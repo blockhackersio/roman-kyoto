@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  circom_runtime: 0.1.25
+
 importers:
 
   .:
@@ -14,15 +17,6 @@ importers:
       wait-on:
         specifier: ^7.2.0
         version: 7.2.0
-
-  contracts:
-    dependencies:
-      '@chainlink/contracts-ccip':
-        specifier: ^1.4.0
-        version: 1.4.0(ethers@5.7.2)
-      '@openzeppelin/contracts':
-        specifier: ^5.0.2
-        version: 5.0.2
 
   frontend:
     dependencies:
@@ -72,6 +66,9 @@ importers:
 
   protocol:
     dependencies:
+      '@chainlink/contracts-ccip':
+        specifier: ^1.4.0
+        version: 1.4.0(ethers@6.11.1)
       '@nomicfoundation/hardhat-chai-matchers':
         specifier: ^2.0.6
         version: 2.0.6(@nomicfoundation/hardhat-ethers@3.0.5)(chai@4.4.1)(ethers@6.11.1)(hardhat@2.22.2)
@@ -84,6 +81,9 @@ importers:
       '@nomicfoundation/hardhat-toolbox':
         specifier: ^5.0.0
         version: 5.0.0(@nomicfoundation/hardhat-chai-matchers@2.0.6)(@nomicfoundation/hardhat-ethers@3.0.5)(@nomicfoundation/hardhat-ignition-ethers@0.15.1)(@nomicfoundation/hardhat-network-helpers@1.0.10)(@nomicfoundation/hardhat-verify@2.0.5)(@typechain/ethers-v6@0.5.1)(@typechain/hardhat@9.1.0)(@types/chai@4.3.14)(@types/mocha@10.0.6)(@types/node@20.12.7)(chai@4.4.1)(ethers@6.11.1)(hardhat-gas-reporter@1.0.10)(hardhat@2.22.2)(solidity-coverage@0.8.12)(ts-node@10.9.2)(typechain@8.3.2)(typescript@5.4.5)
+      '@openzeppelin/contracts':
+        specifier: ^5.0.2
+        version: 5.0.2
       '@types/snarkjs':
         specifier: ^0.7.8
         version: 0.7.8
@@ -411,12 +411,12 @@ packages:
       to-fast-properties: 2.0.0
     dev: true
 
-  /@chainlink/contracts-ccip@1.4.0(ethers@5.7.2):
+  /@chainlink/contracts-ccip@1.4.0(ethers@6.11.1):
     resolution: {integrity: sha512-8F0OpmXy73vSbOvnKPL0DcYLA6FTiwQSKw1+DQzKyBYVbFk4vtijzs+5Ts/Beu6EIPqXlmLq7WVFZFHiDOBjCg==}
     dependencies:
       '@arbitrum/nitro-contracts': 1.1.1
       '@arbitrum/token-bridge-contracts': 1.1.2
-      '@eth-optimism/contracts': 0.6.0(ethers@5.7.2)
+      '@eth-optimism/contracts': 0.6.0(ethers@6.11.1)
       '@openzeppelin/contracts': 4.9.3
       '@openzeppelin/contracts-upgradeable': 4.9.3
       '@scroll-tech/contracts': 0.1.0
@@ -677,7 +677,7 @@ packages:
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dev: true
 
-  /@eth-optimism/contracts@0.6.0(ethers@5.7.2):
+  /@eth-optimism/contracts@0.6.0(ethers@6.11.1):
     resolution: {integrity: sha512-vQ04wfG9kMf1Fwy3FEMqH2QZbgS0gldKhcBeBUPfO8zu68L61VI97UDXmsMQXzTsEAxK8HnokW3/gosl4/NW3w==}
     peerDependencies:
       ethers: ^5
@@ -685,7 +685,7 @@ packages:
       '@eth-optimism/core-utils': 0.12.0
       '@ethersproject/abstract-provider': 5.7.0
       '@ethersproject/abstract-signer': 5.7.0
-      ethers: 5.7.2
+      ethers: 6.11.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -1654,7 +1654,7 @@ packages:
       cbor: 9.0.2
       chalk: 4.1.2
       compare-versions: 6.1.0
-      debug: 4.3.4
+      debug: 4.3.4(supports-color@8.1.1)
       ethereumjs-util: 7.1.5
       minimist: 1.2.8
       proper-lockfile: 4.1.2
@@ -3068,20 +3068,6 @@ packages:
   /death@1.1.0:
     resolution: {integrity: sha512-vsV6S4KVHvTGxbEcij7hkWRv0It+sGGWVOM67dQde/o5Xjnr+KmLjxWJii2uEObIrt1CcM9w0Yaovx+iOlIL+w==}
     dev: false
-
-  /debug@4.3.4:
-    resolution: {integrity: sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==}
-    engines: {node: '>=6.0'}
-    requiresBuild: true
-    peerDependencies:
-      supports-color: '*'
-    peerDependenciesMeta:
-      supports-color:
-        optional: true
-    dependencies:
-      ms: 2.1.2
-    dev: false
-    optional: true
 
   /debug@4.3.4(supports-color@8.1.1):
     resolution: {integrity: sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==}
