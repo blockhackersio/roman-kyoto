@@ -1,0 +1,57 @@
+{
+  "name": "@blockhackers/protocol",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "./scripts/build.sh",
+    "test": "./scripts/test.sh",
+    "deploy:localhost": "./scripts/deploy.sh localhost",
+    "node": "hardhat node",
+    "postinstall": "./scripts/install.sh",
+    "dev": "concurrently -r \"pnpm node\" \"sleep 2 && pnpm deploy:localhost\""
+  },
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs",
+      "types": "./src/index.ts"
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.6",
+    "@nomicfoundation/hardhat-ethers": "^3.0.5",
+    "@nomicfoundation/hardhat-ignition": "^0.15.1",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@types/snarkjs": "^0.7.8",
+    "circom_tester": "^0.0.20",
+    "circomlib": "^2.0.5",
+    "concurrently": "^8.2.2",
+    "ethers": "6.11.1",
+    "hardhat": "^2.22.2",
+    "mocha": "^10.4.0",
+    "rollup": "^4.14.2",
+    "snarkjs": "^0.7.3",
+    "solc": "0.8.24",
+    "@chainlink/contracts-ccip": "^1.4.0",
+    "@openzeppelin/contracts": "^5.0.2"
+  },
+  "devDependencies": {
+    "@rollup/plugin-json": "^6.1.0",
+    "@types/chai": "4",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.12.7",
+    "chai": "^4.4.1",
+    "esbuild": "^0.20.2",
+    "rollup-plugin-dts": "^6.1.0",
+    "rollup-plugin-esbuild": "^6.1.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  },
+  "engine": {
+    "node": ">=18"
+  }
+}
