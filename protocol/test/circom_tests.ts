@@ -38,20 +38,9 @@ describe("test", () => {
       //
       //
       // create 2 note commitments
-      async function proveSpend(
-        privateKey,
-        amount,
-        blinding,
-        index,
-        merkleProof,
-        valueBase,
-        valueCommitmentRandomness,
-        spendNullifier,
-        valueCommitment
-      ): Promise<string> {
-        return ''
-      }
       //
+      //
+      
     });
   });
 });
