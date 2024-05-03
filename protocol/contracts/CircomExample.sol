@@ -25,19 +25,46 @@ contract CircomExample {
             .decode(data, (uint, uint, uint, uint, uint, uint, uint, uint));
     }
 
-    function spendVerify(bytes memory _proof, uint[1] memory _pubSignals) public view {
+    function spendVerify(
+        bytes memory _proof,
+        uint[1] memory _pubSignals
+    ) public view {
         (uint[2] memory a, uint[2][2] memory b, uint[2] memory c) = parseProof(
             _proof
         );
-        require(spendVerifier.verifyProof(a, b, c, _pubSignals), "invalid proof");
+        require(
+            spendVerifier.verifyProof(a, b, c, _pubSignals),
+            "invalid proof"
+        );
     }
 
-    function outputVerify(bytes memory _proof, uint[1] memory _pubSignals) public view {
+    function outputVerify(
+        bytes memory _proof,
+        uint[1] memory _pubSignals
+    ) public view {
         (uint[2] memory a, uint[2][2] memory b, uint[2] memory c) = parseProof(
             _proof
         );
-        require(outputVerifier.verifyProof(a, b, c, _pubSignals), "invalid proof");
+        require(
+            outputVerifier.verifyProof(a, b, c, _pubSignals),
+            "invalid proof"
+        );
     }
 
-    
+    function transact(
+        bytes[] memory _spendProof,
+        bytes[] memory _outputProofs
+    ) public view {
+        // Iterate over each spendProof
+        for (uint i = 0; i < _spendProof.length; i++) {
+            bytes memory spendProof = _spendProof[i];
+            // You can process spendProof here
+        }
+
+        // Iterate over each outputProof
+        for (uint j = 0; j < _outputProofs.length; j++) {
+            bytes memory outputProof = _outputProofs[j];
+            // You can process outputProof here
+        }
+    }
 }

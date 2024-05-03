@@ -26,7 +26,15 @@ class CircomStuff {
     pathIndex: string,
     nullifier: string,
     root: string,
-    pathElements: string[]
+    pathElements: string[],
+    Vx: string,
+    Vy: string,
+    v: string,
+    Rx: string,
+    Ry: string,
+    r: string,
+    Cx: string,
+    Cy: string
   ) {
     return await generateGroth16Proof(
       {
@@ -38,6 +46,14 @@ class CircomStuff {
         nullifier,
         root,
         pathElements,
+        Vx,
+        Vy,
+        v,
+        Rx,
+        Ry,
+        r,
+        Cx,
+        Cy,
       },
       "spend"
     );
@@ -91,6 +107,8 @@ class CircomStuff {
     return await verifier.spendVerify(proof, [commitment]);
   }
 }
+
+
 async function deployVerifierFixture() {
   return ignition.deploy(CircomExampleModule);
 }
@@ -279,9 +297,10 @@ it("output", async () => {
 
 it("spend", async () => {
   await ensurePoseidon();
-  const [privateKey, b1] = getRandomBits(10, 253);
+  const [privateKey, b1,r1] = getRandomBits(10, 253);
   const spendKey = poseidonHash([privateKey]);
 
+  const { R, V } = getInitialPoints(babyJub);
   const n1: Note = {
     amount: 10n,
     asset: await getAsset("USDC"),
@@ -291,6 +310,7 @@ it("spend", async () => {
 
   const n1nc = await notecommitment(n1);
 
+  const n1vc = valcommit(V, n1.amount, R, r1);
   const contract = await getCircomExampleContract();
 
   const tree = new MerkleTree(5, [], {
@@ -313,7 +333,15 @@ it("spend", async () => {
     toStr(BigInt(index)),
     await nullifierHash(toStr(privateKey), n1, BigInt(index)),
     root,
-    pathElements
+    pathElements,
+    toStr(V.x),
+    toStr(V.y),
+    toStr(n1.amount),
+    toStr(R.x),
+    toStr(R.y),
+    toStr(r1),
+    toStr(n1vc.x),
+    toStr(n1vc.y)
   );
 
   await contract.spendVerify(proof, n1nc);

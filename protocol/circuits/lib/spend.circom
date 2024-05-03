@@ -1,9 +1,10 @@
 
 pragma circom 2.0.0;
 
+include "../../node_modules/circomlib/circuits/poseidon.circom";
 include "./keypair.circom";
 include "./merkleproof.circom";
-include "../../node_modules/circomlib/circuits/poseidon.circom";
+include "./valcommit.circom";
 
 template Spend(levels) {
   signal input root;
@@ -15,6 +16,16 @@ template Spend(levels) {
   signal input nullifier;
   signal input pathElements[levels];
   signal output commitment;
+
+  // Value commit
+  signal input Vx;
+  signal input Vy;
+  signal input Rx;
+  signal input Ry;
+  signal input v;
+  signal input r;
+  signal input Cx;
+  signal input Cy;
 
   component keypair = Keypair();
   keypair.privateKey <== privateKey;
@@ -50,4 +61,15 @@ template Spend(levels) {
   checkRoot.in[0] <== root;
   checkRoot.in[1] <== merkle.root;
   checkRoot.enabled <== amount;
+
+  component valcommit = ValueCommitment();
+  valcommit.Vx <== Vx;
+  valcommit.Vy <== Vy;
+  valcommit.Rx <== Rx;
+  valcommit.Ry <== Ry;
+  valcommit.v <== v;
+  valcommit.r <== r;
+  
+  valcommit.out[0] === Cx;
+  valcommit.out[1] === Cy;
 }
