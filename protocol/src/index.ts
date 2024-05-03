@@ -1,40 +1,38 @@
 // export your SDK here
 
-import { Provider } from "ethers";
+import { Provider, Signer } from "ethers";
 import { CircomExample__factory } from "../typechain-types";
 import { generateGroth16Proof } from "./zklib";
 export * from "./config";
 
-export class CircomExample {
-  constructor(private provider: Provider, private address: string) {}
+export async function transfer(
+  signer: Signer,
+  amount: bigint,
+  spendKey: string,
+  asset: string, // "USDC" | "WBTC" etc.
+  notes: NoteStore
+): Promise<unknown> {
+  return "";
+}
 
-  async prepareTransfer(
-    amount: bigint,
-    spendKey: string,
-    asset: string,// "USDC" | "WBTC" etc.
-    notes: NoteStore,
-  ): Promise<unknown> {
-    return ''
-  }
+export async function deposit(
+  signer: Signer,
+  amount: bigint,
+  spendKey: string,
+  asset: string, // "USDC" | "WBTC" etc.
+  notes: NoteStore
+): Promise<unknown> {
+  return "";
+}
 
-
-  async prepareDeposit(
-    amount: bigint,
-    spendKey: string,
-    asset: string,// "USDC" | "WBTC" etc.
-    notes: NoteStore,
-  ): Promise<unknown> {
-    return ''
-  }
-
-  async prepareWithdraw(
-    amount: bigint,
-    recipient: string,
-    asset: string,// "USDC" | "WBTC" etc.
-    notes: NoteStore,
-  ): Promise<unknown> {
-    return ''
-  }
+export async function withdraw(
+  signer: Signer,
+  amount: bigint,
+  recipient: string,
+  asset: string, // "USDC" | "WBTC" etc.
+  notes: NoteStore
+): Promise<unknown> {
+  return "";
 }
 
 export type Note = {
@@ -42,9 +40,9 @@ export type Note = {
   spender: string;
   blinding: string;
   asset: string;
-}
+};
 
 export type NoteStore = {
-  getUnspentUtxos():Record<string,Note[]>;
-  getUtxosUpTo(amount:bigint, asset: string):Promise<Note[]>;
-}
+  getUnspentUtxos(): Record<string, Note[]>;
+  getUtxosUpTo(amount: bigint, asset: string): Promise<Note[]>;
+};
