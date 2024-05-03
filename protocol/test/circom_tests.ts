@@ -155,7 +155,7 @@ describe("test", () => {
       // create:
       const [Ro, Vo, pk, b1, b2, r1, r2, r3, r4] = getRandomBits(10, 253);
 
-      const pub = poseidonHash([pk]);
+      const spender = poseidonHash([pk]);
       const G = babyJub.ExtendedPoint.fromAffine({
         x: babyJub.CURVE.Gx,
         y: babyJub.CURVE.Gy,
@@ -167,14 +167,14 @@ describe("test", () => {
       const n1: Note = {
         amount: 10n,
         asset: "USDC",
-        spender: pub,
+        spender,
         blinding: toFixedHex(b1),
       };
 
       const n2: Note = {
         amount: 10n,
         asset: "USDC",
-        spender: pub,
+        spender,
         blinding: toFixedHex(b2),
       };
 
@@ -208,12 +208,8 @@ describe("test", () => {
       const contract = await getCircomExampleContract();
       const proof = await contract.spendProve("0x" + pk.toString(16));
       console.log(proof)
-      // Add the note commitments to a merkle tree
-      //
-      //
-      // create 2 note commitments
-      //
-      //
+
+      await contract.spendVerify(proof, spender);
     });
   });
 });
