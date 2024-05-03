@@ -193,8 +193,15 @@ async function proveOutput(): Promise<string> {
 }
 const modN = (a: bigint) => mod(a, babyJub.CURVE.n);
 
-function valcommit(V: ExtPointType, v: bigint, R: ExtPointType, r: bigint) {
-  const vV = V.multiply(modN(v));
+function getV(asset: string) {
+  const { G } = getInitialPoints(babyJub);
+  const V = G.multiply(BigInt(asset));
+  return V;
+}
+
+function valcommit(n: Note, R: ExtPointType, r: bigint) {
+  const V = getV(n.asset);
+  const vV = V.multiply(modN(n.amount));
   const rR = R.multiply(modN(r));
   const Vc = vV.add(rR);
   return Vc;
@@ -275,19 +282,18 @@ async function nullifierHash(
 }
 
 function getInitialPoints(B: BabyJub) {
-  const [Ro, Vo] = getRandomBits(2, 253);
+  const [Ro] = getRandomBits(2, 253);
   const G = B.ExtendedPoint.fromAffine({
     x: babyJub.CURVE.Gx,
     y: babyJub.CURVE.Gy,
   });
   const R = G.multiply(Ro);
-  const V = G.multiply(Vo);
-  return { G, R, V };
+  return { G, R };
 }
 
 it("output", async () => {
   await ensurePoseidon();
-  const { R, V } = getInitialPoints(babyJub);
+  const { R } = getInitialPoints(babyJub);
   const [privateKey, b1, r1] = getRandomBits(10, 253);
   const spendKey = poseidonHash([privateKey]);
 
@@ -299,8 +305,9 @@ it("output", async () => {
   };
 
   const n1nc = await notecommitment(n1);
-  const n1vc = valcommit(V, n1.amount, R, r1);
+  const n1vc = valcommit(n1, R, r1);
   const contract = await getCircomExampleContract();
+  const V = getV(n1.asset);
   const proof = await contract.outputProve(
     toStr(n1.amount),
     n1.blinding,
@@ -323,7 +330,7 @@ it("spend", async () => {
   const [privateKey, b1, r1] = getRandomBits(10, 253);
   const spendKey = poseidonHash([privateKey]);
 
-  const { R, V } = getInitialPoints(babyJub);
+  const { R } = getInitialPoints(babyJub);
   const n1: Note = {
     amount: 10n,
     asset: await getAsset("USDC"),
@@ -333,7 +340,7 @@ it("spend", async () => {
 
   const n1nc = await notecommitment(n1);
 
-  const n1vc = valcommit(V, n1.amount, R, r1);
+  const n1vc = valcommit(n1, R, r1);
   const contract = await getCircomExampleContract();
 
   const tree = new MerkleTree(5, [], {
@@ -347,7 +354,7 @@ it("spend", async () => {
   const pathElements = tree.path(index).pathElements.map((e) => e.toString());
 
   const root = `${tree.root}`;
-
+  const V = getV(n1.asset);
   const proof = await contract.spendProve(
     toStr(privateKey),
     toStr(n1.amount),
@@ -379,7 +386,7 @@ it("transact", async () => {
   const spendKey = poseidonHash([privateKey]);
   const receiverSpendKey = poseidonHash([recieverPrivateKey]);
 
-  const { R, V } = getInitialPoints(babyJub);
+  const { R } = getInitialPoints(babyJub);
   // input
   const n1: Note = {
     amount: 10n,
@@ -398,9 +405,9 @@ it("transact", async () => {
 
   const n1nc = await notecommitment(n1);
   const n2nc = await notecommitment(n2);
-// TODO get asset identifier from 'asset'
-  const n1vc = valcommit(V, n1.amount, R, r1);
-  const n2vc = valcommit(V, n2.amount, R, r2);
+  // TODO get asset identifier from 'asset'
+  const n1vc = valcommit(n1, R, r1);
+  const n2vc = valcommit(n2, R, r2);
 
   const bsk = modN(r1 - r2);
   const Bpk = R.multiply(bsk);
@@ -421,6 +428,7 @@ it("transact", async () => {
   const root = `${tree.root}`;
 
   const nullifier = await nullifierHash(toStr(privateKey), n1, BigInt(index));
+  const Vs = getV(n1.asset);
   const proofSpend = await contract.spendProve(
     toStr(privateKey),
     toStr(n1.amount),
@@ -430,8 +438,8 @@ it("transact", async () => {
     nullifier,
     root,
     pathElements,
-    toStr(V.x),
-    toStr(V.y),
+    toStr(Vs.x),
+    toStr(Vs.y),
     toStr(n1.amount),
     toStr(R.x),
     toStr(R.y),
@@ -440,13 +448,14 @@ it("transact", async () => {
     toStr(n1vc.y)
   );
 
+  const Vo = getV(n2.asset);
   const proofOutput = await contract.outputProve(
     toStr(n2.amount),
     n2.blinding,
     n2.asset,
     n2.spender,
-    toStr(V.x),
-    toStr(V.y),
+    toStr(Vo.x),
+    toStr(Vo.y),
     toStr(n2.amount),
     toStr(R.x),
     toStr(R.y),
