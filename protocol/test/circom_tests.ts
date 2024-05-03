@@ -23,9 +23,35 @@ describe("test", () => {
       const address = await verifier.getAddress();
       const circomExample = new CircomExample(ethers.provider, address);
       const proof = await circomExample.multiplierProve(4, 10);
-      await expect(circomExample.multiplierVerify(proof, 44)).to.be.revertedWith(
-        "invalid proof"
-      );
+      await expect(
+        circomExample.multiplierVerify(proof, 44)
+      ).to.be.revertedWith("invalid proof");
+    });
+
+    it("should create a transaction", async () => {
+      // create:
+      // 2 preexisting notes
+      // 2 note commitments
+      // 2 value commitments
+      //
+      // Add the note commitments to a merkle tree
+      //
+      //
+      // create 2 note commitments
+      async function proveSpend(
+        privateKey,
+        amount,
+        blinding,
+        index,
+        merkleProof,
+        valueBase,
+        valueCommitmentRandomness,
+        spendNullifier,
+        valueCommitment
+      ): Promise<string> {
+        return ''
+      }
+      //
     });
   });
 });
