@@ -6,6 +6,7 @@
   "scripts": {
     "build": "./scripts/build.sh",
     "test": "./scripts/test.sh",
+    "test:nocircuits": "NO_CIRCOM=1 pnpm test",
     "deploy:localhost": "./scripts/deploy.sh localhost",
     "node": "hardhat node",
     "postinstall": "./scripts/install.sh",

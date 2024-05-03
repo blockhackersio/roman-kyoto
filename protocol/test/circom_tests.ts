@@ -106,8 +106,31 @@ class CircomStuff {
     );
     return await verifier.spendVerify(proof, [commitment]);
   }
+
+  async transact(
+    spends: SpendProof[],
+    outputs: OutputProof[],
+    Bpk: [string, string]
+  ) {
+    console.log({ spends, outputs });
+    const verifier = CircomExample__factory.connect(
+      this.address,
+      this.provider
+    );
+    await verifier.transact(spends, outputs, Bpk);
+  }
 }
 
+type OutputProof = {
+  proof: string;
+  commitment: string;
+  valueCommitment: [string, string];
+};
+type SpendProof = {
+  proof: string;
+  nullifier: string;
+  valueCommitment: [string, string];
+};
 
 async function deployVerifierFixture() {
   return ignition.deploy(CircomExampleModule);
@@ -297,7 +320,7 @@ it("output", async () => {
 
 it("spend", async () => {
   await ensurePoseidon();
-  const [privateKey, b1,r1] = getRandomBits(10, 253);
+  const [privateKey, b1, r1] = getRandomBits(10, 253);
   const spendKey = poseidonHash([privateKey]);
 
   const { R, V } = getInitialPoints(babyJub);
@@ -343,6 +366,111 @@ it("spend", async () => {
     toStr(n1vc.x),
     toStr(n1vc.y)
   );
-
+  // simple proof verification
   await contract.spendVerify(proof, n1nc);
+});
+
+it("transact", async () => {
+  await ensurePoseidon();
+  const [privateKey, recieverPrivateKey, b1, b2, r1, r2] = getRandomBits(
+    10,
+    253
+  );
+  const spendKey = poseidonHash([privateKey]);
+  const receiverSpendKey = poseidonHash([recieverPrivateKey]);
+
+  const { R, V } = getInitialPoints(babyJub);
+  // input
+  const n1: Note = {
+    amount: 10n,
+    asset: await getAsset("USDC"),
+    spender: spendKey,
+    blinding: toFixedHex(b1),
+  };
+
+  // output
+  const n2: Note = {
+    amount: 10n,
+    asset: await getAsset("USDC"),
+    spender: receiverSpendKey,
+    blinding: toFixedHex(b2),
+  };
+
+  const n1nc = await notecommitment(n1);
+  const n2nc = await notecommitment(n2);
+// TODO get asset identifier from 'asset'
+  const n1vc = valcommit(V, n1.amount, R, r1);
+  const n2vc = valcommit(V, n2.amount, R, r2);
+
+  const bsk = modN(r1 - r2);
+  const Bpk = R.multiply(bsk);
+
+  const contract = await getCircomExampleContract();
+
+  const tree = new MerkleTree(5, [], {
+    hashFunction: poseidonHash2,
+  });
+
+  // already have n1 in tree but not n2
+  tree.bulkInsert([n1nc]);
+
+  const index = tree.indexOf(n1nc);
+
+  const pathElements = tree.path(index).pathElements.map((e) => e.toString());
+
+  const root = `${tree.root}`;
+
+  const nullifier = await nullifierHash(toStr(privateKey), n1, BigInt(index));
+  const proofSpend = await contract.spendProve(
+    toStr(privateKey),
+    toStr(n1.amount),
+    n1.blinding,
+    n1.asset,
+    toStr(BigInt(index)),
+    nullifier,
+    root,
+    pathElements,
+    toStr(V.x),
+    toStr(V.y),
+    toStr(n1.amount),
+    toStr(R.x),
+    toStr(R.y),
+    toStr(r1),
+    toStr(n1vc.x),
+    toStr(n1vc.y)
+  );
+
+  const proofOutput = await contract.outputProve(
+    toStr(n2.amount),
+    n2.blinding,
+    n2.asset,
+    n2.spender,
+    toStr(V.x),
+    toStr(V.y),
+    toStr(n2.amount),
+    toStr(R.x),
+    toStr(R.y),
+    toStr(r2),
+    toStr(n2vc.x),
+    toStr(n2vc.y)
+  );
+
+  await contract.outputVerify(proofOutput, n2nc);
+  await contract.transact(
+    [
+      {
+        proof: proofSpend,
+        nullifier: n1nc,
+        valueCommitment: [toStr(n1vc.x), toStr(n1vc.y)],
+      },
+    ],
+    [
+      {
+        proof: proofOutput,
+        commitment: n2nc,
+        valueCommitment: [toStr(n2vc.x), toStr(n2vc.y)],
+      },
+    ],
+    [toStr(Bpk.x), toStr(Bpk.y)]
+  );
 });
