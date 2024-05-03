@@ -55,7 +55,15 @@ class CircomStuff {
     amount: string,
     blinding: string,
     asset: string,
-    publicKey: string
+    publicKey: string,
+    Vx: string,
+    Vy: string,
+    v: string,
+    Rx: string,
+    Ry: string,
+    r: string,
+    Cx: string,
+    Cy: string
   ) {
     return await generateGroth16Proof(
       {
@@ -63,6 +71,14 @@ class CircomStuff {
         blinding,
         asset,
         publicKey,
+        Vx,
+        Vy,
+        v,
+        Rx,
+        Ry,
+        r,
+        Cx,
+        Cy,
       },
       "output"
     );
@@ -137,6 +153,8 @@ describe("test", () => {
       } as const);
     }
 
+    type BabyJub = ReturnType<typeof getBabyJubJub>;
+
     async function proveSpend(): Promise<string> {
       // privateKey,
       // amount,
@@ -194,6 +212,7 @@ describe("test", () => {
     function getRandomBits(count: number, bits: number) {
       return new Array(count).fill(0).map(() => getRandomBigInt(bits));
     }
+
     async function getCircomExampleContract() {
       const { verifier } = await loadFixture(deployVerifierFixture);
       const address = await verifier.getAddress();
@@ -242,21 +261,22 @@ describe("test", () => {
         signature(privateKey, commitment, index),
       ]);
     }
-    // const G = babyJub.ExtendedPoint.fromAffine({
-    //   x: babyJub.CURVE.Gx,
-    //   y: babyJub.CURVE.Gy,
-    // });
-    // const R = G.multiply(Ro);
-    // const V = G.multiply(Vo);
-    // create:
-    //      const n1vc = valcommit(V, n1.amount, R, r1);
-    //      const n2vc = valcommit(V, n2.amount, R, r2);
+
+    function getInitialPoints(B: BabyJub) {
+      const [Ro, Vo] = getRandomBits(2, 253);
+      const G = B.ExtendedPoint.fromAffine({
+        x: babyJub.CURVE.Gx,
+        y: babyJub.CURVE.Gy,
+      });
+      const R = G.multiply(Ro);
+      const V = G.multiply(Vo);
+      return { G, R, V };
+    }
+
     it("output", async () => {
       await ensurePoseidon();
-      const [Ro, Vo, privateKey, b1, b2 /*r1, r2, r3, r4*/] = getRandomBits(
-        10,
-        253
-      );
+      const { R, V } = getInitialPoints(babyJub);
+      const [privateKey, b1, r1] = getRandomBits(10, 253);
       const spendKey = poseidonHash([privateKey]);
 
       const n1: Note = {
@@ -267,18 +287,28 @@ describe("test", () => {
       };
 
       const n1nc = await notecommitment(n1);
-
+      const n1vc = valcommit(V, n1.amount, R, r1);
       const contract = await getCircomExampleContract();
-      const proof = await contract.outputProve(toStr(n1.amount), n1.blinding, n1.asset, n1.spender);
+      const proof = await contract.outputProve(
+        toStr(n1.amount),
+        n1.blinding,
+        n1.asset,
+        n1.spender,
+        toStr(V.x),
+        toStr(V.y),
+        toStr(n1.amount),
+        toStr(R.x),
+        toStr(R.y),
+        toStr(r1),
+        toStr(n1vc.x),
+        toStr(n1vc.y)
+      );
       await contract.outputVerify(proof, n1nc);
     });
 
     it("spend", async () => {
       await ensurePoseidon();
-      const [Ro, Vo, privateKey, b1, b2 /*r1, r2, r3, r4*/] = getRandomBits(
-        10,
-        253
-      );
+      const [privateKey, b1, b2] = getRandomBits(10, 253);
       const spendKey = poseidonHash([privateKey]);
 
       const n1: Note = {
