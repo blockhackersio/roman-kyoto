@@ -29,7 +29,6 @@ class CircomStuff {
     pathElements: string[],
     Vx: string,
     Vy: string,
-    v: string,
     Rx: string,
     Ry: string,
     r: string,
@@ -48,7 +47,6 @@ class CircomStuff {
         pathElements,
         Vx,
         Vy,
-        v,
         Rx,
         Ry,
         r,
@@ -66,7 +64,6 @@ class CircomStuff {
     publicKey: string,
     Vx: string,
     Vy: string,
-    v: string,
     Rx: string,
     Ry: string,
     r: string,
@@ -81,7 +78,6 @@ class CircomStuff {
         publicKey,
         Vx,
         Vy,
-        v,
         Rx,
         Ry,
         r,
@@ -315,7 +311,6 @@ it("output", async () => {
     n1.spender,
     toStr(V.x),
     toStr(V.y),
-    toStr(n1.amount),
     toStr(R.x),
     toStr(R.y),
     toStr(r1),
@@ -366,7 +361,6 @@ it("spend", async () => {
     pathElements,
     toStr(V.x),
     toStr(V.y),
-    toStr(n1.amount),
     toStr(R.x),
     toStr(R.y),
     toStr(r1),
@@ -394,6 +388,8 @@ it("transact", async () => {
     spender: spendKey,
     blinding: toFixedHex(b1),
   };
+  const n1nc = await notecommitment(n1);
+  const n1vc = valcommit(n1, R, r1);
 
   // output
   const n2: Note = {
@@ -403,9 +399,7 @@ it("transact", async () => {
     blinding: toFixedHex(b2),
   };
 
-  const n1nc = await notecommitment(n1);
   const n2nc = await notecommitment(n2);
-  const n1vc = valcommit(n1, R, r1);
   const n2vc = valcommit(n2, R, r2);
 
   const bsk = modN(r1 - r2);
@@ -439,7 +433,6 @@ it("transact", async () => {
     pathElements,
     toStr(Vs.x),
     toStr(Vs.y),
-    toStr(n1.amount),
     toStr(R.x),
     toStr(R.y),
     toStr(r1),
@@ -455,7 +448,6 @@ it("transact", async () => {
     n2.spender,
     toStr(Vo.x),
     toStr(Vo.y),
-    toStr(n2.amount),
     toStr(R.x),
     toStr(R.y),
     toStr(r2),

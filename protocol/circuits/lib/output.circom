@@ -15,7 +15,6 @@ template Output() {
   signal input Vy;
   signal input Rx;
   signal input Ry;
-  signal input v;
   signal input r;
   signal input Cx;
   signal input Cy;
@@ -35,7 +34,7 @@ template Output() {
   valcommit.Vy <== Vy;
   valcommit.Rx <== Rx;
   valcommit.Ry <== Ry;
-  valcommit.v <== v;
+  valcommit.v <== amount;
   valcommit.r <== r;
   
   valcommit.out[0] === Cx;
