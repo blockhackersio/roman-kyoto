@@ -3,8 +3,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-    title: "Dapp",
-    description: "A decentralized application (Dapp) starter template.",
+    title: "Roman Kyoto",
+    description: "",
 };
 
 export default function RootLayout({
