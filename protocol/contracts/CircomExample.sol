@@ -2,12 +2,13 @@
 pragma solidity ^0.8.24;
 
 import {MultiplierVerifier} from "./generated/multiplier.sol";
+import {SpendVerifier} from "./generated/spend.sol";
 
 contract CircomExample {
-    MultiplierVerifier public multiplier;
+    SpendVerifier public spendVerifier;
 
-    constructor(address _multiplier) payable {
-        multiplier = MultiplierVerifier(_multiplier);
+    constructor(address _spendVerifier) payable {
+        spendVerifier = SpendVerifier(_spendVerifier);
     }
 
     function parseProof(
@@ -21,10 +22,10 @@ contract CircomExample {
             .decode(data, (uint, uint, uint, uint, uint, uint, uint, uint));
     }
 
-    function multiplierVerify(bytes memory _proof, uint[1] memory _pubSignals) public view {
+    function spendVerify(bytes memory _proof, uint[1] memory _pubSignals) public view {
         (uint[2] memory a, uint[2][2] memory b, uint[2] memory c) = parseProof(
             _proof
         );
-        require(multiplier.verifyProof(a, b, c, _pubSignals), "invalid proof");
+        require(spendVerifier.verifyProof(a, b, c, _pubSignals), "invalid proof");
     }
 }

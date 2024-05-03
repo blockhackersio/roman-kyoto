@@ -1,15 +1,54 @@
 // import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { ethers, ignition } from "hardhat";
 import { expect } from "chai";
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+
 // import { CircomExample } from "../src";
 import CircomExampleModule from "../ignition/modules/CircomExample";
 import { Note } from "../src/index";
-import { ensurePoseidon, poseidonHash } from "../src/poseidon";
-import { toFixedHex } from "../src/zklib";
+import { ensurePoseidon, poseidonHash, poseidonHashRaw } from "../src/poseidon";
+import { generateGroth16Proof, toFixedHex } from "../src/zklib";
 import { keccak_256 } from "@noble/hashes/sha3";
 import { ExtPointType, twistedEdwards } from "@noble/curves/abstract/edwards";
-import { hexToBytes, randomBytes } from "@noble/hashes/utils";
+import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils";
 import { Field, mod } from "@noble/curves/abstract/modular";
+import CircomExample from "../ignition/modules/CircomExample";
+import { CircomExample__factory } from "../typechain-types";
+import { Provider } from "ethers";
+import { numberToHexUnpadded } from "@noble/curves/abstract/utils";
+
+class CircomStuff {
+  constructor(private provider: Provider, private address: string) {}
+
+  async spendProve(
+    privateKey: string,
+    amount: string,
+    blinding: string,
+    asset: string,
+    pathIndex: string,
+    nullifier: string
+  ) {
+    return await generateGroth16Proof(
+      {
+        privateKey,
+        amount,
+        blinding,
+        asset,
+        pathIndex,
+        nullifier,
+      },
+      "spend"
+    );
+  }
+
+  async spendVerify(proof: string, commitment: string) {
+    const verifier = CircomExample__factory.connect(
+      this.address,
+      this.provider
+    );
+    return await verifier.spendVerify(proof, [commitment]);
+  }
+}
 describe("test", () => {
   async function deployVerifierFixture() {
     return ignition.deploy(CircomExampleModule);
@@ -121,67 +160,105 @@ describe("test", () => {
     function getRandomBits(count: number, bits: number) {
       return new Array(count).fill(0).map(() => getRandomBigInt(bits));
     }
+    async function getCircomExampleContract() {
+      const { verifier } = await loadFixture(deployVerifierFixture);
+      const address = await verifier.getAddress();
+      const circomExample = new CircomStuff(ethers.provider, address);
+      return circomExample;
+    }
+
+    function bigintToStr(b: bigint): string {
+      return "0x" + b.toString(16);
+    }
+    function stringToBytes(str: string) {
+      return BigInt("0x" + Buffer.from(str, "utf-8").toString("hex"));
+    }
+
+    async function hashToField(bytes: bigint) {
+      await ensurePoseidon();
+      return poseidonHash([bytes]);
+    }
+
+    function getAsset(assetString: string) {
+      const bytes = stringToBytes(assetString);
+      return hashToField(bytes);
+    }
 
     it("should create a transaction", async () => {
       await ensurePoseidon();
       // create:
-      const [Ro, Vo, pk, b1, b2, r1, r2, r3, r4] = getRandomBits(10, 253);
-
-      const pub = poseidonHash([pk]);
-      const G = babyJub.ExtendedPoint.fromAffine({
-        x: babyJub.CURVE.Gx,
-        y: babyJub.CURVE.Gy,
-      });
-      const R = G.multiply(Ro);
-      const V = G.multiply(Vo);
+      const [Ro, Vo, pk, b1, b2, /*r1, r2, r3, r4*/] = getRandomBits(10, 253);
+      const spender = poseidonHash([pk]);
+      // const G = babyJub.ExtendedPoint.fromAffine({
+      //   x: babyJub.CURVE.Gx,
+      //   y: babyJub.CURVE.Gy,
+      // });
+      // const R = G.multiply(Ro);
+      // const V = G.multiply(Vo);
 
       // 2 preexisting notes
       const n1: Note = {
         amount: 10n,
-        asset: "USDC",
-        spender: pub,
+        asset: await getAsset("USDC"),
+        spender,
         blinding: toFixedHex(b1),
       };
+      const n1Index = 0n;
 
       const n2: Note = {
         amount: 10n,
-        asset: "USDC",
-        spender: pub,
+        asset: await getAsset("USDC"),
+        spender,
         blinding: toFixedHex(b2),
       };
 
-      function stringToBytes(str: string) {
-        return BigInt("0x" + Buffer.from(str, "utf-8").toString("hex"));
-      }
-
-      async function hashToField(bytes: bigint) {
-        await ensurePoseidon();
-        return poseidonHash([bytes]);
-      }
+      console.log({ pk, n1 });
 
       async function notecommitment(n: Note): Promise<string> {
+        return poseidonHash([n.amount, n.spender, n.blinding, n.asset]);
+      }
+
+      function signature(
+        privateKey: string,
+        commitment: string,
+        index: bigint
+      ): string {
+        return poseidonHash([privateKey, commitment, index]);
+      }
+
+      async function nullifierHash(
+        privateKey: string,
+        n: Note,
+        index: bigint
+      ): Promise<string> {
+        const commitment = await notecommitment(n);
         return poseidonHash([
-          n1.amount,
-          BigInt("0x" + n1.spender),
-          BigInt(n1.blinding),
-          BigInt("0x" + (await hashToField(stringToBytes(n1.asset)))),
+          commitment,
+          index,
+          signature(privateKey, commitment, index),
         ]);
+        // return pose;
       }
 
       // 2 note commitments
       const n1nc = await notecommitment(n1);
-      const n2nc = await notecommitment(n2);
+      //      const n2nc = await notecommitment(n2);
       // 2 value commitments
 
-      const n1vc = valcommit(V, n1.amount, R, r1);
-      const n2vc = valcommit(V, n2.amount, R, r2);
-      console.log({ n1nc, n2nc, n1vc, n2vc });
-      // Add the note commitments to a merkle tree
-      //
-      //
-      // create 2 note commitments
-      //
-      //
+      //      const n1vc = valcommit(V, n1.amount, R, r1);
+      //      const n2vc = valcommit(V, n2.amount, R, r2);
+
+      const contract = await getCircomExampleContract();
+      const proof = await contract.spendProve(
+        bigintToStr(pk),
+        bigintToStr(n1.amount),
+        n1.blinding,
+        n1.asset,
+        bigintToStr(n1Index),
+        await nullifierHash(bigintToStr(pk), n1, n1Index)
+      );
+      console.log(proof);
+      await contract.spendVerify(proof, n1nc);
     });
   });
 });
