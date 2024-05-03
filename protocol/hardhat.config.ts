@@ -43,6 +43,12 @@ const config: HardhatUserConfig = {
       accounts: [process.env.PRIVATE_KEY!],
       saveDeployments: true,
     },
+    bsctestnet: {
+      chainId: 97,
+      url: "https://public.stackup.sh/api/v1/node/bsc-testnet",
+      accounts: [process.env.PRIVATE_KEY!],
+      saveDeployments: true,
+    },
   },
 };
 
