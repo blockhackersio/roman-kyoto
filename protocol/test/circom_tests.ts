@@ -13,7 +13,8 @@ import { ExtPointType, twistedEdwards } from "@noble/curves/abstract/edwards";
 import { randomBytes } from "@noble/hashes/utils";
 import { Field, mod } from "@noble/curves/abstract/modular";
 import { CircomExample__factory } from "../typechain-types";
-import { Provider } from "ethers";
+import { AbiCoder, Provider, keccak256 } from "ethers";
+import { bytesToNumberBE, ensureBytes } from "@noble/curves/abstract/utils";
 
 class CircomStuff {
   constructor(private provider: Provider, private address: string) { }
@@ -369,6 +370,68 @@ it("spend", async () => {
   );
   // simple proof verification
   await contract.spendVerify(proof, n1nc);
+});
+
+it.only("Bind signatures", async () => {
+  // B - base point
+  // a - secret key
+  // A - Public Key
+  // T - random bytes
+  // M - message bytes
+  // --- sign ------
+  // r = H(T||A||M)
+  // R = r * B
+  // S = r + H(R||A||M) * a
+  // R = H(T||A||M) * B
+  // S = H(T||A||M) + H(R||A||M) * a
+  // --- verify ----
+  // c = H(R||A||M)
+  // -B * S + R + c * A == identity
+  const abi = new AbiCoder();
+
+  const babyJub = getBabyJubJub();
+  const modN = (a: bigint) => mod(a, babyJub.CURVE.n);
+  const hash = babyJub.CURVE.hash;
+  const message = "Hello world";
+  const B = babyJub.ExtendedPoint.BASE;
+  const a = modN(BigInt("0x" + Buffer.from(randomBytes(32)).toString("hex")));
+  const T = randomBytes(32);
+  const msgBytes = ensureBytes("message", Buffer.from(message, "utf8"));
+  const A = babyJub.ExtendedPoint.BASE.multiply(a);
+  const r = modN(
+    bytesToNumberBE(
+      hash(
+        abi.encode(
+          ["bytes", "uint256", "uint256", "bytes"],
+          [T, A.x, A.y, msgBytes]
+        )
+      )
+    )
+  );
+  const R = B.multiply(r);
+  const cData = abi.encode(
+    ["uint256", "uint256", "uint256", "uint256", "bytes"],
+    [R.x, R.y, A.x, A.y, msgBytes]
+  );
+
+  const hashed = keccak256(cData);
+
+  const c = modN(BigInt(hashed));
+  const s = modN(r + c * a);
+
+  /////////////////////////////
+  // sig is now R and s
+  //////////////////////////////
+
+  // Following should happen in solidity
+  expect(
+    B.negate()
+      .multiply(s)
+      .add(R)
+      .add(A.multiply(c))
+      .equals(babyJub.ExtendedPoint.ZERO)
+  ).to.be.true;
+
 });
 
 it("transact", async () => {
