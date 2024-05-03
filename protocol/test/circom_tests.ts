@@ -405,7 +405,6 @@ it("transact", async () => {
 
   const n1nc = await notecommitment(n1);
   const n2nc = await notecommitment(n2);
-  // TODO get asset identifier from 'asset'
   const n1vc = valcommit(n1, R, r1);
   const n2vc = valcommit(n2, R, r2);
 
