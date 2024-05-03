@@ -36,7 +36,7 @@ export async function withdraw(
 }
 
 export type Note = {
-  amount: string;
+  amount: bigint;
   spender: string;
   blinding: string;
   asset: string;
