@@ -11,7 +11,9 @@ let poseidon: PoseidonFn = () => {
 export function poseidonHash(items: BigNumberish[]): string {
   return fieldToString(poseidon(items));
 }
-
+export function poseidonHashRaw(items:BigNumberish[]):Uint8Array {
+  return poseidon(items)
+}
 export function poseidonHash2(a: BigNumberish, b: BigNumberish): string {
   return poseidonHash([a, b]);
 }
