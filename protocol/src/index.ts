@@ -6,17 +6,45 @@ import { generateGroth16Proof } from "./zklib";
 export * from "./config";
 
 export class CircomExample {
-  constructor(
-    private provider: Provider,
-    private address: string 
-  ) { }
+  constructor(private provider: Provider, private address: string) {}
 
-  async multiplierProve(a: number, b: number) {
-    return await generateGroth16Proof({ a, b }, "multiplier");
+  async prepareTransfer(
+    amount: bigint,
+    spendKey: string,
+    asset: string,// "USDC" | "WBTC" etc.
+    notes: NoteStore,
+  ): Promise<unknown> {
+    return ''
   }
 
-  async multiplierVerify(proof: string, c: number) {
-    const verifier = CircomExample__factory.connect(this.address, this.provider);
-    return await verifier.multiplierVerify(proof, [c]);
+
+  async prepareDeposit(
+    amount: bigint,
+    spendKey: string,
+    asset: string,// "USDC" | "WBTC" etc.
+    notes: NoteStore,
+  ): Promise<unknown> {
+    return ''
   }
+
+  async prepareWithdraw(
+    amount: bigint,
+    recipient: string,
+    asset: string,// "USDC" | "WBTC" etc.
+    notes: NoteStore,
+  ): Promise<unknown> {
+    return ''
+  }
+}
+
+export type Note = {
+  amount: string;
+  spender: string;
+  blinding: string;
+  asset: string;
+}
+
+export type NoteStore = {
+  getUnspentUtxos():Record<string,Note[]>;
+  getUtxosUpTo(amount:bigint, asset: string):Promise<Note[]>;
 }
