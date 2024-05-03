@@ -1,9 +1,9 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
-import MultiplierVerifier from "./generated/MultiplierVerifier";
+import SpendVerifier from "./generated/SpendVerifier";
 
 export default buildModule("CircomExample", (m) => {
-  const { verifier: multiplierVerifier } = m.useModule(MultiplierVerifier);
-  const verifier = m.contract("CircomExample", [multiplierVerifier]);
+  const { verifier: spendVerifier } = m.useModule(SpendVerifier);
+  const verifier = m.contract("CircomExample", [spendVerifier]);
 
   return { verifier };
 });

@@ -1,15 +1,37 @@
 // import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { ethers, ignition } from "hardhat";
 import { expect } from "chai";
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+
 // import { CircomExample } from "../src";
 import CircomExampleModule from "../ignition/modules/CircomExample";
 import { Note } from "../src/index";
 import { ensurePoseidon, poseidonHash } from "../src/poseidon";
-import { toFixedHex } from "../src/zklib";
+import { generateGroth16Proof, toFixedHex } from "../src/zklib";
 import { keccak_256 } from "@noble/hashes/sha3";
 import { ExtPointType, twistedEdwards } from "@noble/curves/abstract/edwards";
-import { hexToBytes, randomBytes } from "@noble/hashes/utils";
+import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils";
 import { Field, mod } from "@noble/curves/abstract/modular";
+import CircomExample from "../ignition/modules/CircomExample";
+import { CircomExample__factory } from "../typechain-types";
+import { Provider } from "ethers";
+import { numberToHexUnpadded } from "@noble/curves/abstract/utils";
+
+class CircomStuff {
+  constructor(private provider: Provider, private address: string) {}
+
+  async spendProve(privateKey: string) {
+    return await generateGroth16Proof({ privateKey }, "spend");
+  }
+
+  async spendVerify(proof: string, publicKey: string) {
+    const verifier = CircomExample__factory.connect(
+      this.address,
+      this.provider
+    );
+    return await verifier.spendVerify(proof, [publicKey]);
+  }
+}
 describe("test", () => {
   async function deployVerifierFixture() {
     return ignition.deploy(CircomExampleModule);
@@ -121,6 +143,12 @@ describe("test", () => {
     function getRandomBits(count: number, bits: number) {
       return new Array(count).fill(0).map(() => getRandomBigInt(bits));
     }
+    async function getCircomExampleContract() {
+      const { verifier } = await loadFixture(deployVerifierFixture);
+      const address = await verifier.getAddress();
+      const circomExample = new CircomStuff(ethers.provider, address);
+      return circomExample;
+    }
 
     it("should create a transaction", async () => {
       await ensurePoseidon();
@@ -176,6 +204,10 @@ describe("test", () => {
       const n1vc = valcommit(V, n1.amount, R, r1);
       const n2vc = valcommit(V, n2.amount, R, r2);
       console.log({ n1nc, n2nc, n1vc, n2vc });
+
+      const contract = await getCircomExampleContract();
+      const proof = await contract.spendProve("0x" + pk.toString(16));
+      console.log(proof)
       // Add the note commitments to a merkle tree
       //
       //

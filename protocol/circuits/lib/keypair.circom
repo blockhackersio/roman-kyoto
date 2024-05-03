@@ -1,7 +1,7 @@
 
 pragma circom 2.0.0;
 include "../../node_modules/circomlib/circuits/poseidon.circom";
-
+// From https://github.com/tornadocash/tornado-nova/blob/master/circuits/keypair.circom
 // Since we don't use signatures, the keypair can be based on a simple hash
 template Keypair() {
     signal input privateKey;
