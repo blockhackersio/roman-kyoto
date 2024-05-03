@@ -6,11 +6,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import MerkleTree from "fixed-merkle-tree";
 import CircomExampleModule from "../ignition/modules/CircomExample";
 import { Note } from "../src/index";
-import {
-  ensurePoseidon,
-  poseidonHash,
-  poseidonHash2,
-} from "../src/poseidon";
+import { ensurePoseidon, poseidonHash, poseidonHash2 } from "../src/poseidon";
 import { generateGroth16Proof, toFixedHex } from "../src/zklib";
 import { keccak_256 } from "@noble/hashes/sha3";
 import { ExtPointType, twistedEdwards } from "@noble/curves/abstract/edwards";
@@ -283,7 +279,7 @@ it("output", async () => {
 
 it("spend", async () => {
   await ensurePoseidon();
-  const [privateKey, b1, b2] = getRandomBits(10, 253);
+  const [privateKey, b1] = getRandomBits(10, 253);
   const spendKey = poseidonHash([privateKey]);
 
   const n1: Note = {
@@ -291,13 +287,6 @@ it("spend", async () => {
     asset: await getAsset("USDC"),
     spender: spendKey,
     blinding: toFixedHex(b1),
-  };
-
-  const n2: Note = {
-    amount: 10n,
-    asset: await getAsset("USDC"),
-    spender: spendKey,
-    blinding: toFixedHex(b2),
   };
 
   const n1nc = await notecommitment(n1);
