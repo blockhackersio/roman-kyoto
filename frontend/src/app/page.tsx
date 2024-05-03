@@ -13,6 +13,9 @@ import trustModule from "@web3-onboard/trust";
 import frontierModule from "@web3-onboard/frontier";
 import { chains } from "../constants/Chains";
 import NavBar from "../components/NavBar";
+import TransactionTable from "@/components/TransactionTable";
+import { Button, Container, Flex } from "@chakra-ui/react";
+import { Transaction } from "@/models/Transaction";
 
 const injected = injectedModule();
 const coinbase = coinbaseModule();
@@ -27,39 +30,63 @@ const trust = trustModule();
 const frontier = frontierModule();
 
 const wallets = [
-    injected,
-    infinityWallet,
-    keepkey,
-    sequence,
-    trust,
-    frontier,
-    taho,
-    coinbase,
-    dcent,
-    safe,
-    keystone,
+  injected,
+  infinityWallet,
+  keepkey,
+  sequence,
+  trust,
+  frontier,
+  taho,
+  coinbase,
+  dcent,
+  safe,
+  keystone,
 ];
 
 const appMetadata = {
-    name: "Dapp Starter Template",
-    icon: "<svg>My App Icon</svg>",
-    description: "A decentralized application (Dapp) starter template.",
-    recommendedInjectedWallets: [
-        { name: "MetaMask", url: "https://metamask.io" },
-        { name: "Coinbase", url: "https://wallet.coinbase.com/" },
-    ],
+  name: "Dapp Starter Template",
+  icon: "<svg>My App Icon</svg>",
+  description: "A decentralized application (Dapp) starter template.",
+  recommendedInjectedWallets: [
+    { name: "MetaMask", url: "https://metamask.io" },
+    { name: "Coinbase", url: "https://wallet.coinbase.com/" },
+  ],
 };
 
 const web3Onboard = init({
-    wallets,
-    chains,
-    appMetadata,
+  wallets,
+  chains,
+  appMetadata,
 });
 
+// Dummy data for demonstration
+const transactions: Transaction[] = [
+  { id: 1, date: "2023-01-01", amount: 150, description: "Grocery shopping" },
+  { id: 2, date: "2023-01-02", amount: 200, description: "Electronics" },
+  { id: 3, date: "2023-01-03", amount: 50, description: "Books" },
+];
+
 export default function Page() {
-    return (
-        <Web3OnboardProvider web3Onboard={web3Onboard}>
-            <NavBar />
-        </Web3OnboardProvider>
-    );
+  return (
+    <Web3OnboardProvider web3Onboard={web3Onboard}>
+      <NavBar />
+      <Container maxW="container.lg" p={4}>
+        <Flex
+          justifyContent={{ base: "space-around", md: "space-around" }}
+          mb={4}
+          gap={{ base: "2", md: "4" }}
+        >
+          <Button colorScheme="blue" size="lg">
+            USDC
+          </Button>
+          <Button colorScheme="yellow" size="lg">
+            WBTC
+          </Button>
+        </Flex>
+      </Container>
+      <Container maxW="container.xl" p={4}>
+        <TransactionTable transactions={transactions} />
+      </Container>
+    </Web3OnboardProvider>
+  );
 }
