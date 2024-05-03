@@ -3,7 +3,10 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-ethers";
 import "@nomicfoundation/hardhat-ignition";
 
-import {TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD} from "hardhat/builtin-tasks/task-names";
+import "hardhat-deploy";
+import "dotenv/config";
+
+import { TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD } from "hardhat/builtin-tasks/task-names";
 
 subtask(
   TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD,
@@ -32,6 +35,15 @@ subtask(
 
 const config: HardhatUserConfig = {
   solidity: "0.8.24",
+
+  networks: {
+    baseSepolia: {
+      chainId: 84532,
+      url: "https://public.stackup.sh/api/v1/node/base-sepolia",
+      accounts: [process.env.PRIVATE_KEY!],
+      saveDeployments: true,
+    },
+  },
 };
 
 export default config;
