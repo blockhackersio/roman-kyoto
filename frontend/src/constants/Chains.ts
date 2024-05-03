@@ -1,4 +1,4 @@
-const INFURA_KEY = "";
+const INFURA_KEY = "1f80dfadfd824fe8ba572bc9341b0535";
 export const chains = [
     {
         id: "0x1",
@@ -47,5 +47,17 @@ export const chains = [
         token: "DEGEN",
         label: "Degen",
         rpcUrl: "https://rpc.degen.tips",
+    },
+    {
+        id: 80002,
+        token: "MATIC",
+        label: "Polygon - Amoy",
+        rpcUrl: "https://rpc-amoy.polygon.technology/",
+    },
+    {
+        id: 84532,
+        token: "ETH",
+        label: "Base Sepolia",
+        rpcUrl: "https://sepolia.base.org",
     },
 ];
