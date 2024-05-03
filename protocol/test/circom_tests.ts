@@ -24,7 +24,7 @@ import { Provider } from "ethers";
 import { numberToHexUnpadded } from "@noble/curves/abstract/utils";
 
 class CircomStuff {
-  constructor(private provider: Provider, private address: string) {}
+  constructor(private provider: Provider, private address: string) { }
 
   async spendProve(
     privateKey: string,
@@ -34,7 +34,7 @@ class CircomStuff {
     pathIndex: string,
     nullifier: string,
     root: string,
-    pathElements:string[],
+    pathElements: string[]
   ) {
     return await generateGroth16Proof(
       {
@@ -45,10 +45,34 @@ class CircomStuff {
         pathIndex,
         nullifier,
         root,
-        pathElements
+        pathElements,
       },
       "spend"
     );
+  }
+
+  async outputProve(
+    amount: string,
+    blinding: string,
+    asset: string,
+    publicKey: string
+  ) {
+    return await generateGroth16Proof(
+      {
+        amount,
+        blinding,
+        asset,
+        publicKey,
+      },
+      "output"
+    );
+  }
+  async outputVerify(proof: string, commitment: string) {
+    const verifier = CircomExample__factory.connect(
+      this.address,
+      this.provider
+    );
+    return await verifier.outputVerify(proof, [commitment]);
   }
 
   async spendVerify(proof: string, commitment: string) {
@@ -177,7 +201,7 @@ describe("test", () => {
       return circomExample;
     }
 
-    function bigintToStr(b: bigint): string {
+    function toStr(b: bigint): string {
       return "0x" + b.toString(16);
     }
     function stringToBytes(str: string) {
@@ -194,72 +218,91 @@ describe("test", () => {
       return hashToField(bytes);
     }
 
-    it("should create a transaction", async () => {
-      await ensurePoseidon();
-      // create:
-      const [Ro, Vo, pk, b1, b2 /*r1, r2, r3, r4*/] = getRandomBits(10, 253);
-      const spender = poseidonHash([pk]);
-      // const G = babyJub.ExtendedPoint.fromAffine({
-      //   x: babyJub.CURVE.Gx,
-      //   y: babyJub.CURVE.Gy,
-      // });
-      // const R = G.multiply(Ro);
-      // const V = G.multiply(Vo);
+    async function notecommitment(n: Note): Promise<string> {
+      return poseidonHash([n.amount, n.spender, n.blinding, n.asset]);
+    }
 
-      // 2 preexisting notes
+    function signature(
+      privateKey: string,
+      commitment: string,
+      index: bigint
+    ): string {
+      return poseidonHash([privateKey, commitment, index]);
+    }
+
+    async function nullifierHash(
+      privateKey: string,
+      n: Note,
+      index: bigint
+    ): Promise<string> {
+      const commitment = await notecommitment(n);
+      return poseidonHash([
+        commitment,
+        index,
+        signature(privateKey, commitment, index),
+      ]);
+    }
+    // const G = babyJub.ExtendedPoint.fromAffine({
+    //   x: babyJub.CURVE.Gx,
+    //   y: babyJub.CURVE.Gy,
+    // });
+    // const R = G.multiply(Ro);
+    // const V = G.multiply(Vo);
+    // create:
+    //      const n1vc = valcommit(V, n1.amount, R, r1);
+    //      const n2vc = valcommit(V, n2.amount, R, r2);
+    it("output", async () => {
+      await ensurePoseidon();
+      const [Ro, Vo, privateKey, b1, b2 /*r1, r2, r3, r4*/] = getRandomBits(
+        10,
+        253
+      );
+      const spendKey = poseidonHash([privateKey]);
+
       const n1: Note = {
         amount: 10n,
         asset: await getAsset("USDC"),
-        spender,
+        spender: spendKey,
+        blinding: toFixedHex(b1),
+      };
+
+      const n1nc = await notecommitment(n1);
+
+      const contract = await getCircomExampleContract();
+      const proof = await contract.outputProve(toStr(n1.amount), n1.blinding, n1.asset, n1.spender);
+      await contract.outputVerify(proof, n1nc);
+    });
+
+    it("spend", async () => {
+      await ensurePoseidon();
+      const [Ro, Vo, privateKey, b1, b2 /*r1, r2, r3, r4*/] = getRandomBits(
+        10,
+        253
+      );
+      const spendKey = poseidonHash([privateKey]);
+
+      const n1: Note = {
+        amount: 10n,
+        asset: await getAsset("USDC"),
+        spender: spendKey,
         blinding: toFixedHex(b1),
       };
 
       const n2: Note = {
         amount: 10n,
         asset: await getAsset("USDC"),
-        spender,
+        spender: spendKey,
         blinding: toFixedHex(b2),
       };
 
-      async function notecommitment(n: Note): Promise<string> {
-        return poseidonHash([n.amount, n.spender, n.blinding, n.asset]);
-      }
-
-      function signature(
-        privateKey: string,
-        commitment: string,
-        index: bigint
-      ): string {
-        return poseidonHash([privateKey, commitment, index]);
-      }
-
-      async function nullifierHash(
-        privateKey: string,
-        n: Note,
-        index: bigint
-      ): Promise<string> {
-        const commitment = await notecommitment(n);
-        return poseidonHash([
-          commitment,
-          index,
-          signature(privateKey, commitment, index),
-        ]);
-      }
-
-      // 2 note commitments
       const n1nc = await notecommitment(n1);
-      //      const n2nc = await notecommitment(n2);
-      // 2 value commitments
-
-      //      const n1vc = valcommit(V, n1.amount, R, r1);
-      //      const n2vc = valcommit(V, n2.amount, R, r2);
 
       const contract = await getCircomExampleContract();
 
       const tree = new MerkleTree(5, [], {
         hashFunction: poseidonHash2,
       });
-      
+
       tree.bulkInsert([n1nc]);
 
       const index = tree.indexOf(n1nc);
@@ -268,17 +311,17 @@ describe("test", () => {
         .path(index)
         .pathElements.map((e) => e.toString());
 
-      const root = tree.root;
+      const root = `${tree.root}`;
 
       const proof = await contract.spendProve(
-        bigintToStr(pk),
-        bigintToStr(n1.amount),
+        toStr(privateKey),
+        toStr(n1.amount),
         n1.blinding,
         n1.asset,
-        bigintToStr(BigInt(index)),
-        await nullifierHash(bigintToStr(pk), n1, BigInt(index)),
-        `${root}`,
-        pathElements,
+        toStr(BigInt(index)),
+        await nullifierHash(toStr(privateKey), n1, BigInt(index)),
+        root,
+        pathElements
       );
 
       await contract.spendVerify(proof, n1nc);

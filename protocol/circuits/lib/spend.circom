@@ -3,9 +3,9 @@ pragma circom 2.0.0;
 
 include "./keypair.circom";
 include "./merkleproof.circom";
+include "../../node_modules/circomlib/circuits/poseidon.circom";
 
 template Spend(levels) {
-
   signal input root;
   signal input privateKey;
   signal input amount;

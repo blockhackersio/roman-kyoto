@@ -3,12 +3,15 @@ pragma solidity ^0.8.24;
 
 import {MultiplierVerifier} from "./generated/multiplier.sol";
 import {SpendVerifier} from "./generated/spend.sol";
+import {OutputVerifier} from "./generated/output.sol";
 
 contract CircomExample {
     SpendVerifier public spendVerifier;
+    OutputVerifier public outputVerifier;
 
-    constructor(address _spendVerifier) payable {
+    constructor(address _spendVerifier, address _outputVerifier) payable {
         spendVerifier = SpendVerifier(_spendVerifier);
+        outputVerifier = OutputVerifier(_outputVerifier);
     }
 
     function parseProof(
@@ -28,4 +31,13 @@ contract CircomExample {
         );
         require(spendVerifier.verifyProof(a, b, c, _pubSignals), "invalid proof");
     }
+
+    function outputVerify(bytes memory _proof, uint[1] memory _pubSignals) public view {
+        (uint[2] memory a, uint[2][2] memory b, uint[2] memory c) = parseProof(
+            _proof
+        );
+        require(outputVerifier.verifyProof(a, b, c, _pubSignals), "invalid proof");
+    }
+
+    
 }
