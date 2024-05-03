@@ -2,15 +2,18 @@
 pragma circom 2.0.0;
 
 include "./keypair.circom";
+include "./merkleproof.circom";
 
-template Spend() {
+template Spend(levels) {
 
+  signal input root;
   signal input privateKey;
   signal input amount;
   signal input blinding;
   signal input asset;
   signal input pathIndex;
   signal input nullifier;
+  signal input pathElements[levels];
   signal output commitment;
 
   component keypair = Keypair();
@@ -35,5 +38,16 @@ template Spend() {
   nullifierHash.inputs[2] <== sig.out;
   nullifierHash.out === nullifier;
 
+  component merkle = MerkleProof(levels);
+  merkle.leaf <== commitmentHasher.out;
+  merkle.index <== pathIndex;
+  for (var i = 0; i < levels; i++) {
+      merkle.pathElements[i] <== pathElements[i];
+  }
 
+  // check merkle proof only if amount is non-zero
+  component checkRoot = ForceEqualIfEnabled();
+  checkRoot.in[0] <== root;
+  checkRoot.in[1] <== merkle.root;
+  checkRoot.enabled <== amount;
 }

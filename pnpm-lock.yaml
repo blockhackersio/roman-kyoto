@@ -108,6 +108,9 @@ importers:
       ethers:
         specifier: 6.11.1
         version: 6.11.1
+      fixed-merkle-tree:
+        specifier: ^0.7.3
+        version: 0.7.3
       hardhat:
         specifier: ^2.22.2
         version: 2.22.2(ts-node@10.9.2)(typescript@5.4.5)
@@ -3854,6 +3857,10 @@ packages:
     resolution: {integrity: sha512-1IMnbjt4KzsQfnhnzNd8wUEgXZ44IzZaZmnLYx7D5FZlaHt2gW20Cri8Q+E/t5tIj4+epTBub+2Zxu/vNILzqQ==}
     dependencies:
       micromatch: 4.0.5
+    dev: false
+
+  /fixed-merkle-tree@0.7.3:
+    resolution: {integrity: sha512-b50ZBpDfp/Nru120IdeS0IyqbVjOien1OSdWMDdcxS9uVHLV668xndNkEnn9t1WFOvc5aw1owl6l4N8mP5mkKg==}
     dev: false
 
   /flat-cache@3.2.0:

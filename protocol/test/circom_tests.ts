@@ -3,10 +3,16 @@ import { ethers, ignition } from "hardhat";
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
+import MerkleTree from "fixed-merkle-tree";
 // import { CircomExample } from "../src";
 import CircomExampleModule from "../ignition/modules/CircomExample";
 import { Note } from "../src/index";
-import { ensurePoseidon, poseidonHash, poseidonHashRaw } from "../src/poseidon";
+import {
+  ensurePoseidon,
+  poseidonHash,
+  poseidonHash2,
+  poseidonHashRaw,
+} from "../src/poseidon";
 import { generateGroth16Proof, toFixedHex } from "../src/zklib";
 import { keccak_256 } from "@noble/hashes/sha3";
 import { ExtPointType, twistedEdwards } from "@noble/curves/abstract/edwards";
@@ -26,7 +32,9 @@ class CircomStuff {
     blinding: string,
     asset: string,
     pathIndex: string,
-    nullifier: string
+    nullifier: string,
+    root: string,
+    pathElements:string[],
   ) {
     return await generateGroth16Proof(
       {
@@ -36,6 +44,8 @@ class CircomStuff {
         asset,
         pathIndex,
         nullifier,
+        root,
+        pathElements
       },
       "spend"
     );
@@ -187,7 +197,7 @@ describe("test", () => {
     it("should create a transaction", async () => {
       await ensurePoseidon();
       // create:
-      const [Ro, Vo, pk, b1, b2, /*r1, r2, r3, r4*/] = getRandomBits(10, 253);
+      const [Ro, Vo, pk, b1, b2 /*r1, r2, r3, r4*/] = getRandomBits(10, 253);
       const spender = poseidonHash([pk]);
       // const G = babyJub.ExtendedPoint.fromAffine({
       //   x: babyJub.CURVE.Gx,
@@ -203,7 +213,6 @@ describe("test", () => {
         spender,
         blinding: toFixedHex(b1),
       };
-      const n1Index = 0n;
 
       const n2: Note = {
         amount: 10n,
@@ -211,8 +220,6 @@ describe("test", () => {
         spender,
         blinding: toFixedHex(b2),
       };
-
-      console.log({ pk, n1 });
 
       async function notecommitment(n: Note): Promise<string> {
         return poseidonHash([n.amount, n.spender, n.blinding, n.asset]);
@@ -237,7 +244,6 @@ describe("test", () => {
           index,
           signature(privateKey, commitment, index),
         ]);
-        // return pose;
       }
 
       // 2 note commitments
@@ -249,15 +255,32 @@ describe("test", () => {
       //      const n2vc = valcommit(V, n2.amount, R, r2);
 
       const contract = await getCircomExampleContract();
+
+      const tree = new MerkleTree(5, [], {
+        hashFunction: poseidonHash2,
+      });
+      
+      tree.bulkInsert([n1nc]);
+
+      const index = tree.indexOf(n1nc);
+
+      const pathElements = tree
+        .path(index)
+        .pathElements.map((e) => e.toString());
+
+      const root = tree.root;
+
       const proof = await contract.spendProve(
         bigintToStr(pk),
         bigintToStr(n1.amount),
         n1.blinding,
         n1.asset,
-        bigintToStr(n1Index),
-        await nullifierHash(bigintToStr(pk), n1, n1Index)
+        bigintToStr(BigInt(index)),
+        await nullifierHash(bigintToStr(pk), n1, BigInt(index)),
+        `${root}`,
+        pathElements,
       );
-      console.log(proof);
+
       await contract.spendVerify(proof, n1nc);
     });
   });
