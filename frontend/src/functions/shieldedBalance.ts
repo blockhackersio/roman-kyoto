@@ -113,7 +113,7 @@ function generateNullifier(
 }
 
 // Get the shielded balance of each asset for a user
-function getShieldedBalances(
+function calculateShieldedBalances(
   utxos: Utxo[],
   spentNullifiers: string[]
 ): Map<string, bigint> {
