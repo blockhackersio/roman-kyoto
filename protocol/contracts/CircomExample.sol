@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-import {MultiplierVerifier} from "./generated/multiplier.sol";
-import {SpendVerifier} from "./generated/spend.sol";
-import {OutputVerifier} from "./generated/output.sol";
+import {MultiplierVerifier} from "./generated/MultiplierVerifier.sol";
+import {SpendVerifier} from "./generated/SpendVerifier.sol";
+import {OutputVerifier} from "./generated/OutputVerifier.sol";
+
 import "./EdOnBN254.sol";
 
 import "hardhat/console.sol";
@@ -78,10 +79,7 @@ contract CircomExample {
         uint256[2] memory _R,
         uint256[2] memory _A,
         bytes memory _message
-    )
-        public
-        view
-    {
+    ) public view {
         EdOnBN254.Affine memory _Rp = EdOnBN254.Affine(_R[0], _R[1]);
         EdOnBN254.Affine memory _Ap = EdOnBN254.Affine(_A[0], _A[1]);
         bytes memory data = abi.encode(_Rp.x, _Rp.y, _Ap.x, _Ap.y, _message);
@@ -95,7 +93,6 @@ contract CircomExample {
             .add(_Ap.mul(_c));
 
         require(_Z.x == 0, "signature is not valid");
-
     }
 
     function transact(
