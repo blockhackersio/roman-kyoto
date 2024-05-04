@@ -262,7 +262,7 @@ export function getAsset(assetString: string) {
 }
 
 export async function notecommitment(n: Note): Promise<string> {
-  return  "0x"+BigInt(poseidonHash([n.amount, n.spender, n.blinding, n.asset])).toString(16);
+  return poseidonHash([n.amount, n.spender, n.blinding, n.asset]);
 }
 
 export function signature(

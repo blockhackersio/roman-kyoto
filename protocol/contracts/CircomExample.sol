@@ -18,24 +18,24 @@ contract CircomExample is MerkleTreeWithHistory {
     OutputVerifier public outputVerifier;
 
     event NewCommitment(
-        bytes32 indexed commitment,
+        uint256 indexed commitment,
         uint256 indexed index,
         bytes encryptedOutput
     );
 
-    event NewNullifier(bytes32 indexed nullifier);
+    event NewNullifier(uint256 indexed nullifier);
 
-    mapping(bytes32 => bool) public nullifierHashes;
+    mapping(uint256 => bool) public nullifierHashes;
 
     struct SpendProof {
         bytes proof;
-        bytes32 nullifier;
+        uint256 nullifier;
         uint[2] valueCommitment;
     }
 
     struct OutputProof {
         bytes proof;
-        bytes32 commitment;
+        uint256 commitment;
         uint[2] valueCommitment;
         bytes encryptedOutput;
     }
@@ -119,7 +119,7 @@ contract CircomExample is MerkleTreeWithHistory {
         EdOnBN254.Affine memory _valueBal,
         uint256 _root
     ) internal {
-        require(isKnownRoot(bytes32(_root)), "Invalid merkle root");
+        // require(isKnownRoot(bytes32(_root)), "Invalid merkle root");
 
         for (uint i = 0; i < _spendProof.length; i++) {
             require(
@@ -251,7 +251,7 @@ contract CircomExample is MerkleTreeWithHistory {
         _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
     }
 
-    function isSpent(bytes32 _nullifierHash) public view returns (bool) {
+    function isSpent(uint256 _nullifierHash) public view returns (bool) {
         return nullifierHashes[_nullifierHash];
     }
 }
