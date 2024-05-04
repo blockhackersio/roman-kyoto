@@ -143,6 +143,23 @@ contract CircomExample {
         }
     }
 
+    function deposit(
+        SpendProof[] memory _spendProof,
+        OutputProof[] memory _outputProofs,
+        uint[2] memory _bpk,
+        uint256 _assetId,
+    ) public view {
+
+       EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
+
+      _transactCheck(
+        _spendProof,
+        _outputProofs,
+        _bpk,
+        _valueBal
+      );
+
+    }
     function transact(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
