@@ -8,31 +8,37 @@ import {
     HStack,
     VStack,
 } from "@chakra-ui/react";
-import { USDC, WBTC } from "@/constants/Tokens";
-import { useConnectWallet } from "@web3-onboard/react";
+import { USDC, USDC_contract_addresses, WBTC } from "@/constants/Tokens";
+import { useConnectWallet, useSetChain } from "@web3-onboard/react";
 import { getERC20Balance } from "@/helpers/ERC20helpers";
-import { chains } from "@/constants/Chains";
 
 export default function Balances(): JSX.Element {
     const [{ wallet }] = useConnectWallet();
-
     const [USDCBalance, setUSDCBalance] = useState<number>(0);
     const [WBTCBalance, setWBTCBalance] = useState<number>(0);
-    useEffect(() => {
-        if (wallet) {
-            getERC20Balance(
-                USDC.contractAddress,
-                wallet?.accounts[0]?.address || "",
-                chains.find((chain) => chain.id === USDC.chainId)?.rpcUrl || ""
-            ).then((result) => setUSDCBalance(result.toNumber()));
+    const [{ chains, connectedChain }, setChain] = useSetChain();
 
-            getERC20Balance(
-                WBTC.contractAddress,
-                wallet?.accounts[0]?.address || "",
-                chains.find((chain) => chain.id === WBTC.chainId)?.rpcUrl || ""
-            ).then((result) => setWBTCBalance(result.toNumber()));
+    useEffect(() => {
+        if (wallet && connectedChain) {
+            const rpcUrl = chains.find(
+                (chain) => chain.id === connectedChain?.id
+            )?.rpcUrl;
+
+            if (wallet && rpcUrl && rpcUrl !== "") {
+                getERC20Balance(
+                    USDC_contract_addresses[connectedChain?.id],
+                    wallet?.accounts[0]?.address || "",
+                    rpcUrl
+                ).then((result) => setUSDCBalance(result.toNumber()));
+
+                getERC20Balance(
+                    "",
+                    wallet?.accounts[0]?.address || "",
+                    rpcUrl
+                ).then((result) => setWBTCBalance(result.toNumber()));
+            }
         }
-    }, [wallet]);
+    }, [wallet, connectedChain, chains]);
 
     return (
         <Card p={4} border="1px" borderColor="gray.200" borderRadius="md">
@@ -42,9 +48,11 @@ export default function Balances(): JSX.Element {
             <CardBody>
                 <HStack spacing={3} justify="center">
                     <TokenBalanceCard
-                        symbol={USDC.symbol}
+                        symbol={"USDC"}
                         balance={USDCBalance}
-                        icon={USDC.icon}
+                        icon={
+                            "https://cryptologos.cc/logos/usd-coin-usdc-logo.png"
+                        }
                     />
                     <TokenBalanceCard
                         symbol={WBTC.symbol}
