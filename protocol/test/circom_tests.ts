@@ -44,7 +44,7 @@ it("output", async () => {
   await ensurePoseidon();
 
   const { R, valcommit, getV } = getInitialPoints(babyJub);
-  const [privateKey, b1, r1] = getRandomBits(10, 253);
+  const [privateKey, b1,] = getRandomBits(10, 253);
   const spendKey = poseidonHash([privateKey]);
 
   const n1: Note = {
@@ -55,7 +55,7 @@ it("output", async () => {
   };
 
   const n1nc = await notecommitment(n1);
-  const n1vc = valcommit(n1, R, r1);
+  const {Vc:n1vc, r:r1}= valcommit(n1);
   const contract = await getCircomExampleContract();
   const V = getV(n1.asset);
   const proof = await contract.outputProve(
@@ -76,7 +76,7 @@ it("output", async () => {
 
 it("spend", async () => {
   await ensurePoseidon();
-  const [privateKey, b1, r1] = getRandomBits(10, 253);
+  const [privateKey, b1] = getRandomBits(10, 253);
   const spendKey = poseidonHash([privateKey]);
 
   const { R, valcommit, getV } = getInitialPoints(babyJub);
@@ -89,7 +89,7 @@ it("spend", async () => {
 
   const n1nc = await notecommitment(n1);
 
-  const n1vc = valcommit(n1, R, r1);
+  const { Vc: n1vc, r: r1 } = valcommit(n1);
   const contract = await getCircomExampleContract();
 
   const tree = new MerkleTree(5, [], {
@@ -170,14 +170,21 @@ it("Bind signatures", async () => {
 
 it("transact", async () => {
   await ensurePoseidon();
-  const [privateKey, recieverPrivateKey, b1, b2, r1, r2] = getRandomBits(
-    10,
-    253
-  );
+  const [privateKey, recieverPrivateKey, b1, b2] = getRandomBits(10, 253);
   const spendKey = poseidonHash([privateKey]);
   const receiverSpendKey = poseidonHash([recieverPrivateKey]);
 
   const { R, modN, valcommit, getV } = getInitialPoints(babyJub);
+
+  const noteList: Note[] = [
+    {
+      amount: 10n,
+      asset: await getAsset("USDC"),
+      spender: spendKey,
+      blinding: toFixedHex(b1),
+    },
+  ];
+
   // input
   const n1: Note = {
     amount: 10n,
@@ -186,7 +193,7 @@ it("transact", async () => {
     blinding: toFixedHex(b1),
   };
   const n1nc = await notecommitment(n1);
-  const n1vc = valcommit(n1, R, r1);
+  const { Vc: n1vc, r: r1 } = valcommit(n1);
 
   // output
   const n2: Note = {
@@ -197,7 +204,7 @@ it("transact", async () => {
   };
 
   const n2nc = await notecommitment(n2);
-  const n2vc = valcommit(n2, R, r2);
+  const { Vc: n2vc, r: r2 } = valcommit(n2);
 
   const bsk = modN(r1 - r2);
   const Bpk = R.multiply(bsk);

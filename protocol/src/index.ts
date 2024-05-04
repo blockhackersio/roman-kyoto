@@ -265,14 +265,6 @@ export function getInitialPoints(B: BabyJub) {
     return V;
   }
 
-  function valcommit(n: Note, R: ExtPointType, r: bigint) {
-    const V = getV(n.asset);
-    const vV = V.multiply(modN(n.amount));
-    const rR = R.multiply(modN(r));
-    const Vc = vV.add(rR);
-    return Vc;
-  }
-
 function reddsaSign(
   a: bigint,
   A: ExtPointType,
@@ -328,6 +320,23 @@ function reddsaSign(
     y: B.CURVE.Gy,
   });
   const R = G.multiply(Ro);
+
+
+
+
+  function valcommit(n: Note) {
+    const r = getRandomBigInt(253);
+    const V = getV(n.asset);
+    const vV = V.multiply(modN(n.amount));
+    const rR = R.multiply(modN(r));
+    const Vc = vV.add(rR);
+    return {Vc, r};
+  }
+
+
+
+
+
   return { G, R, modN, valcommit, getV, reddsaSign };
 }
 
