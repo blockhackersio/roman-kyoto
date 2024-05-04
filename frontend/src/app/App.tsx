@@ -40,7 +40,7 @@ export default function App() {
           provider
         );
 
-        const userPrivateKey = "abc";
+        const userPrivateKey = "abc"; // Replace with actual user private key for used for note decryption
         const [utxos, nullifiers] = await Promise.all([
           getUserUtxos(contract, userPrivateKey),
           getSpentNullifiers(contract),
@@ -67,7 +67,7 @@ export default function App() {
           marginX={4}
           marginY={8}
         >
-          <Balances />
+          <Balances shieldedBalances={shieldedBalances} />
           <TransferCard />
           <DepositCard />
           <WithdrawCard />
