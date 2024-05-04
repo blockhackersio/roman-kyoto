@@ -86,16 +86,20 @@ async function getUserUtxos(
 }
 
 // Generate commitment of a given note
-function getCommitment(note: Note): string {
+function getCommitment(note: Note, userPublicKey: string): string {
   // Poseidon hash of asset, pubkey, binding, asset
-  return commitment;
+  // const commitment = poseidonHash([note.amount, userPublicKey, note.blinding, note.asset]);
+  // return commitment;
 }
 
 // Generate nullifier of a given note
-function generateNullifier(note: Note): string {
-  const commitment = getCommitment(note);
-  // const signature = privateKey
-  // Poseidon hash of commitment,
+function generateNullifier(
+  commitment: NewCommitment,
+  userPrivateKey: string
+): string {
+  // Poseidon hash of commitment, index, private key
+  // const nullifier = poseidonHash([commitment.commitment, commitment.index, userPrivateKey]);
+  // return nullifier;
 }
 
 function removeNullifiedNotes(notes: Note[], nullifiers: string[]): Note[] {
