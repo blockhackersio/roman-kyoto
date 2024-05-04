@@ -71,6 +71,14 @@ const config: HardhatUserConfig = {
     currencyDisplayPrecision: 4,
     coinmarketcap: process.env.COIN_MARKET_CAP_API_KEY,
   },
+
+  gasReporter: {
+    currency: "ETH",
+    L1: "ethereum",
+    gasPrice: 21,
+    currencyDisplayPrecision: 4,
+    coinmarketcap: process.env.COIN_MARKET_CAP_API_KEY,
+  },
 };
 
 export default config;
