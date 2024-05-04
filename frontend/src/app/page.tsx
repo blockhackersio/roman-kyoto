@@ -16,6 +16,7 @@ import NavBar from "../components/NavBar";
 import TransactionTable from "@/components/TransactionTable";
 import { Button, Container, Flex } from "@chakra-ui/react";
 import { Transaction } from "@/models/Transaction";
+import EventRetrieval from "@/functions/EventRetrieval";
 
 const injected = injectedModule();
 const coinbase = coinbaseModule();
@@ -67,6 +68,11 @@ const transactions: Transaction[] = [
 ];
 
 export default function Page() {
+  const handleButtonClick = () => {
+    // Call NoteListener with a test chain ID or any other parameter
+    EventRetrieval("0x1"); // Example chain ID, replace with actual test data as needed
+  };
+
   return (
     <Web3OnboardProvider web3Onboard={web3Onboard}>
       <NavBar />
@@ -76,7 +82,7 @@ export default function Page() {
           mb={4}
           gap={{ base: "2", md: "4" }}
         >
-          <Button colorScheme="blue" size="lg">
+          <Button colorScheme="blue" size="lg" onClick={handleButtonClick}>
             USDC
           </Button>
           <Button colorScheme="yellow" size="lg">
