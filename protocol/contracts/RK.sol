@@ -47,10 +47,11 @@ contract RK is CircomExample, CCIPReceiver {
     constructor(
         address _spendVerifier,
         address _outputVerifier,
+        address _merkleHasher,
         address _router,
         address[] memory _allowlistedRemotes,
         uint64[] memory _allowlistedChains
-    ) CircomExample(_spendVerifier, _outputVerifier) CCIPReceiver(_router) {
+    ) CircomExample(_spendVerifier, _outputVerifier, _merkleHasher) CCIPReceiver(_router) {
         router = IRouterClient(_router);
 
         // set all of our allowed remotes on chains

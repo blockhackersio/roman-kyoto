@@ -5,11 +5,13 @@ import {MultiplierVerifier} from "./generated/MultiplierVerifier.sol";
 import {SpendVerifier} from "./generated/SpendVerifier.sol";
 import {OutputVerifier} from "./generated/OutputVerifier.sol";
 
+import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
+
 import "./EdOnBN254.sol";
 
 import "hardhat/console.sol";
 
-contract CircomExample {
+contract CircomExample is MerkleTreeWithHistory {
     using EdOnBN254 for *;
 
     SpendVerifier public spendVerifier;
@@ -27,7 +29,11 @@ contract CircomExample {
         uint[2] valueCommitment;
     }
 
-    constructor(address _spendVerifier, address _outputVerifier) payable {
+    constructor(
+        address _spendVerifier,
+        address _outputVerifier,
+        address _hasher
+    ) MerkleTreeWithHistory(5, _hasher) {
         spendVerifier = SpendVerifier(_spendVerifier);
         outputVerifier = OutputVerifier(_outputVerifier);
     }
@@ -95,10 +101,11 @@ contract CircomExample {
         require(_Z.x == 0, "signature is not valid");
     }
 
-    function transact(
+    function _transactCheck(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
-        uint[2] memory _bpk
+        uint[2] memory _bpk,
+        EdOnBN254.Affine memory _valueBal
     ) public view {
         EdOnBN254.Affine memory total = EdOnBN254.zero();
 
@@ -125,8 +132,8 @@ contract CircomExample {
         }
 
         require(
-            total.add(EdOnBN254.zero().neg()).x == _bpk[0] &&
-                total.add(EdOnBN254.zero().neg()).y == _bpk[1],
+            total.add(_valueBal.neg()).x == _bpk[0] &&
+                total.add(_valueBal.neg()).y == _bpk[1],
             "Sum of values is incorrect"
         );
 
@@ -139,5 +146,80 @@ contract CircomExample {
             OutputProof memory outputProof = _outputProofs[j];
             outputVerify(outputProof.proof, [outputProof.commitment]);
         }
+    }
+
+    function deposit(
+        SpendProof[] memory _spendProof,
+        OutputProof[] memory _outputProofs,
+        uint[2] memory _bpk,
+        uint256 _assetId,
+        uint256 _depositAmount
+    ) public {
+        // this is the same as G * poseidon(asset) * value of asset being deposited
+        EdOnBN254.Affine memory _valueBal = EdOnBN254
+            .primeSubgroupGenerator()
+            .mul(_assetId)
+            .mul(_depositAmount)
+            .neg();
+
+        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal);
+
+        // Insert all leaves except the last one using pairs as usual
+        for (uint i = 0; i < _outputProofs.length - 1; i += 2) {
+            _insert(
+                bytes32(_outputProofs[i].commitment),
+                bytes32(_outputProofs[i + 1].commitment)
+            );
+        }
+
+        if (_outputProofs.length % 2 != 0) {
+            _insert(
+                bytes32(_outputProofs[_outputProofs.length - 1].commitment),
+                bytes32(ZERO_VALUE)
+            );
+        }
+    }
+
+    function withdraw(
+        SpendProof[] memory _spendProof,
+        OutputProof[] memory _outputProofs,
+        uint[2] memory _bpk,
+        uint256 _assetId,
+        uint256 _withdrawAmount
+    ) public {
+        // this is the same as G * poseidon(asset) * value of asset being deposited
+        EdOnBN254.Affine memory _valueBal = EdOnBN254
+            .primeSubgroupGenerator()
+            .mul(_assetId)
+            .mul(_withdrawAmount);
+
+        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal);
+
+        // Insert all leaves except the last one using pairs as usual
+        if (_outputProofs.length != 0) {
+            for (uint i = 0; i < _outputProofs.length - 1; i += 2) {
+                _insert(
+                    bytes32(_outputProofs[i].commitment),
+                    bytes32(_outputProofs[i + 1].commitment)
+                );
+            }
+
+            if (_outputProofs.length % 2 != 0) {
+                _insert(
+                    bytes32(_outputProofs[_outputProofs.length - 1].commitment),
+                    bytes32(ZERO_VALUE)
+                );
+            }
+        }
+    }
+
+    function transact(
+        SpendProof[] memory _spendProof,
+        OutputProof[] memory _outputProofs,
+        uint[2] memory _bpk
+    ) public view {
+        EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
+
+        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal);
     }
 }

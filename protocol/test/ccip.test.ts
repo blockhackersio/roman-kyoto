@@ -53,6 +53,8 @@ describe("CCIP functionality testing", async () => {
     });
     const EdOnBN254 = (await hre.deployments.get("EdOnBN254")).address;
 
+    const Hasher = await hre.deployments.get("Hasher");
+
     // next we deploy our source RK contract
     await hre.deployments.deploy("RKSource", {
       contract: "RK",
@@ -60,6 +62,7 @@ describe("CCIP functionality testing", async () => {
       args: [
         SpendVerifierSource.address,
         OutputVerifierSource.address,
+        Hasher.address,
         CCIPRouter.address,
         [],
         [],
