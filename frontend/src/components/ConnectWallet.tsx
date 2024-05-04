@@ -1,15 +1,6 @@
-import { useEffect, useState } from "react";
 import { useConnectWallet } from "@web3-onboard/react";
 import { ethers } from "ethers";
-import {
-    Button,
-    Center,
-    Heading,
-    VStack,
-    Text,
-    color,
-    theme,
-} from "@chakra-ui/react";
+import { Button, Center, Heading, VStack, Text } from "@chakra-ui/react";
 import Image from "next/image";
 import toriigate from "../images/toriigate.jpg";
 export default function ConnectWallet() {

@@ -1,7 +1,18 @@
 import { chains } from "@/constants/Chains";
 import { USDC, WBTC } from "@/constants/Tokens";
 import { getERC20Balance } from "@/helper/ERC20helpers";
-import { Button, Card, Input, Select, VStack } from "@chakra-ui/react";
+import {
+    Button,
+    Card,
+    CardBody,
+    CardFooter,
+    CardHeader,
+    Heading,
+    Input,
+    Select,
+    Stack,
+    VStack,
+} from "@chakra-ui/react";
 import { useConnectWallet } from "@web3-onboard/react";
 import { useState, useEffect } from "react";
 
@@ -35,18 +46,25 @@ export default function WithdrawCard(): JSX.Element {
 
     return (
         <Card p={4} border="1px" borderColor="gray.200" borderRadius="md">
-            <VStack spacing={4}>
-                <Select value={selectedToken} onChange={handleTokenChange}>
-                    <option value="USDC">USDC</option>
-                    <option value="WBTC">WBTC</option>
-                </Select>
-                <Input
-                    type="number"
-                    value={withdrawAmount}
-                    onChange={handleAmountChange}
-                    max={maxWithdraw}
-                    placeholder="Enter withdraw amount"
-                />
+            <CardHeader display="flex" justifyContent="center">
+                <Heading size="md">Withdraw</Heading>
+            </CardHeader>
+            <CardBody>
+                <Stack spacing={4}>
+                    <Select value={selectedToken} onChange={handleTokenChange}>
+                        <option value="USDC">USDC</option>
+                        <option value="WBTC">WBTC</option>
+                    </Select>
+                    <Input
+                        type="number"
+                        value={withdrawAmount}
+                        onChange={handleAmountChange}
+                        max={maxWithdraw}
+                        placeholder="Enter withdraw amount"
+                    />
+                </Stack>
+            </CardBody>
+            <CardFooter display="flex" justifyContent="center">
                 <Button
                     onClick={
                         () =>
@@ -56,10 +74,12 @@ export default function WithdrawCard(): JSX.Element {
                         // TODO: Implement withdraw functionality
                     }
                     isDisabled={!wallet || withdrawAmount <= 0}
+                    colorScheme="red"
+                    width="50%"
                 >
                     Withdraw
                 </Button>
-            </VStack>
+            </CardFooter>
         </Card>
     );
 }

@@ -37,7 +37,7 @@ export default function NavBar() {
                     flex={{ base: 1 }}
                     justify={{ base: "center", md: "start" }}
                 >
-                    <Text fontSize="l" fontWeight="bold" marginRight={"0px"}>
+                    <Text fontSize="l" fontWeight="bold" color={"red"}>
                         Roman Kyoto
                     </Text>
                 </Flex>
