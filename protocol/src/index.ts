@@ -265,52 +265,48 @@ export function getInitialPoints(B: BabyJub) {
     return V;
   }
 
-function reddsaSign(
-  a: bigint,
-  A: ExtPointType,
-  msgByteStr: string
-) {
-  // B - base point
-  // a - secret key
-  // A - Public Key
-  // T - random bytes
-  // M - message bytes
-  // --- sign ------
-  // r = H(T||A||M)
-  // R = r * B
-  // S = r + H(R||A||M) * a
-  // R = H(T||A||M) * B
-  // S = H(T||A||M) + H(R||A||M) * a
-  // --- verify ----
-  // c = H(R||A||M)
-  // -B * S + R + c * A == identity
+  function reddsaSign(a: bigint, A: ExtPointType, msgByteStr: string) {
+    // B - base point
+    // a - secret key
+    // A - Public Key
+    // T - random bytes
+    // M - message bytes
+    // --- sign ------
+    // r = H(T||A||M)
+    // R = r * B
+    // S = r + H(R||A||M) * a
+    // R = H(T||A||M) * B
+    // S = H(T||A||M) + H(R||A||M) * a
+    // --- verify ----
+    // c = H(R||A||M)
+    // -B * S + R + c * A == identity
 
-  const abi = new AbiCoder();
+    const abi = new AbiCoder();
 
-  const modN = (a: bigint) => mod(a,B.CURVE.n);
-  const hash = B.CURVE.hash;
-  const BA = B.ExtendedPoint.BASE;
-  const T = randomBytes(32);
-  const r = modN(
-    bytesToNumberBE(
-      hash(
-        abi.encode(
-          ["bytes", "uint256", "uint256", "bytes"],
-          [T, A.x, A.y, msgByteStr]
+    const modN = (a: bigint) => mod(a, B.CURVE.n);
+    const hash = B.CURVE.hash;
+    const BA = B.ExtendedPoint.BASE;
+    const T = randomBytes(32);
+    const r = modN(
+      bytesToNumberBE(
+        hash(
+          abi.encode(
+            ["bytes", "uint256", "uint256", "bytes"],
+            [T, A.x, A.y, msgByteStr]
+          )
         )
       )
-    )
-  );
-  const R = BA.multiply(r);
-  const cData = abi.encode(
-    ["uint256", "uint256", "uint256", "uint256", "bytes"],
-    [R.x, R.y, A.x, A.y, msgByteStr]
-  );
-  const hashed = keccak256(cData);
-  const c = modN(BigInt(hashed));
-  const s = modN(r + c * a);
-  return { R, s };
-}
+    );
+    const R = BA.multiply(r);
+    const cData = abi.encode(
+      ["uint256", "uint256", "uint256", "uint256", "bytes"],
+      [R.x, R.y, A.x, A.y, msgByteStr]
+    );
+    const hashed = keccak256(cData);
+    const c = modN(BigInt(hashed));
+    const s = modN(r + c * a);
+    return { R, s };
+  }
 
   const [Ro] = getRandomBits(2, 253);
 
@@ -321,21 +317,14 @@ function reddsaSign(
   });
   const R = G.multiply(Ro);
 
-
-
-
   function valcommit(n: Note) {
     const r = getRandomBigInt(253);
     const V = getV(n.asset);
     const vV = V.multiply(modN(n.amount));
     const rR = R.multiply(modN(r));
     const Vc = vV.add(rR);
-    return {Vc, r};
+    return { Vc, r };
   }
-
-
-
-
 
   return { G, R, modN, valcommit, getV, reddsaSign };
 }
@@ -378,6 +367,6 @@ export type Note = {
 };
 
 export type NoteStore = {
-  getUnspentUtxos(): Record<string, Note[]>;
-  getUtxosUpTo(amount: bigint, asset: string): Promise<Note[]>;
+  // getUnspentNotes(): Record<string, Note[]>;
+  getNotesUpTo(amount: bigint, asset: string): Promise<Note[]>;
 };
