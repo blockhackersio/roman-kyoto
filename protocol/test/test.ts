@@ -141,7 +141,7 @@ function createStore(hexPrivate: string) {
       }, 0n);
     },
     async logBalances() {
-      const assets = ["USDC"];
+      const assets = ["USDC", "WBTC"];
       const balances = await Promise.all(
         assets.map((asset) => this.getBalance(asset))
       );
@@ -172,11 +172,6 @@ it("integrate", async () => {
 
   let store = createStore(hexPrivate);
 
-  // console.log("\n\n");
-  // console.log("Balances");
-  // const usdc = await store.getBalance("USDC");
-  // console.table([{ asset: "USDC", balance: usdc }]);
-  // console.log("\n\n");
   await store.logBalances();
   let tx = await deposit(
     await ethers.provider.getSigner(),
@@ -188,12 +183,23 @@ it("integrate", async () => {
   );
 
   let receipt = await tx.wait();
+  store = await extractToStore(hexPrivate, store, receipt);
+  await store.logBalances();
 
+  tx = await deposit(
+    await ethers.provider.getSigner(),
+    await verifier.getAddress(),
+    2n,
+    spender,
+    "WBTC",
+    tree
+  );
+
+  receipt = await tx.wait();
   store = await extractToStore(hexPrivate, store, receipt);
   await store.logBalances();
 
   tree = await buildMerkleTree(verifier as any as Contract);
-
   tx = await transfer(
     await ethers.provider.getSigner(),
     await verifier.getAddress(),
