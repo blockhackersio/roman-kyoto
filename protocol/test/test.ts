@@ -1,53 +1,28 @@
-
-// import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { ethers, ignition } from "hardhat";
-import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
-import MerkleTree from "fixed-merkle-tree";
 import CircomExampleModule from "../ignition/modules/CircomExample";
 import {
-  BabyJub,
   CircomStuff,
   Note,
-  NoteStore,
-  OutputProof,
-  SpendProof,
   buildMerkleTree,
   decryptNote,
   deposit,
-  encryptNote,
   getAsset,
-  getBabyJubJub,
-  getInitialPoints,
   getKeys,
-  getRandomBigInt,
-  getRandomBits,
-  notecommitment,
   nullifierHash,
-  toStr,
   transfer,
   withdraw,
 } from "../src/index";
-import { ensurePoseidon, poseidonHash, poseidonHash2 } from "../src/poseidon";
-import { generateGroth16Proof, toFixedHex } from "../src/zklib";
-import { keccak_256 } from "@noble/hashes/sha3";
-import { ExtPointType, twistedEdwards } from "@noble/curves/abstract/edwards";
-import { randomBytes } from "@noble/hashes/utils";
-import { Field, mod } from "@noble/curves/abstract/modular";
+import { ensurePoseidon } from "../src/poseidon";
 import { CircomExample__factory } from "../typechain-types";
 import {
-  AbiCoder,
   Contract,
   ContractTransactionReceipt,
   Interface,
   LogDescription,
-  Provider,
-  Signer,
   Wallet,
-  keccak256,
 } from "ethers";
-import { bytesToNumberBE, ensureBytes } from "@noble/curves/abstract/utils";
 import hasherArtifact from "../contracts/generated/Hasher.json";
 async function deployVerifierFixture() {
   return ignition.deploy(CircomExampleModule);
@@ -73,7 +48,6 @@ export async function getCircomExampleContract() {
   return circomExample;
 }
 
-
 function getNoteCommitmentEvents(receipt: ContractTransactionReceipt | null) {
   if (!receipt) throw new Error("receipt was null!");
 
@@ -96,6 +70,8 @@ type WalletStore = {
   nullifiers: string[];
   privateKey: string;
   getNotesUpTo: (amount: bigint, asset: string) => Promise<Note[]>;
+  getBalance: (asset: string) => Promise<bigint>;
+  logBalances: () => Promise<void>;
 };
 
 async function extractToStore(
@@ -135,6 +111,52 @@ function getUnspentNotes(store: WalletStore) {
   });
 }
 
+function createStore(hexPrivate: string) {
+  let store: WalletStore = {
+    notes: [],
+    nullifiers: [],
+    privateKey: hexPrivate,
+    async getNotesUpTo(amount: bigint, asset: string) {
+      const assetId = await getAsset(asset);
+      const notesOfAsset = getUnspentNotes(store).filter(
+        (n) => n.note.asset === assetId
+      );
+      let total = 0n;
+      let notes: Note[] = [];
+      for (let { note } of notesOfAsset) {
+        if (note.amount === 0n) continue;
+        total += note.amount;
+        notes.push(note);
+        if (total > amount) break;
+      }
+      return notes;
+    },
+    async getBalance(asset: string) {
+      const assetId = await getAsset(asset);
+      const notesOfAsset = getUnspentNotes(store).filter(
+        (n) => n.note.asset === assetId
+      );
+      return notesOfAsset.reduce((total, note) => {
+        return total + note.note.amount;
+      }, 0n);
+    },
+    async logBalances() {
+      const assets = ["USDC"];
+      const balances = await Promise.all(
+        assets.map((asset) => this.getBalance(asset))
+      );
+      console.log("Balance");
+      console.table(
+        balances.map((bal, i) => ({
+          Asset: assets[i],
+          Balance: bal,
+        }))
+      );
+    },
+  };
+  return store;
+}
+
 it("integrate", async () => {
   await ensurePoseidon();
 
@@ -148,27 +170,14 @@ it("integrate", async () => {
   const spender = await getKeys(BigInt(spenderPrivate));
   const hexPrivate = spender.privateKey.toString(16);
 
-  let store: WalletStore = {
-    notes: [],
-    nullifiers: [],
-    privateKey: hexPrivate,
-    async getNotesUpTo(amount: bigint, asset: string) {
-      const assetId = await getAsset(asset);
-      const notesOfAsset = getUnspentNotes(store).filter(
-        (n) => n.note.asset === assetId
-      );
-      let total = 0n;
-      let notes: Note[] = [];
-      for (let { note } of notesOfAsset) {
-        if(note.amount === 0n) continue;
-        total += note.amount;
-        notes.push(note);
-        if(total > amount) break;
-      }
-      return notes;
-    },
-  };
+  let store = createStore(hexPrivate);
 
+  // console.log("\n\n");
+  // console.log("Balances");
+  // const usdc = await store.getBalance("USDC");
+  // console.table([{ asset: "USDC", balance: usdc }]);
+  // console.log("\n\n");
+  await store.logBalances();
   let tx = await deposit(
     await ethers.provider.getSigner(),
     await verifier.getAddress(),
@@ -181,6 +190,7 @@ it("integrate", async () => {
   let receipt = await tx.wait();
 
   store = await extractToStore(hexPrivate, store, receipt);
+  await store.logBalances();
 
   tree = await buildMerkleTree(verifier as any as Contract);
 
@@ -194,8 +204,10 @@ it("integrate", async () => {
     tree,
     store
   );
+
   receipt = await tx.wait();
   store = await extractToStore(hexPrivate, store, receipt);
+  await store.logBalances();
   tree = await buildMerkleTree(verifier as any as Contract);
 
   tx = await withdraw(
@@ -208,4 +220,7 @@ it("integrate", async () => {
     tree,
     store
   );
+  receipt = await tx.wait();
+  store = await extractToStore(hexPrivate, store, receipt);
+  await store.logBalances();
 });

@@ -509,6 +509,10 @@ async function createProofs(
   return { Bpk, spendProofs, outputProofs };
 }
 
+function shrtn(str:string) {
+  return str.slice(0,5) + ".." + str.slice(-5)
+}
+
 export async function transfer(
   signer: Signer,
   poolAddress: string,
@@ -519,6 +523,16 @@ export async function transfer(
   tree: MerkleTree,
   notes: NoteStore
 ): Promise<ContractTransactionResponse> {
+  
+  logAction(
+    "Transferring " +
+    amount +
+    " " +
+    asset +
+    " to " +
+    shrtn(toFixedHex(receiver.publicKey))
+  );
+
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
   const contract = new CircomStuff(signer, poolAddress);
@@ -557,6 +571,14 @@ export async function transfer(
   );
 }
 
+function logAction(str: string) {
+  console.log("\n\n");
+  console.log("-----------------------------------------------");
+  console.log(" " + str);
+  console.log("-----------------------------------------------");
+  console.log("\n\n");
+}
+
 export async function deposit(
   signer: Signer,
   poolAddress: string,
@@ -565,6 +587,7 @@ export async function deposit(
   asset: string, // "USDC" | "WBTC" etc.
   tree: MerkleTree
 ): Promise<ContractTransactionResponse> {
+  logAction("Depositing " + amount + " " + asset);
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
   const contract = new CircomStuff(signer, poolAddress);
@@ -604,6 +627,8 @@ export async function withdraw(
   tree: MerkleTree,
   notes: NoteStore
 ): Promise<ContractTransactionResponse> {
+  logAction("Withdrawing " + amount + " " + asset);
+
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
   const contract = new CircomStuff(signer, poolAddress);
