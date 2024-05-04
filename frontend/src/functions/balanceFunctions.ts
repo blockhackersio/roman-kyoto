@@ -12,6 +12,14 @@ import { Contract, EventLog } from "web3-eth-contract";
 // event NewNullifier(bytes32 nullifier);
 // event PublicKey(address indexed owner, bytes key);
 
+
+type Utxo = {
+  commitment: Commitment;
+  note: Note;
+  nullifier?: string;
+};
+
+
 // userKey is the connected wallets private key
 // Function to retrieve and filter commitments based on decrypted output
 async function getUserCommitmentsAndNotes(
@@ -73,32 +81,38 @@ async function getNullifiers(contract: Contract): Promise<string[]> {
   return nullifiers;
 }
 
+async function generateNullifier(
+  commitment: Commitment,
+  signature: string
+): Promise<string> {
+  const nullifier = poseidonHash([
+    commitment.commitment,
+    commitment.index,
+    signature,
+  ]);
+  return nullifier;
+}
+
 async function checkIfCommitmentSpent(
   commitment: Commitment[],
-  nullifiers: string[]
+  allNullifiers: string[],
+  privateKey: string
 ) {
   // Import generate nullifier (use the commitment to generate the nullifier) 
   // check if it matches any nullifiers in the list
   commitment.forEach((commitment) => {
-    const nullifier = generateNullifier(commitment);
+    const nullifier = await generateNullifier(commitment, privateKey);
     if (nullifiers.includes(nullifier)) {
       // Commitment has been spent
     }
   }
-
 }
 
 
-
-
-async function getBalance(notes: Note[], nullifiers: string[]) {
+// Function to get the balance of the user
+async function getBalance(commitments: Commitment[], notes: Note[], nullifiers: string[], privateKey: string) {
   // Check if the commitment has been spent
-  const unspentCommitments = UserComitments.filter(
-    (commitment) => !nullifiers.includes(commitment.commitment)
-  );
-  // Return the balance of the user
-  return unspentCommitments.reduce(
-    (total, commitment) => total + commitment.amount,
-    0
-  );
+  const unspentCommitments = commitments.filter((commitment) => {
+    checkIfCommitmentSpent(commitment, nullifiers, privateKey);
+  });
 }
