@@ -279,6 +279,20 @@ export async function nullifierHash(
 }
 
 export function getInitialPoints(B: BabyJub) {
+  function getV(asset: string) {
+    const { G } = getInitialPoints(B);
+    const V = G.multiply(BigInt(asset));
+    return V;
+  }
+
+  function valcommit(n: Note, R: ExtPointType, r: bigint) {
+    const V = getV(n.asset);
+    const vV = V.multiply(modN(n.amount));
+    const rR = R.multiply(modN(r));
+    const Vc = vV.add(rR);
+    return Vc;
+  }
+
   function reddsaSign(a: bigint, A: ExtPointType, msgByteStr: string) {
     // B - base point
     // a - secret key
@@ -658,9 +672,9 @@ export async function burnToCrosschain(
   );
 
   const babyJub = getBabyJubJub();
-  const { R, modN, valcommit,mintcommit, getV } = getInitialPoints(babyJub);
-  // XXX: Todo finishe mint commitment 
-  const mintcommitment = mintcommit(await getAsset(asset),amount)
+  const { R, modN, valcommit, mintcommit, getV } = getInitialPoints(babyJub);
+  // XXX: Todo finishe mint commitment
+  const mintcommitment = mintcommit(await getAsset(asset), amount);
   return await contract.withdraw(
     spendProofs,
     outputProofs,
