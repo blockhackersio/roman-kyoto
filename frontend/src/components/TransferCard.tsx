@@ -13,6 +13,8 @@ import {
 import { useConnectWallet } from "@web3-onboard/react";
 import { useState, useEffect } from "react";
 import { chains } from "../constants/Chains";
+import { transfer } from "@/helpers/ShieldedPoolhelpers";
+import { ethers } from "ethers";
 
 export default function TransferCard(): JSX.Element {
     const [{ wallet }] = useConnectWallet();
@@ -72,7 +74,10 @@ export default function TransferCard(): JSX.Element {
                         value={recipientAddress}
                         onChange={(e) => setRecipientAddress(e.target.value)}
                         required
-                        pattern="^0x[a-fA-F0-9]{40}$"
+                        isInvalid={
+                            !ethers.utils.isAddress(recipientAddress) &&
+                            recipientAddress !== ""
+                        }
                     />
                     <Input
                         type="number"
@@ -80,15 +85,17 @@ export default function TransferCard(): JSX.Element {
                         onChange={handleAmountChange}
                         max={maxTransfer}
                         placeholder="Enter transfer amount"
-                        required
                     />
                 </Stack>
             </CardBody>
             <CardFooter display="flex" justifyContent="center">
                 <Button
                     onClick={() =>
-                        console.log(
-                            `Transfer ${transferAmount} ${selectedToken}`
+                        transfer(
+                            transferAmount || 0,
+                            recipientAddress,
+                            selectedToken,
+                            selectedChain
                         )
                     }
                     isDisabled={

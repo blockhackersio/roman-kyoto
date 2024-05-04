@@ -1,6 +1,7 @@
 import { chains } from "@/constants/Chains";
 import { USDC, WBTC } from "@/constants/Tokens";
 import { getERC20Balance } from "@/helpers/ERC20helpers";
+import { deposit } from "@/helpers/ShieldedPoolhelpers";
 
 import {
     Button,
@@ -33,7 +34,7 @@ export default function DepositCard(): JSX.Element {
                 //     chains.find((chain) => chain.id === token.chainId)
                 //         ?.rpcUrl || ""
                 // );
-                // setMaxDeposit(balance.toNumber());
+                setMaxDeposit(10);
             };
             fetchBalance();
         }
@@ -71,10 +72,7 @@ export default function DepositCard(): JSX.Element {
                 <CardFooter display="flex" justifyContent="center">
                     <Button
                         onClick={
-                            () =>
-                                console.log(
-                                    `Deposit ${depositAmount} ${selectedToken}`
-                                )
+                            () => deposit(depositAmount || 0, selectedToken)
                             // TODO: Implement deposit functionality
                         }
                         isDisabled={
