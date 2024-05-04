@@ -2,6 +2,7 @@ import { HardhatUserConfig, subtask } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-ethers";
 import "@nomicfoundation/hardhat-ignition";
+import "hardhat-gas-reporter";
 
 import "hardhat-deploy";
 import "dotenv/config";
@@ -34,7 +35,15 @@ subtask(
 );
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.24",
+  solidity: {
+    version: "0.8.24",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 10000,
+      },
+    },
+  },
 
   networks: {
     baseSepolia: {
@@ -49,6 +58,14 @@ const config: HardhatUserConfig = {
       accounts: [process.env.PRIVATE_KEY!],
       saveDeployments: true,
     },
+  },
+
+  gasReporter: {
+    currency: "ETH",
+    L1: "ethereum",
+    gasPrice: 21,
+    currencyDisplayPrecision: 4,
+    coinmarketcap: process.env.COIN_MARKET_CAP_API_KEY,
   },
 };
 
