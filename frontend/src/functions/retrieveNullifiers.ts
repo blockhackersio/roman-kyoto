@@ -10,10 +10,13 @@ async function retrieveNullifiers(
   userKey: string,
   contract: Contract
 ): Promise<string[]> {
-  const allEvents: EventLog[] = await contract.getPastEvents("NewNullifier", {
-    fromBlock: 0,
-    toBlock: "latest",
-  });
+  const allNullifiers: EventLog[] = await contract.getPastEvents(
+    "NewNullifier",
+    {
+      fromBlock: 0,
+      toBlock: "latest",
+    }
+  );
 
   const decryptedOutputs: string[] = allEvents
     .map((event) => {
