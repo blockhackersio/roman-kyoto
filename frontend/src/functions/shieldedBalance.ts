@@ -56,6 +56,8 @@ async function getUserUtxos(
   );
   const Utxos: Utxo[] = [];
 
+  // For each NewCommitment event, attempt to decrypt the note using the user's private key
+  // If note is successfully decrypted, add it to the user's UTXOs
   allCommitmentEvents.forEach((event) => {
     if (event.args) {
       const newCommitment: NewCommitment = {
@@ -71,8 +73,8 @@ async function getUserUtxos(
       );
       // If note is successfully decrypted, add it to the user's UTXOs
       if (note) {
-        // Generate the nullifier of the note
-        const nullifier = generateNullifier(note);
+        // Generate the nullifier of the commitment - used to check if a note has been spent
+        const nullifier = generateNullifier(newCommitment, userPrivateKey);
         const utxo: Utxo = {
           commitment: newCommitment,
           note: note,
@@ -85,8 +87,16 @@ async function getUserUtxos(
   return Utxos;
 }
 
+// Get all spent nullifiers for a given contract
+async function getSpentNullifiers(contract: Contract): Promise<string[]> {
+  const allNullifierEvents = await contract.queryFilter(
+    contract.filters.NewNullifier()
+  );
+  return allNullifierEvents.map((event) => event.args?.nullifier);
+}
+
 // Generate commitment of a given note
-function getCommitment(note: Note, userPublicKey: string): string {
+function generateCommitment(note: Note, userPublicKey: string): string {
   // Poseidon hash of asset, pubkey, binding, asset
   // const commitment = poseidonHash([note.amount, userPublicKey, note.blinding, note.asset]);
   // return commitment;
@@ -102,16 +112,20 @@ function generateNullifier(
   // return nullifier;
 }
 
-function removeNullifiedNotes(notes: Note[], nullifiers: string[]): Note[] {
-  return notes.filter((note) => !nullifiers.includes(note.nullifier));
-}
-
 // Get the shielded balance of each asset for a user
-function getShieldedBalances(notes: Note[]): Map<string, bigint> {
+function getShieldedBalances(
+  utxos: Utxo[],
+  spentNullifiers: string[]
+): Map<string, bigint> {
+  // Filter out spent utxos - (utxos with nullifiers that exist in spent nullifiers array)
+  const unspentUtxos = utxos.filter(
+    (utxo) => !spentNullifiers.includes(utxo.nullifier)
+  );
+
   // Sums the amounts of all notes for each asset
-  return notes.reduce((balances, note) => {
-    const currentBalance = balances.get(note.asset) || BigInt(0);
-    balances.set(note.asset, currentBalance + BigInt(note.amount));
+  return unspentUtxos.reduce((balances, utxo) => {
+    const currentBalance = balances.get(utxo.note.asset) || BigInt(0);
+    balances.set(utxo.note.asset, currentBalance + BigInt(utxo.note.amount));
     return balances;
   }, new Map<string, bigint>());
 }
