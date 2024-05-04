@@ -119,6 +119,22 @@ export class CircomStuff {
 
     await verifier.sigVerify(s, R, A, message);
   }
+
+  async deposit(
+    spends: SpendProof[],
+    outputs: OutputProof[],
+    Bpk: [string, string],
+    assetId: string,
+    amount: string,
+  ) {
+    console.log({ spends, outputs });
+    const verifier = CircomExample__factory.connect(
+      this.address,
+      this.provider
+    );
+    await verifier.deposit(spends, outputs, Bpk, assetId, amount);
+  }
+
   async transact(
     spends: SpendProof[],
     outputs: OutputProof[],
@@ -267,7 +283,6 @@ export async function nullifierHash(
 }
 
 export function getInitialPoints(B: BabyJub) {
-
   function reddsaSign(a: bigint, A: ExtPointType, msgByteStr: string) {
     // B - base point
     // a - secret key
@@ -476,13 +491,96 @@ export async function deposit(
   poolAddress: string,
   amount: bigint,
   senderPrivateKey: bigint,
-  senderPublicKey: string,
   receiverPublicKey: string,
   asset: string, // "USDC" | "WBTC" etc.
   tree: MerkleTree,
-  notes: NoteStore
-): Promise<unknown> {
-  return "";
+): Promise<void> {
+  const babyJub = getBabyJubJub();
+  if (signer.provider === null) throw new Error("Signer must have a provider");
+
+  const contract = new CircomStuff(signer.provider, poolAddress);
+  const assetId = await getAsset(asset);
+
+  const { R, modN, valcommit, getV } = getInitialPoints(babyJub);
+  const spendList: Note[] = [];
+  const outputList: Note[] = [createNote(amount, receiverPublicKey, assetId)];
+
+  const spendProofs: SpendProof[] = [];
+  const outputProofs: OutputProof[] = [];
+
+  let totalRandomness = 0n;
+
+  for (let n1 of spendList) {
+    const n1nc = await notecommitment(n1);
+    const { Vc: n1vc, r: r1 } = valcommit(n1);
+
+    const root = `${tree.root}`;
+    const index = tree.indexOf(n1nc);
+    const pathElements = tree.path(index).pathElements.map((e) => e.toString());
+    const nullifier = await nullifierHash(
+      toStr(senderPrivateKey),
+      n1,
+      BigInt(index)
+    );
+    const Vs = getV(n1.asset);
+    const proofSpend = await contract.spendProve(
+      toStr(senderPrivateKey),
+      toStr(n1.amount),
+      n1.blinding,
+      n1.asset,
+      toStr(BigInt(index)),
+      nullifier,
+      root,
+      pathElements,
+      toStr(Vs.x),
+      toStr(Vs.y),
+      toStr(R.x),
+      toStr(R.y),
+      toStr(r1),
+      toStr(n1vc.x),
+      toStr(n1vc.y)
+    );
+    totalRandomness = modN(totalRandomness + r1);
+    spendProofs.push({
+      proof: proofSpend,
+      valueCommitment: [toStr(n1vc.x), toStr(n1vc.y)],
+      nullifier: n1nc,
+    });
+  }
+
+  for (let n2 of outputList) {
+    const n2nc = await notecommitment(n2);
+    const { Vc: n2vc, r: r2 } = valcommit(n2);
+
+    const Vo = getV(n2.asset);
+    const proofOutput = await contract.outputProve(
+      toStr(n2.amount),
+      n2.blinding,
+      n2.asset,
+      n2.spender,
+      toStr(Vo.x),
+      toStr(Vo.y),
+      toStr(R.x),
+      toStr(R.y),
+      toStr(r2),
+      toStr(n2vc.x),
+      toStr(n2vc.y)
+    );
+    outputProofs.push({
+      proof: proofOutput,
+      valueCommitment: [toStr(n2vc.x), toStr(n2vc.y)],
+      commitment: n2nc,
+    });
+    totalRandomness = modN(totalRandomness - r2);
+  }
+  // Create sig
+  const bsk = totalRandomness;
+  const Bpk = R.multiply(bsk);
+
+  await contract.deposit(spendProofs, outputProofs, [
+    toStr(Bpk.x),
+    toStr(Bpk.y),
+  ], assetId, toStr(amount));
 }
 
 export async function withdraw(

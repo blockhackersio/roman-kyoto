@@ -12,6 +12,7 @@ import {
   NoteStore,
   OutputProof,
   SpendProof,
+  deposit,
   getAsset,
   getBabyJubJub,
   getInitialPoints,
@@ -189,13 +190,12 @@ it("transact", async () => {
     },
   ];
 
+  const nc = await notecommitment(spendList[0]);
+  const tree = new MerkleTree(5, [], {
+    hashFunction: poseidonHash2,
+  });
 
-  const nc = await notecommitment(spendList[0])
-    const tree = new MerkleTree(5, [], {
-      hashFunction: poseidonHash2,
-    });
-
-    tree.insert(nc);
+  tree.insert(nc);
 
   await transfer(
     await ethers.provider.getSigner(),
@@ -211,5 +211,39 @@ it("transact", async () => {
         return spendList;
       },
     }
+  );
+});
+
+it("deposit", async () => {
+  const { verifier } = await loadFixture(deployVerifierFixture);
+  await ensurePoseidon();
+  const [privateKey, recieverPrivateKey, b1] = getRandomBits(10, 253);
+  const spendKey = poseidonHash([privateKey]);
+  const receiverSpendKey = poseidonHash([recieverPrivateKey]);
+
+  const spendList: Note[] = [
+    {
+      amount: 10n,
+      asset: await getAsset("USDC"),
+      spender: spendKey,
+      blinding: toFixedHex(b1),
+    },
+  ];
+
+  const nc = await notecommitment(spendList[0]);
+  const tree = new MerkleTree(5, [], {
+    hashFunction: poseidonHash2,
+  });
+
+  tree.insert(nc);
+
+  await deposit(
+    await ethers.provider.getSigner(),
+    await verifier.getAddress(),
+    10n,
+    privateKey,
+    receiverSpendKey,
+    "USDC",
+    tree
   );
 });
