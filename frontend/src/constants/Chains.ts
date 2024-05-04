@@ -1,7 +1,7 @@
 const INFURA_KEY = "1f80dfadfd824fe8ba572bc9341b0535";
 export const chains = [
     {
-        id: "0x1",
+        id: 1,
         token: "ETH",
         label: "Ethereum Mainnet",
         rpcUrl: `https://mainnet.infura.io/v3/${INFURA_KEY}`,
