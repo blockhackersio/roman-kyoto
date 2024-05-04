@@ -372,7 +372,7 @@ it("spend", async () => {
   await contract.spendVerify(proof, n1nc);
 });
 
-it.only("Bind signatures", async () => {
+it("Bind signatures", async () => {
   // B - base point
   // a - secret key
   // A - Public Key
