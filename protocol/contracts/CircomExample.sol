@@ -166,11 +166,17 @@ contract CircomExample is MerkleTreeWithHistory {
 
         // Insert all leaves except the last one using pairs as usual
         for (uint i = 0; i < _outputProofs.length - 1; i += 2) {
-            _insert(_outputProofs[i].commitment, _outputProofs[i+1].commitment);
+            _insert(
+                bytes32(_outputProofs[i].commitment),
+                bytes32(_outputProofs[i + 1].commitment)
+            );
         }
 
         if (_outputProofs.length % 2 != 0) {
-            _insert(_outputProofs[_outputProofs.length - 1].commitment, ZERO_VALUE);
+            _insert(
+                bytes32(_outputProofs[_outputProofs.length - 1].commitment),
+                bytes32(ZERO_VALUE)
+            );
         }
     }
 
