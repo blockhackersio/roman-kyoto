@@ -11,7 +11,7 @@ import "./EdOnBN254.sol";
 
 import "hardhat/console.sol";
 
-contract CircomExample {
+contract CircomExample is MerkleTreeWithHistory{
     using EdOnBN254 for *;
 
     SpendVerifier public spendVerifier;
@@ -37,7 +37,7 @@ contract CircomExample {
         spendVerifier = SpendVerifier(_spendVerifier);
         outputVerifier = OutputVerifier(_outputVerifier);
 
-        deployFromBytecode(_hasherBytecode);
+        // deployFromBytecode(_hasherBytecode);
     }
 
     function parseProof(
