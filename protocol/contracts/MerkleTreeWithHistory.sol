@@ -8,8 +8,6 @@ interface IHasher {
     ) external pure returns (bytes32);
 }
 
-import "hardhat/console.sol";
-
 contract MerkleTreeWithHistory {
     uint256 public constant FIELD_SIZE =
         21888242871839275222246405745257275088548364400416034343698204186575808495617;
@@ -30,17 +28,6 @@ contract MerkleTreeWithHistory {
     uint32 public currentRootIndex = 0; // todo remove
     uint32 public nextIndex = 0;
 
-    // function deployFromBytecode(
-    //     bytes memory bytecode
-    // ) public returns (address) {
-    //     address child;
-    //     assembly {
-    //         mstore(0x0, bytecode)
-    //         child := create(0, 0xa0, calldatasize())
-    //     }
-    //     return child;
-    // }
-
     constructor(
         uint32 _levels,
         address _hasher //        bytes memory _hasherBytecode
@@ -49,13 +36,7 @@ contract MerkleTreeWithHistory {
         require(_levels < 32, "_levels should be less than 32");
         levels = _levels;
 
-        // address _hasher = deployFromBytecode(_hasherBytecode);
-
         hasher = IHasher(_hasher);
-    }
-
-    function setHasherAddress(address _hasher) public {
-      hasher = IHasher(_hasher);
     }
 
     function _initialize() internal {
@@ -84,9 +65,6 @@ contract MerkleTreeWithHistory {
         bytes32[2] memory input;
         input[0] = _left;
         input[1] = _right;
-        console.logBytes32(input[0]);
-        console.logBytes32(input[1]);
-        console.logAddress(address(hasher));
         return hasher.poseidon(input);
     }
 
@@ -102,7 +80,6 @@ contract MerkleTreeWithHistory {
         );
         uint32 currentIndex = _nextIndex / 2;
         bytes32 currentLevelHash = hashLeftRight(_leaf1, _leaf2);
-        console.log("yes");
         bytes32 left;
         bytes32 right;
 
