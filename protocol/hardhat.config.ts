@@ -58,6 +58,10 @@ const config: HardhatUserConfig = {
       accounts: [process.env.PRIVATE_KEY!],
       saveDeployments: true,
     },
+    cardona: {
+      url: "https://rpc.cardona.zkevm-rpc.com/",
+      accounts: [process.env.PRIVATE_KEY!],
+    },
   },
 
   gasReporter: {
