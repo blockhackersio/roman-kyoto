@@ -110,8 +110,8 @@ export async function getSpentNullifiers(
 async function generateCommitment(note: Note): Promise<string> {
   // Poseidon hash of asset, pubkey, binding, asset
   // const commitment = poseidonHash([note.amount, userPublicKey, note.blinding, note.asset]);
-  const commitment = await notecommitment(note);
-  return commitment;
+  // const commitment = await notecommitment(note);
+  // return commitment;
 }
 
 // Generate nullifier of a given note
@@ -122,8 +122,8 @@ async function generateNullifier(
 ): Promise<string> {
   // Poseidon hash of commitment, index, private key
   // const nullifier = poseidonHash([commitment.commitment, commitment.index, userPrivateKey]);
-  const nullifier = await nullifierHash(privateKey, note, index);
-  return nullifier;
+  // const nullifier = await nullifierHash(privateKey, note, index);
+  // return nullifier;
 }
 
 // Get the shielded balance of each asset for a user
