@@ -420,7 +420,6 @@ async function extractToStore(
 ) {
   const events = getNoteCommitmentEvents(receipt);
   for (let ev of events) {
-    console.log({ ev });
     if (ev.name === "NewCommitment") {
       const cypher = ev.args[2] as string;
       const index = ev.args[1] as bigint;

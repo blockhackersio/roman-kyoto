@@ -99,7 +99,6 @@ contract MerkleTreeWithHistory {
         );
         uint32 currentIndex = _nextIndex / 2;
         bytes32 currentLevelHash = hashLeftRight(_leaf1, _leaf2);
-        console.log("yes");
         bytes32 left;
         bytes32 right;
 

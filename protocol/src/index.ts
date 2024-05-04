@@ -7,7 +7,6 @@ import {
   EventLog,
   Signer,
   keccak256,
-  ethers,
 } from "ethers";
 import { CircomExample__factory } from "../typechain-types";
 import {
@@ -140,7 +139,6 @@ export class CircomStuff {
     amount: string,
     root: string
   ) {
-    console.log({ spends, outputs, Bpk, assetId, amount });
     const verifier = CircomExample__factory.connect(
       this.address,
       this.provider
@@ -156,7 +154,6 @@ export class CircomStuff {
     amount: string,
     root: string
   ) {
-    console.log({ spends, outputs, Bpk, assetId, amount });
     const verifier = CircomExample__factory.connect(
       this.address,
       this.provider
@@ -170,7 +167,6 @@ export class CircomStuff {
     Bpk: [string, string],
     root: string
   ) {
-    console.log({ spends, outputs });
     const verifier = CircomExample__factory.connect(
       this.address,
       this.provider
@@ -377,7 +373,6 @@ export type Keyset = {
 // Use this to get the
 export async function getKeys(privateKey: bigint) {
   await ensurePoseidon();
-  // console.log("getEncryptionPublicKey", privateKey.toString(16));
 
   const encryptionKey = getEncryptionPublicKey(privateKey.toString(16));
 
@@ -410,7 +405,6 @@ export async function buildMerkleTree(contract: Contract) {
 }
 
 export async function encryptNote(publicKey: string, note: Note) {
-  console.log({ publicKey });
   const str = JSON.stringify({ ...note, amount: note.amount.toString() });
 
   return dataEncrypt(publicKey, Buffer.from(str, "utf8"));
@@ -498,7 +492,6 @@ async function createProofs(
       sender.publicKey === n2.spender
         ? sender.encryptionKey
         : receiver.encryptionKey;
-    console.log("encryption key" + keyToEncryptTo, { sender, receiver });
 
     const encryptedOutput = await encryptNote(keyToEncryptTo, n2);
 
@@ -547,7 +540,6 @@ export async function transfer(
     outputList.push(createNote(0n, sender.publicKey, assetId));
   }
 
-  console.log({ spendList, outputList });
   const { Bpk, spendProofs, outputProofs } = await createProofs(
     spendList,
     outputList,

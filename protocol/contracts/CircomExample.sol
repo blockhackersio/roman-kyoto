@@ -176,8 +176,6 @@ contract CircomExample is MerkleTreeWithHistory {
         require(_outputProofs.length == 2, "only can do 2 outputproofs");
 
         _insertCommitments(_outputProofs);
-        console.log("root:");
-        console.logBytes32(roots[currentRootIndex]);
         emit NewCommitment(
             _outputProofs[0].commitment,
             nextIndex - 2,
