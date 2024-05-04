@@ -125,7 +125,7 @@ contract CircomExample {
                     .neg()
             );
         }
- 
+
         require(
             total.add(_valueBal.neg()).x == _bpk[0] &&
                 total.add(_valueBal.neg()).y == _bpk[1],
@@ -148,31 +148,25 @@ contract CircomExample {
         OutputProof[] memory _outputProofs,
         uint[2] memory _bpk,
         uint256 _assetId,
+        uint256 _depositAmount
     ) public view {
+        // this is the same as G * poseidon(asset) * value of asset being deposited
+        EdOnBN254.Affine memory _valueBal = EdOnBN254
+            .primeSubgroupGenerator()
+            .mul(_assetId)
+            .mul(_depositAmount)
+            .neg();
 
-       EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
-
-      _transactCheck(
-        _spendProof,
-        _outputProofs,
-        _bpk,
-        _valueBal
-      );
-
+        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal);
     }
+
     function transact(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
         uint[2] memory _bpk
     ) public view {
-       EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
+        EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
 
-      _transactCheck(
-        _spendProof,
-        _outputProofs,
-        _bpk,
-        _valueBal
-      );
-
+        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal);
     }
 }
