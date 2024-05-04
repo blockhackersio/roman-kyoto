@@ -352,7 +352,16 @@ export function getInitialPoints(B: BabyJub) {
     return { Vc, r };
   }
 
-  return { G, R, modN, valcommit, getV, reddsaSign };
+  function mintcommit(asset: string, amount: bigint) {
+    const r = getRandomBigInt(253);
+    const V = getV(asset);
+    const vV = amount == 0n ? B.ExtendedPoint.ZERO : V.multiply(modN(amount));
+    const rR = R.multiply(modN(r));
+    const Vc = vV.add(rR);
+    return { Vc, r };
+  }
+
+  return { G, R, modN, valcommit, getV, mintcommit, reddsaSign };
 }
 
 function createNote(amount: bigint, spender: string, asset: string): Note {
@@ -655,11 +664,9 @@ export async function burnToCrosschain(
   );
 
   const babyJub = getBabyJubJub();
-  const { R, modN, valcommit, getV } = getInitialPoints(babyJub);
-
-  
-
-
+  const { R, modN, valcommit,mintcommit, getV } = getInitialPoints(babyJub);
+  // XXX: Todo finishe mint commitment 
+  const mintcommitment = mintcommit(await getAsset(asset),amount)
   return await contract.withdraw(
     spendProofs,
     outputProofs,
