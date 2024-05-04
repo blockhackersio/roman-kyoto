@@ -46,48 +46,43 @@ function attemptNoteDecryption(
 // event NewNullifier(bytes32 nullifier);
 // event PublicKey(address indexed owner, bytes key);
 
-// Get users notes for a given contract
-async function getUserNotes(
+// Get users Utxos for a given contract
+async function getUserUtxos(
   contract: Contract,
   userPrivateKey: string
-): Promise<Note[]> {
+): Promise<Utxo[]> {
   const allCommitmentEvents = await contract.queryFilter(
     contract.filters.NewCommitment()
   );
-  const notes: Note[] = [];
+  const Utxos: Utxo[] = [];
 
   allCommitmentEvents.forEach((event) => {
     if (event.args) {
-      // Manually map Result to NewCommitment
       const newCommitment: NewCommitment = {
         type: "NewCommitment",
         commitment: event.args.commitment,
         index: event.args.index,
         encryptedOutput: event.args.encryptedOutput,
       };
+      // attempt to decrypt the note using the user's private key (if it fails, note doesn't belong to user)
       const note: Note | undefined = attemptNoteDecryption(
         newCommitment,
         userPrivateKey
       );
+      // If note is successfully decrypted, add it to the user's UTXOs
       if (note) {
-        notes.push(note);
+        // Generate the nullifier of the note
+        const nullifier = generateNullifier(note);
+        const utxo: Utxo = {
+          commitment: newCommitment,
+          note: note,
+          nullifier: nullifier,
+        };
+        Utxos.push(utxo);
       }
     }
   });
-  return notes;
-}
-
-// Get all nullifiers for a given contract
-async function getNullifiers(contract: Contract): Promise<string[]> {
-  const allNullifierEvents = await contract.queryFilter(
-    contract.filters.NewNullifier()
-  );
-
-  return allNullifierEvents.map((event) => {
-    if (event.args) {
-      return event.args.nullifier;
-    }
-  });
+  return Utxos;
 }
 
 // Generate commitment of a given note
