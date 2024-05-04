@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-import {MultiplierVerifier} from "./generated/MultiplierVerifier.sol";
-import {SpendVerifier} from "./generated/SpendVerifier.sol";
-import {OutputVerifier} from "./generated/OutputVerifier.sol";
+import {MultiplierVerifier} from "./verifiers/MultiplierVerifier.sol";
+import {SpendVerifier} from "./verifiers/SpendVerifier.sol";
+import {OutputVerifier} from "./verifiers/OutputVerifier.sol";
 
 import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
 

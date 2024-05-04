@@ -27,13 +27,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   });
 
   // first we deploy our multiplier, output and spend verifiers on our source chain
-  await deploy("MultiplierVerifierSource", {
-    contract: "MultiplierVerifier",
-    from: Deployer.address,
-    log: true,
-    autoMine: true,
-  });
-
   await deploy("OutputVerifierSource", {
     contract: "OutputVerifier",
     from: Deployer.address,
@@ -48,28 +41,37 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     autoMine: true,
   });
 
-  // next, we redeploy these contracts on our destination chain
-  await deploy("MultiplierVerifierDestination", {
-    contract: "MultiplierVerifier",
+  // deploy our EdOnBN254 library
+  await hre.deployments.deploy("EdOnBN254", {
+    contract: "EdOnBN254",
     from: Deployer.address,
-    log: true,
-    autoMine: true,
   });
+  const SpendVerifierSource = (await hre.deployments.get("SpendVerifierSource"))
+    .address;
+  const OutputVerifierSource = (
+    await hre.deployments.get("OutputVerifierSource")
+  ).address;
+  const EdOnBN254 = (await hre.deployments.get("EdOnBN254")).address;
+  const Hasher = (await hre.deployments.get("Hasher")).address;
 
-  await deploy("OutputVerifierDestination", {
-    contract: "OutputVerifier",
-    from: Deployer.address,
-    log: true,
-    autoMine: true,
-  });
+  const CCIPRouter = "0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93";
 
-  await deploy("SpendVerifierDestination", {
-    contract: "SpendVerifier",
+  await deploy("RK", {
+    contract: "RK",
     from: Deployer.address,
-    log: true,
-    autoMine: true,
+    args: [
+      SpendVerifierSource,
+      OutputVerifierSource,
+      Hasher,
+      CCIPRouter,
+      [],
+      [],
+    ],
+    libraries: {
+      EdOnBN254: EdOnBN254,
+    },
   });
 };
 
 export default func;
-func.tags = ["testbed"];
+func.tags = ["realWorld"];
