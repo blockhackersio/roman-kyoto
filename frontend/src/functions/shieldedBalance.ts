@@ -6,7 +6,12 @@ import {
 } from "@metamask/eth-sig-util";
 import { Contract, ethers } from "ethers";
 
-import { Note, NoteStore } from "../../../protocol/src/index";
+import {
+  Note,
+  NoteStore,
+  notecommitment,
+  nullifierHash,
+} from "../../../protocol/src/index";
 
 export type NewCommitment = {
   type: "NewCommitment";
@@ -47,7 +52,7 @@ function attemptNoteDecryption(
 // event PublicKey(address indexed owner, bytes key);
 
 // Get users Utxos for a given contract
-async function getUserUtxos(
+export async function getUserUtxos(
   contract: Contract,
   userPrivateKey: string
 ): Promise<Utxo[]> {
@@ -58,7 +63,7 @@ async function getUserUtxos(
 
   // For each NewCommitment event, attempt to decrypt the note using the user's private key
   // If note is successfully decrypted, add it to the user's UTXOs
-  allCommitmentEvents.forEach((event) => {
+  await allCommitmentEvents.forEach(async (event) => {
     if (event.args) {
       const newCommitment: NewCommitment = {
         type: "NewCommitment",
@@ -74,7 +79,11 @@ async function getUserUtxos(
       // If note is successfully decrypted, add it to the user's UTXOs
       if (note) {
         // Generate the nullifier of the commitment - used to check if a note has been spent
-        const nullifier = generateNullifier(newCommitment, userPrivateKey);
+        const nullifier = await generateNullifier(
+          userPrivateKey,
+          note,
+          BigInt(newCommitment.index)
+        );
         const utxo: Utxo = {
           commitment: newCommitment,
           note: note,
@@ -88,7 +97,9 @@ async function getUserUtxos(
 }
 
 // Get all spent nullifiers for a given contract
-async function getSpentNullifiers(contract: Contract): Promise<string[]> {
+export async function getSpentNullifiers(
+  contract: Contract
+): Promise<string[]> {
   const allNullifierEvents = await contract.queryFilter(
     contract.filters.NewNullifier()
   );
@@ -96,24 +107,27 @@ async function getSpentNullifiers(contract: Contract): Promise<string[]> {
 }
 
 // Generate commitment of a given note
-function generateCommitment(note: Note, userPublicKey: string): string {
+async function generateCommitment(note: Note): Promise<string> {
   // Poseidon hash of asset, pubkey, binding, asset
   // const commitment = poseidonHash([note.amount, userPublicKey, note.blinding, note.asset]);
-  // return commitment;
+  const commitment = await notecommitment(note);
+  return commitment;
 }
 
 // Generate nullifier of a given note
-function generateNullifier(
-  commitment: NewCommitment,
-  userPrivateKey: string
-): string {
+async function generateNullifier(
+  privateKey: string,
+  note: Note,
+  index: bigint
+): Promise<string> {
   // Poseidon hash of commitment, index, private key
   // const nullifier = poseidonHash([commitment.commitment, commitment.index, userPrivateKey]);
-  // return nullifier;
+  const nullifier = await nullifierHash(privateKey, note, index);
+  return nullifier;
 }
 
 // Get the shielded balance of each asset for a user
-function calculateShieldedBalances(
+export function calculateShieldedBalances(
   utxos: Utxo[],
   spentNullifiers: string[]
 ): Map<string, bigint> {
