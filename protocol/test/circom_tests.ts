@@ -12,6 +12,7 @@ import {
   NoteStore,
   OutputProof,
   SpendProof,
+  buildMerkleTree,
   deposit,
   encryptNote,
   getAsset,
@@ -33,7 +34,7 @@ import { ExtPointType, twistedEdwards } from "@noble/curves/abstract/edwards";
 import { randomBytes } from "@noble/hashes/utils";
 import { Field, mod } from "@noble/curves/abstract/modular";
 import { CircomExample__factory } from "../typechain-types";
-import { AbiCoder, Provider, Signer, keccak256 } from "ethers";
+import { AbiCoder, Contract, Provider, Signer, keccak256 } from "ethers";
 import { bytesToNumberBE, ensureBytes } from "@noble/curves/abstract/utils";
 import hasherArtifact from "../contracts/generated/Hasher.json";
 async function deployVerifierFixture() {
@@ -202,10 +203,10 @@ it("encrypt", async () => {
     spender: keys.publicKey,
     blinding: blinding.toString(),
   });
-  console.log(encrypted)
+  console.log(encrypted);
 });
 
-it.skip("transact", async () => {
+it("transact", async () => {
   const { verifier } = await loadFixture(deployVerifierFixture);
   await ensurePoseidon();
   const [privateKey, recieverPrivateKey, b1] = getRandomBits(10, 256);
@@ -247,7 +248,7 @@ it.skip("transact", async () => {
   );
 });
 
-it.only("deposit", async () => {
+it("deposit", async () => {
   const contract = await getCircomExampleContract();
   const verifier = contract.getContract();
   // const { verifier } = await loadFixture(deployVerifierFixture);
@@ -328,5 +329,28 @@ it("withdaw", async () => {
         return spendList;
       },
     }
+  );
+});
+
+it.only("integrate", async () => {
+  const contract = await getCircomExampleContract();
+  const verifier = contract.getContract();
+  const tree = await buildMerkleTree(verifier as any as Contract);
+  console.log(tree.root);
+  await ensurePoseidon();
+  const [privateKey, recieverPrivateKey] = getRandomBits(10, 256);
+  const { publicKey: receiverSpendKey, encryptionKey } = await getKeys(
+    recieverPrivateKey
+  );
+
+  await deposit(
+    await ethers.provider.getSigner(),
+    await verifier.getAddress(),
+    10n,
+    privateKey,
+    receiverSpendKey,
+    encryptionKey,
+    "USDC",
+    tree
   );
 });

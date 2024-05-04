@@ -279,11 +279,11 @@ export async function nullifierHash(
   index: bigint
 ): Promise<string> {
   const commitment = await notecommitment(n);
-  return "0x"+BigInt(poseidonHash([
+  return poseidonHash([
     commitment,
     index,
     signature(privateKey, commitment, index),
-  ])).toString(16);
+  ]);
 }
 
 export function getInitialPoints(B: BabyJub) {

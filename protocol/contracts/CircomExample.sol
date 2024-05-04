@@ -47,6 +47,7 @@ contract CircomExample is MerkleTreeWithHistory {
     ) MerkleTreeWithHistory(5, _hasher) {
         spendVerifier = SpendVerifier(_spendVerifier);
         outputVerifier = OutputVerifier(_outputVerifier);
+        _initialize();
     }
 
     function parseProof(
@@ -119,7 +120,7 @@ contract CircomExample is MerkleTreeWithHistory {
         EdOnBN254.Affine memory _valueBal,
         uint256 _root
     ) internal {
-        // require(isKnownRoot(bytes32(_root)), "Invalid merkle root");
+        require(isKnownRoot(bytes32(_root)), "Invalid merkle root");
 
         for (uint i = 0; i < _spendProof.length; i++) {
             require(
