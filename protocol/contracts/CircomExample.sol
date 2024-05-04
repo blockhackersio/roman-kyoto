@@ -17,16 +17,27 @@ contract CircomExample is MerkleTreeWithHistory {
     SpendVerifier public spendVerifier;
     OutputVerifier public outputVerifier;
 
+    event NewCommitment(
+        uint256 indexed commitment,
+        uint256 indexed index,
+        bytes encryptedOutput
+    );
+
+    event NewNullifier(uint256 indexed nullifier);
+
+    mapping(uint256 => bool) public nullifierHashes;
+
     struct SpendProof {
         bytes proof;
-        uint nullifier;
+        uint256 nullifier;
         uint[2] valueCommitment;
     }
 
     struct OutputProof {
         bytes proof;
-        uint commitment;
+        uint256 commitment;
         uint[2] valueCommitment;
+        bytes encryptedOutput;
     }
 
     constructor(
@@ -36,6 +47,7 @@ contract CircomExample is MerkleTreeWithHistory {
     ) MerkleTreeWithHistory(5, _hasher) {
         spendVerifier = SpendVerifier(_spendVerifier);
         outputVerifier = OutputVerifier(_outputVerifier);
+        _initialize();
     }
 
     function parseProof(
@@ -105,8 +117,18 @@ contract CircomExample is MerkleTreeWithHistory {
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
         uint[2] memory _bpk,
-        EdOnBN254.Affine memory _valueBal
-    ) public view {
+        EdOnBN254.Affine memory _valueBal,
+        uint256 _root
+    ) internal {
+        require(isKnownRoot(bytes32(_root)), "Invalid merkle root");
+
+        for (uint i = 0; i < _spendProof.length; i++) {
+            require(
+                !isSpent(_spendProof[i].nullifier),
+                "Input is already spent"
+            );
+        }
+
         EdOnBN254.Affine memory total = EdOnBN254.zero();
 
         for (uint i = 0; i < _spendProof.length; i++) {
@@ -139,13 +161,44 @@ contract CircomExample is MerkleTreeWithHistory {
 
         for (uint i = 0; i < _spendProof.length; i++) {
             SpendProof memory spendProof = _spendProof[i];
-            spendVerify(spendProof.proof, [spendProof.nullifier]);
+            spendVerify(spendProof.proof, [uint256(spendProof.nullifier)]);
         }
 
         for (uint j = 0; j < _outputProofs.length; j++) {
             OutputProof memory outputProof = _outputProofs[j];
-            outputVerify(outputProof.proof, [outputProof.commitment]);
+            outputVerify(outputProof.proof, [uint256(outputProof.commitment)]);
         }
+
+        for (uint i = 0; i < _spendProof.length; i++) {
+            nullifierHashes[_spendProof[i].nullifier] = true;
+        }
+
+        require(_outputProofs.length == 2, "only can do 2 outputproofs");
+
+        _insertCommitments(_outputProofs);
+        emit NewCommitment(
+            _outputProofs[0].commitment,
+            nextIndex - 2,
+            _outputProofs[0].encryptedOutput
+        );
+
+        emit NewCommitment(
+            _outputProofs[1].commitment,
+            nextIndex - 1,
+            _outputProofs[1].encryptedOutput
+        );
+
+        for (uint256 i = 0; i < _spendProof.length; i++) {
+            emit NewNullifier(_spendProof[i].nullifier);
+        }
+    }
+
+    function _insertCommitments(OutputProof[] memory _outputProofs) internal {
+        // Insert all leaves except the last one using pairs as usual
+        _insert(
+            bytes32(_outputProofs[0].commitment),
+            bytes32(_outputProofs[1].commitment)
+        );
     }
 
     function deposit(
@@ -153,7 +206,8 @@ contract CircomExample is MerkleTreeWithHistory {
         OutputProof[] memory _outputProofs,
         uint[2] memory _bpk,
         uint256 _assetId,
-        uint256 _depositAmount
+        uint256 _depositAmount,
+        uint256 _root
     ) public {
         // this is the same as G * poseidon(asset) * value of asset being deposited
         EdOnBN254.Affine memory _valueBal = EdOnBN254
@@ -162,22 +216,7 @@ contract CircomExample is MerkleTreeWithHistory {
             .mul(_depositAmount)
             .neg();
 
-        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal);
-
-        // Insert all leaves except the last one using pairs as usual
-        for (uint i = 0; i < _outputProofs.length - 1; i += 2) {
-            _insert(
-                bytes32(_outputProofs[i].commitment),
-                bytes32(_outputProofs[i + 1].commitment)
-            );
-        }
-
-        if (_outputProofs.length % 2 != 0) {
-            _insert(
-                bytes32(_outputProofs[_outputProofs.length - 1].commitment),
-                bytes32(ZERO_VALUE)
-            );
-        }
+        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
     }
 
     function withdraw(
@@ -185,7 +224,8 @@ contract CircomExample is MerkleTreeWithHistory {
         OutputProof[] memory _outputProofs,
         uint[2] memory _bpk,
         uint256 _assetId,
-        uint256 _withdrawAmount
+        uint256 _withdrawAmount,
+        uint256 _root
     ) public {
         // this is the same as G * poseidon(asset) * value of asset being deposited
         EdOnBN254.Affine memory _valueBal = EdOnBN254
@@ -193,33 +233,21 @@ contract CircomExample is MerkleTreeWithHistory {
             .mul(_assetId)
             .mul(_withdrawAmount);
 
-        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal);
-
-        // Insert all leaves except the last one using pairs as usual
-        if (_outputProofs.length != 0) {
-            for (uint i = 0; i < _outputProofs.length - 1; i += 2) {
-                _insert(
-                    bytes32(_outputProofs[i].commitment),
-                    bytes32(_outputProofs[i + 1].commitment)
-                );
-            }
-
-            if (_outputProofs.length % 2 != 0) {
-                _insert(
-                    bytes32(_outputProofs[_outputProofs.length - 1].commitment),
-                    bytes32(ZERO_VALUE)
-                );
-            }
-        }
+        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
     }
 
     function transact(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
-        uint[2] memory _bpk
-    ) public view {
+        uint[2] memory _bpk,
+        uint256 _root
+    ) public {
         EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
 
-        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal);
+        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
+    }
+
+    function isSpent(uint256 _nullifierHash) public view returns (bool) {
+        return nullifierHashes[_nullifierHash];
     }
 }

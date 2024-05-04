@@ -48,6 +48,8 @@ pnpm snarkjs zkey export solidityverifier $G16ZKEY $SOL_VERIFIER
 FNAME_CAPITALIZED=$(echo "$FNAME" | sed -e 's/[-_]\([a-z]\)/\u\1/g' -e 's/^\([a-z]\)/\u\1/')
 sed -i "s/contract Groth16Verifier/contract ${FNAME_CAPITALIZED}Verifier/g" $SOL_VERIFIER
 
+# pnpm snarkjs groth16 fullprove $INPUT $WASM $ZKEY $PROOF $PUBLIC
+
 mkdir -p ignition/modules/generated
 TARGET_FILE="./ignition/modules/generated/${FNAME_CAPITALIZED}Verifier.ts"
 

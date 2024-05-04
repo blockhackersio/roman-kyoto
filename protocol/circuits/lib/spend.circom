@@ -15,7 +15,7 @@ template Spend(levels) {
   signal input pathIndex;
   signal input nullifier;
   signal input pathElements[levels];
-  signal output commitment;
+  signal input commitment;
 
   // Value commit
   signal input Vx;
@@ -35,7 +35,7 @@ template Spend(levels) {
   commitmentHasher.inputs[1] <== keypair.publicKey;
   commitmentHasher.inputs[2] <== blinding;
   commitmentHasher.inputs[3] <== asset;
-  commitment <== commitmentHasher.out;
+  commitment === commitmentHasher.out;
 
   component sig = Signature();
   sig.privateKey <== privateKey;
