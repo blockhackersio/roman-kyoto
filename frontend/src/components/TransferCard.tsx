@@ -12,12 +12,15 @@ import {
 } from "@chakra-ui/react";
 import { useConnectWallet } from "@web3-onboard/react";
 import { useState, useEffect } from "react";
+import { chains } from "../constants/Chains";
 
 export default function TransferCard(): JSX.Element {
     const [{ wallet }] = useConnectWallet();
 
     const [selectedToken, setSelectedToken] = useState("USDC");
-    const [transferAmount, setTransferAmount] = useState(0);
+    const [selectedChain, setSelectedChain] = useState(chains[0].id);
+    const [recipientAddress, setRecipientAddress] = useState("");
+    const [transferAmount, setTransferAmount] = useState();
     const [maxTransfer, setMaxTransfer] = useState(0);
 
     useEffect(() => {
@@ -36,6 +39,10 @@ export default function TransferCard(): JSX.Element {
         setTransferAmount(0); // Reset transfer amount on token change
     };
 
+    const handleChainChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedChain(event.target.value);
+    };
+
     const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const amount = Math.min(Number(event.target.value), maxTransfer);
         setTransferAmount(amount);
@@ -48,16 +55,32 @@ export default function TransferCard(): JSX.Element {
             </CardHeader>
             <CardBody>
                 <Stack spacing={4}>
+                    <Select value={selectedChain} onChange={handleChainChange}>
+                        {chains.map((chain) => (
+                            <option value={chain.id} key={chain.id}>
+                                {chain.label}
+                            </option>
+                        ))}
+                    </Select>
                     <Select value={selectedToken} onChange={handleTokenChange}>
                         <option value="USDC">USDC</option>
                         <option value="WBTC">WBTC</option>
                     </Select>
+                    <Input
+                        type="text"
+                        placeholder="Enter recipient address"
+                        value={recipientAddress}
+                        onChange={(e) => setRecipientAddress(e.target.value)}
+                        required
+                        pattern="^0x[a-fA-F0-9]{40}$"
+                    />
                     <Input
                         type="number"
                         value={transferAmount}
                         onChange={handleAmountChange}
                         max={maxTransfer}
                         placeholder="Enter transfer amount"
+                        required
                     />
                 </Stack>
             </CardBody>
@@ -68,7 +91,12 @@ export default function TransferCard(): JSX.Element {
                             `Transfer ${transferAmount} ${selectedToken}`
                         )
                     }
-                    isDisabled={!wallet || transferAmount <= 0}
+                    isDisabled={
+                        !wallet ||
+                        !transferAmount ||
+                        transferAmount <= 0 ||
+                        !recipientAddress
+                    }
                     colorScheme="red"
                     width="50%"
                 >

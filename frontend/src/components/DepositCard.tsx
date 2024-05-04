@@ -21,7 +21,7 @@ export default function DepositCard(): JSX.Element {
     const [{ wallet }] = useConnectWallet();
 
     const [selectedToken, setSelectedToken] = useState("USDC");
-    const [depositAmount, setDepositAmount] = useState(0);
+    const [depositAmount, setDepositAmount] = useState();
     const [maxDeposit, setMaxDeposit] = useState(0);
 
     useEffect(() => {
@@ -78,7 +78,12 @@ export default function DepositCard(): JSX.Element {
                                 )
                             // TODO: Implement deposit functionality
                         }
-                        isDisabled={!wallet || depositAmount <= 0}
+                        isDisabled={
+                            !wallet ||
+                            !selectedToken ||
+                            !depositAmount ||
+                            depositAmount <= 0
+                        }
                         colorScheme="red"
                         width={"50%"}
                     >

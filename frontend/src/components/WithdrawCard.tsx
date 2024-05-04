@@ -11,7 +11,6 @@ import {
     Input,
     Select,
     Stack,
-    VStack,
 } from "@chakra-ui/react";
 import { useConnectWallet } from "@web3-onboard/react";
 import { useState, useEffect } from "react";
@@ -20,7 +19,7 @@ export default function WithdrawCard(): JSX.Element {
     const [{ wallet }] = useConnectWallet();
 
     const [selectedToken, setSelectedToken] = useState("USDC");
-    const [withdrawAmount, setWithdrawAmount] = useState(0);
+    const [withdrawAmount, setWithdrawAmount] = useState();
     const [maxWithdraw, setMaxWithdraw] = useState(0);
 
     useEffect(() => {
@@ -61,6 +60,7 @@ export default function WithdrawCard(): JSX.Element {
                         onChange={handleAmountChange}
                         max={maxWithdraw}
                         placeholder="Enter withdraw amount"
+                        required
                     />
                 </Stack>
             </CardBody>
@@ -73,7 +73,9 @@ export default function WithdrawCard(): JSX.Element {
                             )
                         // TODO: Implement withdraw functionality
                     }
-                    isDisabled={!wallet || withdrawAmount <= 0}
+                    isDisabled={
+                        !wallet || !withdrawAmount || withdrawAmount <= 0
+                    }
                     colorScheme="red"
                     width="50%"
                 >

@@ -20,9 +20,9 @@ export default function App() {
                     marginY={8}
                 >
                     <Balances />
+                    <TransferCard />
                     <DepositCard />
                     <WithdrawCard />
-                    <TransferCard />
                 </SimpleGrid>
             )}
         </>
