@@ -164,8 +164,14 @@ contract CircomExample is MerkleTreeWithHistory {
 
         _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal);
 
-        // deposit we just create 1
-        _insert(outputProof[0].commitment, ZERO_VALUE);
+        // Insert all leaves except the last one using pairs as usual
+        for (uint i = 0; i < _outputProofs.length - 1; i += 2) {
+            _insert(_outputProofs[i].commitment, _outputProofs[i+1].commitment);
+        }
+
+        if (_outputProofs.length % 2 != 0) {
+            _insert(_outputProofs[_outputProofs.length - 1].commitment, ZERO_VALUE);
+        }
     }
 
     function transact(
