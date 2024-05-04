@@ -1,6 +1,6 @@
 import { chains } from "@/constants/Chains";
 import { USDC, WBTC } from "@/constants/Tokens";
-import { getERC20Balance } from "@/helper/ERC20helpers";
+import { getERC20Balance } from "@/helpers/ERC20helpers";
 import {
     Button,
     Card,
@@ -19,8 +19,8 @@ export default function WithdrawCard(): JSX.Element {
     const [{ wallet }] = useConnectWallet();
 
     const [selectedToken, setSelectedToken] = useState("USDC");
-    const [withdrawAmount, setWithdrawAmount] = useState();
-    const [maxWithdraw, setMaxWithdraw] = useState(0);
+    const [withdrawAmount, setWithdrawAmount] = useState<number>();
+    const [maxWithdraw, setMaxWithdraw] = useState<number>(0);
 
     useEffect(() => {
         if (wallet) {

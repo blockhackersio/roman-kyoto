@@ -1,14 +1,13 @@
 import { chains } from "@/constants/Chains";
 import { USDC, WBTC } from "@/constants/Tokens";
-import { getERC20Balance } from "@/helper/ERC20helpers";
+import { getERC20Balance } from "@/helpers/ERC20helpers";
+
 import {
     Button,
     Card,
     CardHeader,
     Input,
     Select,
-    VStack,
-    Text,
     Heading,
     CardBody,
     CardFooter,
@@ -21,8 +20,9 @@ export default function DepositCard(): JSX.Element {
     const [{ wallet }] = useConnectWallet();
 
     const [selectedToken, setSelectedToken] = useState("USDC");
-    const [depositAmount, setDepositAmount] = useState();
-    const [maxDeposit, setMaxDeposit] = useState(0);
+    const [depositAmount, setDepositAmount] = useState<number>();
+    const [maxDeposit, setMaxDeposit] = useState<number>(0);
+
 
     useEffect(() => {
         if (wallet) {

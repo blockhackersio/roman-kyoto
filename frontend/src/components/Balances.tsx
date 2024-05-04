@@ -9,8 +9,8 @@ import {
     VStack,
 } from "@chakra-ui/react";
 import { USDC, WBTC } from "@/constants/Tokens";
-import { useConnectWallet, useWallets } from "@web3-onboard/react";
-import { getERC20Balance } from "@/helper/ERC20helpers";
+import { useConnectWallet } from "@web3-onboard/react";
+import { getERC20Balance } from "@/helpers/ERC20helpers";
 import { chains } from "@/constants/Chains";
 
 export default function Balances(): JSX.Element {

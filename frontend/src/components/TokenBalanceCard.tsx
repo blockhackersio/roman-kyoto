@@ -8,12 +8,6 @@ import {
     Text,
     VStack,
 } from "@chakra-ui/react";
-import { useConnectWallet, useSetChain, useWallets } from "@web3-onboard/react";
-import { useEffect, useState } from "react";
-import { ethers } from "ethers";
-import { USDC } from "@/constants/Tokens";
-import { ERC20Abi } from "@/constants/Abis";
-import { chains } from "@/constants/Chains";
 
 export default function TokenBalanceCard(props: {
     symbol: string;
