@@ -31,6 +31,7 @@ export type Utxo = {
   nullifier: string;
 };
 
+// Need to fix to however it was encrypted (haven't checked yet)
 function attemptNoteDecryption(
   event: NewCommitment,
   userPrivateKey: string
