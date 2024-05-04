@@ -45,6 +45,8 @@ contract RK is CircomExample, CCIPReceiver {
         _;
     }
 
+    address owner;
+
     constructor(
         address _spendVerifier,
         address _outputVerifier,
@@ -66,26 +68,32 @@ contract RK is CircomExample, CCIPReceiver {
                 )
             ] = true;
         }
+
+        owner = msg.sender;
     }
 
-    // TODO Guard
+    function _enforceOwner() internal view {
+        require(msg.sender == owner, "Only owner can call this function");
+    }
+
     function allowlistChain(uint64 _chainId, bool _allowed) external {
+        _enforceOwner();
         allowlistedChains[_chainId] = _allowed;
     }
 
-    // TODO Guard
     function updateAllowlistDestinationChain(
         address _remoteAddress,
         uint64 _chainId,
         bool _allowed
     ) external {
+        _enforceOwner();
         allowedRemotes[
             keccak256(abi.encode(_remoteAddress, _chainId))
         ] = _allowed;
     }
 
-    // TODO Guard
     function updateGasLimit(uint256 _gasLimit) external {
+        _enforceOwner();
         gasLimit = _gasLimit;
     }
 
@@ -111,12 +119,12 @@ contract RK is CircomExample, CCIPReceiver {
 
     mapping(uint256 => SupportedAsset) public assetToAddress;
 
-    // TODO guard
     function addSupportedAsset(
         uint256 _assetId,
         address _assetAddress,
         uint8 _decimals
     ) external {
+        _enforceOwner();
         assetToAddress[_assetId] = SupportedAsset(
             _assetId,
             _assetAddress,
