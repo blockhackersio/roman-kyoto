@@ -8,7 +8,7 @@
 
 3. return list of desposits (Notes)
 
-## How to check which commitments have been spent (withdrawals)
+## How to check which commitments have been spent
 
 1. Get all NewNullifier events emitted by contract
 2. Get the list of all commitments belonging to the connected wallet (detailed above)
@@ -17,3 +17,7 @@
    - Check if the generated Nullifier exists in the retrieved list of NewNullifiers from the contracts events
      - If the generated Nullifier exists in the list then the commitment has been spent
      - If not, then the commitment has not been spent and is still a valid deposit
+
+## To retrieve the users balance
+
+Simply sum the amount within each of the users commitments
