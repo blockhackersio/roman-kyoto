@@ -9,6 +9,8 @@ export async function generateGroth16Proof(
   const wasmLocation = getWasmFileLocation(circuitName);
   const zkeyLocation = getZkeyFileLocation(circuitName);
 console.log({inputs})
+if ((inputs as any).root) console.log('root>>>:' + BigInt((inputs as any).root).toString(16))
+// console.log('root from inputs:', BigInt((inputs as any).root).toString(16))
   const { proof } = await groth16.fullProve(inputs, wasmLocation, zkeyLocation);
   return serializeG16Proof(proof);
 }

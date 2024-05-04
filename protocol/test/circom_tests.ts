@@ -13,6 +13,7 @@ import {
   OutputProof,
   SpendProof,
   buildMerkleTree,
+  decryptNote,
   deposit,
   encryptNote,
   getAsset,
@@ -34,7 +35,15 @@ import { ExtPointType, twistedEdwards } from "@noble/curves/abstract/edwards";
 import { randomBytes } from "@noble/hashes/utils";
 import { Field, mod } from "@noble/curves/abstract/modular";
 import { CircomExample__factory } from "../typechain-types";
-import { AbiCoder, Contract, Provider, Signer, keccak256 } from "ethers";
+import {
+  AbiCoder,
+  Contract,
+  Interface,
+  Provider,
+  Signer,
+  Wallet,
+  keccak256,
+} from "ethers";
 import { bytesToNumberBE, ensureBytes } from "@noble/curves/abstract/utils";
 import hasherArtifact from "../contracts/generated/Hasher.json";
 async function deployVerifierFixture() {
@@ -119,6 +128,8 @@ it("spend", async () => {
 
   const tree = new MerkleTree(5, [], {
     hashFunction: poseidonHash2,
+    zeroElement:
+      "21663839004416932945382355908790599225266501822907911457504978515578255421292",
   });
 
   tree.bulkInsert([n1nc]);
@@ -332,25 +343,127 @@ it("withdaw", async () => {
   );
 });
 
+it("k", async () => {
+  const note = {
+    amount: 100n,
+    spender:
+      "19807204869336450808882067410408830110949238429594039068086271832610670264832",
+    asset:
+      "20127191088397187424089338044691488801975848983440234473083399104886363173023",
+    blinding:
+      "0x1da72ac35112755e9c645d42e10a0dd2a4bf91e162b69591080b7650e7c6f3f5",
+  };
+  const inputs = {
+    privateKey:
+      "0x28305b81492f2fb67d000a6ace843ab310887122c5ae8ec1d618c59600055d67",
+    amount: "0x64",
+    blinding:
+      "0x1da72ac35112755e9c645d42e10a0dd2a4bf91e162b69591080b7650e7c6f3f5",
+    asset:
+      "20127191088397187424089338044691488801975848983440234473083399104886363173023",
+    pathIndex: "0x0",
+    nullifier:
+      "1027965109721644940135240405116141077779411191513834201745255694605457776831",
+    root: "12211343057785689949037215225253064103215064881203322012072754617152168342536",
+    pathElements: [
+      "20852855321025354209468958424484787777972708366695127796395017975925852331301",
+      "8995896153219992062710898675021891003404871425075198597897889079729967997688",
+      "15126246733515326086631621937388047923581111613947275249184377560170833782629",
+      "6404200169958188928270149728908101781856690902670925316782889389790091378414",
+      "17903822129909817717122288064678017104411031693253675943446999432073303897479",
+    ],
+    Vx: "0xce746b038f3f71167d459af646cacde7124a5f81b67ee3c7d804cdcbc17a60a",
+    Vy: "0x40ffd37a1d3cf4d2c842874d7122f83aa057c115b419e284c168ea0cc43fad8",
+    Rx: "0x2f5307e683c59c3f032430ded7b7fd1736e860148b42a97327b88e9c308256a",
+    Ry: "0x2dfc4efc24fb941059288d8a9babf3adae8eceb61648e02dfa6d3e1680a44873",
+    r: "0x9192c54b59eac761c7d2aeb2ba1e9ac4d8257699bce7e247a266cfb3cd8c00",
+    Cx: "0x15732d7ec4bf19f4c23cd29e7913c44901e1b345f57966389bb983874f03dcba",
+    Cy: "0x2787c39b80e25c52baf364ee8e23ad23ec2b3651675aab8de2766cd116e56946",
+  };
+  const proof = await generateGroth16Proof(inputs, "spend");
+const commitment = await notecommitment(note)
+  const contract = await getCircomExampleContract();
+  console.log(proof);
+  contract.spendVerify(proof, commitment);
+});
+
 it.only("integrate", async () => {
   const contract = await getCircomExampleContract();
   const verifier = contract.getContract();
-  const tree = await buildMerkleTree(verifier as any as Contract);
+  let tree = await buildMerkleTree(verifier as any as Contract);
   console.log(tree.root);
   await ensurePoseidon();
-  const [privateKey, recieverPrivateKey] = getRandomBits(10, 256);
-  const { publicKey: receiverSpendKey, encryptionKey } = await getKeys(
-    recieverPrivateKey
-  );
-
-  await deposit(
+  const spenderPrivate = Wallet.createRandom().privateKey;
+  const receiverPrivate = Wallet.createRandom().privateKey;
+  // const [privateKey, recieverPrivateKey] = getRandomBits(10, 256);
+  console.log("spenderPrivate", spenderPrivate);
+  console.log("receiverPrivate", receiverPrivate);
+  const receiver = await getKeys(BigInt(receiverPrivate));
+  const spender = await getKeys(BigInt(spenderPrivate));
+  const tx = await deposit(
     await ethers.provider.getSigner(),
     await verifier.getAddress(),
-    10n,
-    privateKey,
-    receiverSpendKey,
-    encryptionKey,
+    100n,
+    spender,
     "USDC",
     tree
   );
+  const receipt = await tx.wait();
+  const decodedLogs = receipt?.logs
+    .map((log) => {
+      try {
+        const sm = new Interface(CircomExample__factory.abi);
+        return sm.parseLog(log);
+      } catch (error) {
+        // This log was not from your contract, or not an event your contract emits
+        return null;
+      }
+    })
+    .filter((log) => log !== null);
+  const [event] = decodedLogs!;
+  expect(event?.name).to.equal("NewCommitment");
+  console.log(event?.args);
+  const encryptedEvent = event?.args[2];
+  const note = await decryptNote(
+    spender.privateKey.toString(16),
+    encryptedEvent
+  );
+  console.log("NOTE FROM EVENT:", note);
+  // console.log({note, nullifier: nullifierHash(spender.privateKey, note, )})
+  tree = await buildMerkleTree(verifier as any as Contract);
+  console.log("===========================================================");
+  // console.log(tree)
+  await transfer(
+    await ethers.provider.getSigner(),
+    await verifier.getAddress(),
+    10n,
+    spender,
+    receiver,
+    "USDC",
+    tree,
+    {
+      async getNotesUpTo(_amount: bigint, _asset: string) {
+        return [note];
+      },
+    }
+  );
+
+  // expect()
+  // console.log(decodedLogs)
+  // //  await transfer(
+  //   await ethers.provider.getSigner(),
+  //   await verifier.getAddress(),
+  //   10n,
+  //   privateKey,
+  //   spendKey,
+  //   receiverSpendKey,
+  //   encryptionKey,
+  //   "USDC",
+  //   tree,
+  //   {
+  //     async getNotesUpTo(_amount: bigint, _asset: string) {
+  //       return spendList;
+  //     },
+  //   }
+  // );
 });

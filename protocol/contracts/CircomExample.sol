@@ -173,37 +173,34 @@ contract CircomExample is MerkleTreeWithHistory {
             nullifierHashes[_spendProof[i].nullifier] = true;
         }
 
-        _insertCommitments(_outputProofs);
+        require(_outputProofs.length == 2, "only can do 2 outputproofs");
 
-        for (uint256 i = 0; i < _outputProofs.length; i++) {
-            emit NewCommitment(
-                _outputProofs[i].commitment,
-                nextIndex - (_outputProofs.length - i),
-                _outputProofs[i].encryptedOutput
-            );
-        }
+        _insertCommitments(_outputProofs);
+        console.log("root:");
+        console.logBytes32(roots[currentRootIndex]);
+        emit NewCommitment(
+            _outputProofs[0].commitment,
+            nextIndex - 2,
+            _outputProofs[0].encryptedOutput
+        );
+
+        emit NewCommitment(
+            _outputProofs[1].commitment,
+            nextIndex - 1,
+            _outputProofs[1].encryptedOutput
+        );
+
         for (uint256 i = 0; i < _spendProof.length; i++) {
             emit NewNullifier(_spendProof[i].nullifier);
         }
     }
 
     function _insertCommitments(OutputProof[] memory _outputProofs) internal {
-        if (_outputProofs.length != 0) {
-            // Insert all leaves except the last one using pairs as usual
-            for (uint i = 0; i < _outputProofs.length - 1; i += 2) {
-                _insert(
-                    bytes32(_outputProofs[i].commitment),
-                    bytes32(_outputProofs[i + 1].commitment)
-                );
-            }
-
-            if (_outputProofs.length % 2 != 0) {
-                _insert(
-                    bytes32(_outputProofs[_outputProofs.length - 1].commitment),
-                    bytes32(ZERO_VALUE)
-                );
-            }
-        }
+        // Insert all leaves except the last one using pairs as usual
+        _insert(
+            bytes32(_outputProofs[0].commitment),
+            bytes32(_outputProofs[1].commitment)
+        );
     }
 
     function deposit(

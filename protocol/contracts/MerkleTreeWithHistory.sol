@@ -84,9 +84,6 @@ contract MerkleTreeWithHistory {
         bytes32[2] memory input;
         input[0] = _left;
         input[1] = _right;
-        console.logBytes32(input[0]);
-        console.logBytes32(input[1]);
-        console.logAddress(address(hasher));
         return hasher.poseidon(input);
     }
 

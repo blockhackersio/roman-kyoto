@@ -20,7 +20,7 @@ export function toFixedHex(
 
 export function dataEncrypt(encryptionKey: string, bytes: Buffer) {
   const d = encrypt({
-    publicKey: encryptionKey.replace(/^0x/, ""),
+    publicKey: encryptionKey,
     data: bytes.toString("base64"),
     version: "x25519-xsalsa20-poly1305",
   });
@@ -31,7 +31,7 @@ export function dataDecrypt(privkey: string, data: string): Buffer {
   return Buffer.from(
     decrypt({
       encryptedData: unpackEncryptedMessage(data),
-      privateKey: privkey.replace(/^0x/, ""),
+      privateKey: privkey,
     }),
     "base64"
   );

@@ -3,10 +3,11 @@
 import {
   AbiCoder,
   Contract,
+  ContractTransactionResponse,
   EventLog,
-  Provider,
   Signer,
   keccak256,
+  ethers,
 } from "ethers";
 import { CircomExample__factory } from "../typechain-types";
 import {
@@ -22,7 +23,6 @@ import { randomBytes } from "@noble/hashes/utils";
 import { ensurePoseidon, poseidonHash, poseidonHash2 } from "./poseidon";
 import { bytesToNumberBE } from "@noble/curves/abstract/utils";
 import MerkleTree from "fixed-merkle-tree";
-import { ethers } from "hardhat";
 import { getEncryptionPublicKey } from "@metamask/eth-sig-util";
 export * from "./config";
 
@@ -44,7 +44,8 @@ export class CircomStuff {
     Ry: string,
     r: string,
     Cx: string,
-    Cy: string
+    Cy: string,
+    commitment:string
   ) {
     return await generateGroth16Proof(
       {
@@ -63,6 +64,7 @@ export class CircomStuff {
         r,
         Cx,
         Cy,
+        commitment
       },
       "spend"
     );
@@ -141,9 +143,9 @@ export class CircomStuff {
     console.log({ spends, outputs, Bpk, assetId, amount });
     const verifier = CircomExample__factory.connect(
       this.address,
-      await ethers.provider.getSigner()
+      this.provider
     );
-    await verifier.deposit(spends, outputs, Bpk, assetId, amount, root);
+    return await verifier.deposit(spends, outputs, Bpk, assetId, amount, root);
   }
 
   async withdraw(
@@ -157,9 +159,9 @@ export class CircomStuff {
     console.log({ spends, outputs, Bpk, assetId, amount });
     const verifier = CircomExample__factory.connect(
       this.address,
-      await ethers.provider.getSigner()
+      this.provider
     );
-    await verifier.withdraw(spends, outputs, Bpk, assetId, amount, root);
+    return await verifier.withdraw(spends, outputs, Bpk, assetId, amount, root);
   }
 
   async transact(
@@ -173,7 +175,7 @@ export class CircomStuff {
       this.address,
       this.provider
     );
-    await verifier.transact(spends, outputs, Bpk, root);
+    return await verifier.transact(spends, outputs, Bpk, root);
   }
 }
 
@@ -347,7 +349,8 @@ export function getInitialPoints(B: BabyJub) {
   function valcommit(n: Note) {
     const r = getRandomBigInt(253);
     const V = getV(n.asset);
-    const vV = V.multiply(modN(n.amount));
+    const vV =
+      n.amount == 0n ? B.ExtendedPoint.ZERO : V.multiply(modN(n.amount));
     const rR = R.multiply(modN(r));
     const Vc = vV.add(rR);
     return { Vc, r };
@@ -365,11 +368,16 @@ function createNote(amount: bigint, spender: string, asset: string): Note {
     blinding: toStr(blinding),
   };
 }
+export type Keyset = {
+  encryptionKey: string;
+  publicKey: string;
+  privateKey: bigint;
+};
 
 // Use this to get the
 export async function getKeys(privateKey: bigint) {
   await ensurePoseidon();
-  console.log("getEncryptionPublicKey", privateKey.toString(16));
+  // console.log("getEncryptionPublicKey", privateKey.toString(16));
 
   const encryptionKey = getEncryptionPublicKey(privateKey.toString(16));
 
@@ -378,18 +386,23 @@ export async function getKeys(privateKey: bigint) {
   return {
     encryptionKey,
     publicKey,
-    privateKey,
+    privateKey: BigInt(privateKey),
   };
 }
 
 export async function buildMerkleTree(contract: Contract) {
   const filter = contract.filters.NewCommitment();
   const events = (await contract.queryFilter(filter, 0)) as EventLog[];
-
+  // console.log("buid merkle events:::::--- ", events);
   const leaves = events
-    .sort((a, b) => a.args?.index - b.args?.index)
-    .map((e) => toFixedHex(e.args?.commitment));
-
+    .sort((a, b) => {
+      return Number(a.args?.index) - Number(b.args?.index);
+    })
+    .map((e) => {
+      console.log("e.args.commitment: " + typeof e.args?.commitment);
+      return e.args?.commitment.toString();
+    });
+  console.log(">>>LEAVES: ", leaves);
   const t = new MerkleTree(5, leaves, {
     hashFunction: poseidonHash2,
     zeroElement:
@@ -432,7 +445,6 @@ async function createProofs(
   for (let n1 of spendList) {
     const n1nc = await notecommitment(n1);
     const { Vc: n1vc, r: r1 } = valcommit(n1);
-
     const root = `${tree.root}`;
     const index = tree.indexOf(n1nc);
     const pathElements = tree.path(index).pathElements.map((e) => e.toString());
@@ -457,7 +469,8 @@ async function createProofs(
       toStr(R.y),
       toStr(r1),
       toStr(n1vc.x),
-      toStr(n1vc.y)
+      toStr(n1vc.y),
+      toFixedHex(n1nc)
     );
     totalRandomness = modN(totalRandomness + r1);
     spendProofs.push({
@@ -503,14 +516,12 @@ export async function transfer(
   signer: Signer,
   poolAddress: string,
   amount: bigint,
-  senderPrivateKey: bigint,
-  senderPublicKey: string,
-  receiverPublicKey: string,
-  receiverEncryptionKey: string,
+  sender:Keyset,
+  receiver:Keyset,
   asset: string, // "USDC" | "WBTC" etc.
   tree: MerkleTree,
   notes: NoteStore
-): Promise<void> {
+): Promise<ContractTransactionResponse> {
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
   const contract = new CircomStuff(signer, poolAddress);
@@ -521,23 +532,28 @@ export async function transfer(
   }, 0n);
 
   const change = totalSpent - amount;
+
   const assetId = await getAsset(asset);
   const outputList: Note[] = [];
 
-  outputList.push(createNote(amount, receiverPublicKey, assetId));
-  if (change > 0n)
-    outputList.push(createNote(change, senderPublicKey, assetId));
+  outputList.push(createNote(amount, receiver.publicKey, assetId));
+  if (change > 0n) {
+    outputList.push(createNote(change, sender.publicKey, assetId));
+  } else {
+    outputList.push(createNote(0n, sender.publicKey, assetId));
+  }
 
+  console.log({spendList})
   const { Bpk, spendProofs, outputProofs } = await createProofs(
     spendList,
     outputList,
     tree,
-    senderPrivateKey,
-    receiverEncryptionKey,
+    sender.privateKey,
+    receiver.encryptionKey,
     contract
   );
 
-  await contract.transact(
+  return await contract.transact(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
@@ -549,30 +565,30 @@ export async function deposit(
   signer: Signer,
   poolAddress: string,
   amount: bigint,
-  senderPrivateKey: bigint,
-  receiverPublicKey: string,
-  receiverEncryptionKey: string,
+  receiver: Keyset,
   asset: string, // "USDC" | "WBTC" etc.
   tree: MerkleTree
-): Promise<void> {
+): Promise<ContractTransactionResponse> {
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
   const contract = new CircomStuff(signer, poolAddress);
   const assetId = await getAsset(asset);
 
   const spendList: Note[] = [];
-  const outputList: Note[] = [createNote(amount, receiverPublicKey, assetId)];
-
+  const outputList: Note[] = [
+    createNote(amount, receiver.publicKey, assetId),
+    createNote(0n, receiver.publicKey, assetId),
+  ];
   const { Bpk, spendProofs, outputProofs } = await createProofs(
     spendList,
     outputList,
     tree,
-    senderPrivateKey,
-    receiverEncryptionKey,
+    receiver.privateKey,
+    receiver.encryptionKey,
     contract
   );
 
-  await contract.deposit(
+  return await contract.deposit(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
@@ -593,7 +609,7 @@ export async function withdraw(
   asset: string, // "USDC" | "WBTC" etc.
   tree: MerkleTree,
   notes: NoteStore
-): Promise<void> {
+): Promise<ContractTransactionResponse> {
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
   const contract = new CircomStuff(signer, poolAddress);
@@ -620,7 +636,7 @@ export async function withdraw(
     contract
   );
 
-  await contract.withdraw(
+  return await contract.withdraw(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
