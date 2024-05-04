@@ -180,6 +180,39 @@ contract CircomExample is MerkleTreeWithHistory {
         }
     }
 
+    function withdraw(
+        SpendProof[] memory _spendProof,
+        OutputProof[] memory _outputProofs,
+        uint[2] memory _bpk,
+        uint256 _assetId,
+        uint256 _withdrawAmount
+    ) public {
+        // this is the same as G * poseidon(asset) * value of asset being deposited
+        EdOnBN254.Affine memory _valueBal = EdOnBN254
+            .primeSubgroupGenerator()
+            .mul(_assetId)
+            .mul(_withdrawAmount);
+
+        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal);
+
+        // Insert all leaves except the last one using pairs as usual
+        if (_outputProofs.length != 0) {
+            for (uint i = 0; i < _outputProofs.length - 1; i += 2) {
+                _insert(
+                    bytes32(_outputProofs[i].commitment),
+                    bytes32(_outputProofs[i + 1].commitment)
+                );
+            }
+
+            if (_outputProofs.length % 2 != 0) {
+                _insert(
+                    bytes32(_outputProofs[_outputProofs.length - 1].commitment),
+                    bytes32(ZERO_VALUE)
+                );
+            }
+        }
+    }
+
     function transact(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,

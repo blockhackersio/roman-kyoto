@@ -22,6 +22,7 @@ import {
   nullifierHash,
   toStr,
   transfer,
+  withdraw,
 } from "../src/index";
 import { ensurePoseidon, poseidonHash, poseidonHash2 } from "../src/poseidon";
 import { generateGroth16Proof, toFixedHex } from "../src/zklib";
@@ -262,5 +263,47 @@ it("deposit", async () => {
     receiverSpendKey,
     "USDC",
     tree
+  );
+});
+
+it("withdaw", async () => {
+  const contract = await getCircomExampleContract();
+  const verifier = contract.getContract();
+  // const { verifier } = await loadFixture(deployVerifierFixture);
+  await ensurePoseidon();
+  const [privateKey, recieverPrivateKey, b1] = getRandomBits(10, 253);
+  const spendKey = poseidonHash([privateKey]);
+  const receiverSpendKey = poseidonHash([recieverPrivateKey]);
+
+  const spendList: Note[] = [
+    {
+      amount: 10n,
+      asset: await getAsset("USDC"),
+      spender: spendKey,
+      blinding: toFixedHex(b1),
+    },
+  ];
+
+  const nc = await notecommitment(spendList[0]);
+  const tree = new MerkleTree(5, [], {
+    hashFunction: poseidonHash2,
+  });
+
+  tree.insert(nc);
+
+  await withdraw(
+    await ethers.provider.getSigner(),
+    await verifier.getAddress(),
+    10n,
+    privateKey,
+    spendKey,
+    receiverSpendKey,
+    "USDC",
+    tree,
+    {
+      async getNotesUpTo(_amount: bigint, _asset: string) {
+        return spendList;
+      },
+    }
   );
 });
