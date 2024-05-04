@@ -103,7 +103,19 @@ class CircomStuff {
     );
     return await verifier.spendVerify(proof, [commitment]);
   }
+  async verifySig(
+    s: string,
+    R: [string, string],
+    A: [string, string],
+    message: string
+  ) {
+    const verifier = CircomExample__factory.connect(
+      this.address,
+      this.provider
+    );
 
+    await verifier.sigVerify(s, R, A, message);
+  }
   async transact(
     spends: SpendProof[],
     outputs: OutputProof[],
@@ -372,7 +384,12 @@ it("spend", async () => {
   await contract.spendVerify(proof, n1nc);
 });
 
-it("Bind signatures", async () => {
+function reddsaSign(
+  babyJub: BabyJub,
+  a: bigint,
+  A: ExtPointType,
+  msgByteStr: string
+) {
   // B - base point
   // a - secret key
   // A - Public Key
@@ -387,23 +404,19 @@ it("Bind signatures", async () => {
   // --- verify ----
   // c = H(R||A||M)
   // -B * S + R + c * A == identity
+
   const abi = new AbiCoder();
 
-  const babyJub = getBabyJubJub();
   const modN = (a: bigint) => mod(a, babyJub.CURVE.n);
   const hash = babyJub.CURVE.hash;
-  const message = "Hello world";
   const B = babyJub.ExtendedPoint.BASE;
-  const a = modN(BigInt("0x" + Buffer.from(randomBytes(32)).toString("hex")));
   const T = randomBytes(32);
-  const msgBytes = ensureBytes("message", Buffer.from(message, "utf8"));
-  const A = babyJub.ExtendedPoint.BASE.multiply(a);
   const r = modN(
     bytesToNumberBE(
       hash(
         abi.encode(
           ["bytes", "uint256", "uint256", "bytes"],
-          [T, A.x, A.y, msgBytes]
+          [T, A.x, A.y, msgByteStr]
         )
       )
     )
@@ -411,19 +424,38 @@ it("Bind signatures", async () => {
   const R = B.multiply(r);
   const cData = abi.encode(
     ["uint256", "uint256", "uint256", "uint256", "bytes"],
-    [R.x, R.y, A.x, A.y, msgBytes]
+    [R.x, R.y, A.x, A.y, msgByteStr]
   );
-
   const hashed = keccak256(cData);
-
   const c = modN(BigInt(hashed));
   const s = modN(r + c * a);
+  return { R, s };
+}
 
+it("Bind signatures", async () => {
+  const message = "Hello world";
+  const msgBytes = ensureBytes("message", Buffer.from(message, "utf8"));
+
+  const a = modN(BigInt("0x" + Buffer.from(randomBytes(32)).toString("hex")));
+  const A = babyJub.ExtendedPoint.BASE.multiply(a);
+
+  const msgByteStr = toFixedHex(msgBytes);
+  const { s, R } = reddsaSign(babyJub, a, A, msgByteStr);
+  
   /////////////////////////////
   // sig is now R and s
   //////////////////////////////
-
   // Following should happen in solidity
+  //
+  const abi = new AbiCoder();
+  const cData = abi.encode(
+    ["uint256", "uint256", "uint256", "uint256", "bytes"],
+    [R.x, R.y, A.x, A.y, msgByteStr]
+  );
+  const hashed = keccak256(cData);
+  const c = modN(BigInt(hashed));
+  const B = babyJub.ExtendedPoint.BASE;
+
   expect(
     B.negate()
       .multiply(s)
@@ -432,6 +464,13 @@ it("Bind signatures", async () => {
       .equals(babyJub.ExtendedPoint.ZERO)
   ).to.be.true;
 
+  const contract = await getCircomExampleContract();
+  contract.verifySig(
+    toStr(s),
+    [toStr(R.x), toStr(R.y)],
+    [toStr(A.x), toStr(A.y)],
+    Buffer.from(msgBytes).toString("hex")
+  );
 });
 
 it("transact", async () => {
