@@ -14,8 +14,7 @@ export default function ConnectWallet() {
                     Connect Your Wallet
                 </Heading>
                 <Text fontSize="md" textAlign="center">
-                    Please connect your wallet to interact with the
-                    decentralized application.
+                    Please connect your wallet to interact with Roman Kyoto
                 </Text>
                 <Button
                     isLoading={connecting}
