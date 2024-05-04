@@ -1,4 +1,5 @@
 import { Commitment } from "@/models/Commitment";
+import { Note } from "@/models/Note";
 import {
   decrypt,
   encrypt,
@@ -13,10 +14,10 @@ import { Contract, EventLog } from "web3-eth-contract";
 
 // userKey is the connected wallets private key
 // Function to retrieve and filter commitments based on decrypted output
-async function getUserCommitments(
+async function getUserCommitmentsAndNotes(
   userKey: string,
   contract: Contract
-): Promise<string[]> {
+): Promise<{ commitments: Commitment[]; notes: Note[] }> {
   const allCommitmentEvents: EventLog[] = await contract.getPastEvents(
     "NewCommitment",
     {
@@ -25,25 +26,35 @@ async function getUserCommitments(
     }
   );
 
-  // Can change this to decryptedNotes?? - the output is just a note?
-  const decryptedOutputs: string[] = allCommitmentEvents
-    .map((event) => {
-      try {
-        const decryptedOutput: string = decrypt({
-          encryptedData: event.returnValues.encryptedOutput as EthEncryptedData,
-          privateKey: userKey,
-        });
-        // Check if the decrypted output matches the Note pattern!!!!!
-        // Attempt to parse string into a type
-        if (decryptedOutput.includes("specific user identifier or pattern")) {
-          return decryptedOutput;
-        }
-      } catch (error) {}
-      return null;
-    })
-    .filter((output): output is string => output !== null);
+  let notes: Note[] = [];
+  let commitments: Commitment[] = [];
 
-  return decryptedOutputs;
+  allCommitmentEvents.forEach((event) => {
+    try {
+      const decryptedOutput = decrypt({
+        encryptedData: event.returnValues.encryptedOutput as EthEncryptedData,
+        privateKey: userKey,
+      });
+
+      const note: Note = JSON.parse(decryptedOutput);
+      if (
+        "amount" in note &&
+        "binding" in note &&
+        "spenderZKPubKey" in note &&
+        "assetECPoint" in note
+      ) {
+        notes.push(note); // Add the note if it matches the Note structure
+        commitments.push(event.returnValues as Commitment); // Add the commitment corresponding to the successful decryption and parsing
+      }
+    } catch (error) {
+      // Handle decryption or parsing errors by not adding to the arrays
+    }
+  });
+
+  return {
+    commitments: commitments,
+    notes: notes,
+  };
 }
 
 async function getNullifiers(contract: Contract): Promise<string[]> {
@@ -60,4 +71,34 @@ async function getNullifiers(contract: Contract): Promise<string[]> {
     (event) => event.returnValues.nullifier as string
   );
   return nullifiers;
+}
+
+async function checkIfCommitmentSpent(
+  commitment: Commitment[],
+  nullifiers: string[]
+) {
+  // Import generate nullifier (use the commitment to generate the nullifier) 
+  // check if it matches any nullifiers in the list
+  commitment.forEach((commitment) => {
+    const nullifier = generateNullifier(commitment);
+    if (nullifiers.includes(nullifier)) {
+      // Commitment has been spent
+    }
+  }
+
+}
+
+
+
+
+async function getBalance(notes: Note[], nullifiers: string[]) {
+  // Check if the commitment has been spent
+  const unspentCommitments = UserComitments.filter(
+    (commitment) => !nullifiers.includes(commitment.commitment)
+  );
+  // Return the balance of the user
+  return unspentCommitments.reduce(
+    (total, commitment) => total + commitment.amount,
+    0
+  );
 }
