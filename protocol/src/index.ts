@@ -1,8 +1,15 @@
 // export your SDK here
 
-import { AbiCoder, Provider, Signer, keccak256 } from "ethers";
+import {
+  AbiCoder,
+  Contract,
+  EventLog,
+  Provider,
+  Signer,
+  keccak256,
+} from "ethers";
 import { CircomExample__factory } from "../typechain-types";
-import { generateGroth16Proof } from "./zklib";
+import { generateGroth16Proof, toFixedHex } from "./zklib";
 import { ExtPointType, twistedEdwards } from "@noble/curves/abstract/edwards";
 import { Field, mod } from "@noble/curves/abstract/modular";
 import { keccak_256 } from "@noble/hashes/sha3";
@@ -10,10 +17,11 @@ import { randomBytes } from "@noble/hashes/utils";
 import { ensurePoseidon, poseidonHash, poseidonHash2 } from "./poseidon";
 import { bytesToNumberBE } from "@noble/curves/abstract/utils";
 import MerkleTree from "fixed-merkle-tree";
+import { ethers } from "hardhat";
 export * from "./config";
 
 export class CircomStuff {
-  constructor(private provider: Provider, private address: string) { }
+  constructor(private provider: Signer, private address: string) { }
 
   async spendProve(
     privateKey: string,
@@ -84,6 +92,9 @@ export class CircomStuff {
       "output"
     );
   }
+  getContract() {
+    return CircomExample__factory.connect(this.address, this.provider);
+  }
   async outputVerify(proof: string, commitment: string) {
     const verifier = CircomExample__factory.connect(
       this.address,
@@ -112,6 +123,22 @@ export class CircomStuff {
 
     await verifier.sigVerify(s, R, A, message);
   }
+
+  async deposit(
+    spends: SpendProof[],
+    outputs: OutputProof[],
+    Bpk: [string, string],
+    assetId: string,
+    amount: string
+  ) {
+    console.log({ spends, outputs, Bpk, assetId, amount });
+    const verifier = CircomExample__factory.connect(
+      this.address,
+      await ethers.provider.getSigner()
+    );
+    await verifier.deposit(spends, outputs, Bpk, assetId, amount);
+  }
+
   async transact(
     spends: SpendProof[],
     outputs: OutputProof[],
@@ -260,12 +287,6 @@ export async function nullifierHash(
 }
 
 export function getInitialPoints(B: BabyJub) {
-  function getV(asset: string) {
-    const { G } = getInitialPoints(B);
-    const V = G.multiply(BigInt(asset));
-    return V;
-  }
-
   function reddsaSign(a: bigint, A: ExtPointType, msgByteStr: string) {
     // B - base point
     // a - secret key
@@ -318,6 +339,11 @@ export function getInitialPoints(B: BabyJub) {
   });
   const R = G.multiply(Ro);
 
+  function getV(asset: string) {
+    const V = G.multiply(BigInt(asset));
+    return V;
+  }
+
   function valcommit(n: Note) {
     const r = getRandomBigInt(253);
     const V = getV(n.asset);
@@ -340,6 +366,22 @@ function createNote(amount: bigint, spender: string, asset: string): Note {
   };
 }
 
+export async function buildMerkleTree(contract: Contract) {
+  const filter = contract.filters.NewCommitment();
+  const events = (await contract.queryFilter(filter, 0)) as EventLog[];
+
+  const leaves = events
+    .sort((a, b) => a.args?.index - b.args?.index)
+    .map((e) => toFixedHex(e.args?.commitment));
+
+  const t = new MerkleTree(5, leaves, {
+    hashFunction: poseidonHash2,
+    zeroElement:
+      "21663839004416932945382355908790599225266501822907911457504978515578255421292",
+  });
+
+  return t;
+}
 export async function transfer(
   signer: Signer,
   poolAddress: string,
@@ -348,6 +390,7 @@ export async function transfer(
   senderPublicKey: string,
   receiverPublicKey: string,
   asset: string, // "USDC" | "WBTC" etc.
+  tree: MerkleTree,
   notes: NoteStore
 ): Promise<void> {
   const babyJub = getBabyJubJub();
@@ -378,14 +421,9 @@ export async function transfer(
     const n1nc = await notecommitment(n1);
     const { Vc: n1vc, r: r1 } = valcommit(n1);
 
-    const tree = new MerkleTree(5, [], {
-      hashFunction: poseidonHash2,
-    });
-
-    tree.insert(n1nc);
+    const root = `${tree.root}`;
     const index = tree.indexOf(n1nc);
     const pathElements = tree.path(index).pathElements.map((e) => e.toString());
-    const root = `${tree.root}`;
     const nullifier = await nullifierHash(
       toStr(senderPrivateKey),
       n1,
@@ -452,15 +490,104 @@ export async function transfer(
   ]);
 }
 
-
 export async function deposit(
   signer: Signer,
+  poolAddress: string,
   amount: bigint,
-  spendKey: string,
+  senderPrivateKey: bigint,
+  receiverPublicKey: string,
   asset: string, // "USDC" | "WBTC" etc.
-  notes: NoteStore
-): Promise<unknown> {
-  return "";
+  tree: MerkleTree
+): Promise<void> {
+  const babyJub = getBabyJubJub();
+  if (signer.provider === null) throw new Error("Signer must have a provider");
+
+  const contract = new CircomStuff(signer, poolAddress);
+  const assetId = await getAsset(asset);
+
+  const { R, modN, valcommit, getV } = getInitialPoints(babyJub);
+  const spendList: Note[] = [];
+  const outputList: Note[] = [createNote(amount, receiverPublicKey, assetId)];
+
+  const spendProofs: SpendProof[] = [];
+  const outputProofs: OutputProof[] = [];
+
+  let totalRandomness = 0n;
+
+  for (let n1 of spendList) {
+    const n1nc = await notecommitment(n1);
+    const { Vc: n1vc, r: r1 } = valcommit(n1);
+
+    const root = `${tree.root}`;
+    const index = tree.indexOf(n1nc);
+    const pathElements = tree.path(index).pathElements.map((e) => e.toString());
+    const nullifier = await nullifierHash(
+      toStr(senderPrivateKey),
+      n1,
+      BigInt(index)
+    );
+    const Vs = getV(n1.asset);
+    const proofSpend = await contract.spendProve(
+      toStr(senderPrivateKey),
+      toStr(n1.amount),
+      n1.blinding,
+      n1.asset,
+      toStr(BigInt(index)),
+      nullifier,
+      root,
+      pathElements,
+      toStr(Vs.x),
+      toStr(Vs.y),
+      toStr(R.x),
+      toStr(R.y),
+      toStr(r1),
+      toStr(n1vc.x),
+      toStr(n1vc.y)
+    );
+    totalRandomness = modN(totalRandomness + r1);
+    spendProofs.push({
+      proof: proofSpend,
+      valueCommitment: [toStr(n1vc.x), toStr(n1vc.y)],
+      nullifier: n1nc,
+    });
+  }
+
+  for (let n2 of outputList) {
+    const n2nc = await notecommitment(n2);
+    const { Vc: n2vc, r: r2 } = valcommit(n2);
+
+    const Vo = getV(n2.asset);
+    const proofOutput = await contract.outputProve(
+      toStr(n2.amount),
+      n2.blinding,
+      n2.asset,
+      n2.spender,
+      toStr(Vo.x),
+      toStr(Vo.y),
+      toStr(R.x),
+      toStr(R.y),
+      toStr(r2),
+      toStr(n2vc.x),
+      toStr(n2vc.y)
+    );
+    outputProofs.push({
+      proof: proofOutput,
+      valueCommitment: [toStr(n2vc.x), toStr(n2vc.y)],
+      commitment: n2nc,
+    });
+    totalRandomness = modN(totalRandomness - r2);
+  }
+  // Create sig
+  const bsk = totalRandomness;
+  const Bpk = R.multiply(bsk);
+
+  await contract.deposit(
+    spendProofs,
+    outputProofs,
+    [toStr(Bpk.x), toStr(Bpk.y)],
+    assetId,
+    toStr(amount)
+  );
 }
 
 export async function withdraw(
