@@ -9,13 +9,18 @@ import {
   BabyJub,
   CircomStuff,
   Note,
+  NoteStore,
+  OutputProof,
+  SpendProof,
   getAsset,
   getBabyJubJub,
   getInitialPoints,
+  getRandomBigInt,
   getRandomBits,
   notecommitment,
   nullifierHash,
   toStr,
+  transfer,
 } from "../src/index";
 import { ensurePoseidon, poseidonHash, poseidonHash2 } from "../src/poseidon";
 import { generateGroth16Proof, toFixedHex } from "../src/zklib";
@@ -24,7 +29,7 @@ import { ExtPointType, twistedEdwards } from "@noble/curves/abstract/edwards";
 import { randomBytes } from "@noble/hashes/utils";
 import { Field, mod } from "@noble/curves/abstract/modular";
 import { CircomExample__factory } from "../typechain-types";
-import { AbiCoder, Provider, keccak256 } from "ethers";
+import { AbiCoder, Provider, Signer, keccak256 } from "ethers";
 import { bytesToNumberBE, ensureBytes } from "@noble/curves/abstract/utils";
 
 async function deployVerifierFixture() {
@@ -44,7 +49,7 @@ it("output", async () => {
   await ensurePoseidon();
 
   const { R, valcommit, getV } = getInitialPoints(babyJub);
-  const [privateKey, b1, r1] = getRandomBits(10, 253);
+  const [privateKey, b1] = getRandomBits(10, 253);
   const spendKey = poseidonHash([privateKey]);
 
   const n1: Note = {
@@ -55,7 +60,7 @@ it("output", async () => {
   };
 
   const n1nc = await notecommitment(n1);
-  const n1vc = valcommit(n1, R, r1);
+  const { Vc: n1vc, r: r1 } = valcommit(n1);
   const contract = await getCircomExampleContract();
   const V = getV(n1.asset);
   const proof = await contract.outputProve(
@@ -76,7 +81,7 @@ it("output", async () => {
 
 it("spend", async () => {
   await ensurePoseidon();
-  const [privateKey, b1, r1] = getRandomBits(10, 253);
+  const [privateKey, b1] = getRandomBits(10, 253);
   const spendKey = poseidonHash([privateKey]);
 
   const { R, valcommit, getV } = getInitialPoints(babyJub);
@@ -89,7 +94,7 @@ it("spend", async () => {
 
   const n1nc = await notecommitment(n1);
 
-  const n1vc = valcommit(n1, R, r1);
+  const { Vc: n1vc, r: r1 } = valcommit(n1);
   const contract = await getCircomExampleContract();
 
   const tree = new MerkleTree(5, [], {
@@ -169,105 +174,110 @@ it("Bind signatures", async () => {
 });
 
 it("transact", async () => {
+  const { verifier } = await loadFixture(deployVerifierFixture);
   await ensurePoseidon();
-  const [privateKey, recieverPrivateKey, b1, b2, r1, r2] = getRandomBits(
-    10,
-    253
-  );
+  const [privateKey, recieverPrivateKey, b1] = getRandomBits(10, 253);
   const spendKey = poseidonHash([privateKey]);
   const receiverSpendKey = poseidonHash([recieverPrivateKey]);
 
-  const { R, modN, valcommit, getV } = getInitialPoints(babyJub);
-  // input
-  const n1: Note = {
-    amount: 10n,
-    asset: await getAsset("USDC"),
-    spender: spendKey,
-    blinding: toFixedHex(b1),
-  };
-  const n1nc = await notecommitment(n1);
-  const n1vc = valcommit(n1, R, r1);
+  const spendList: Note[] = [
+    {
+      amount: 10n,
+      asset: await getAsset("USDC"),
+      spender: spendKey,
+      blinding: toFixedHex(b1),
+    },
+  ];
 
-  // output
-  const n2: Note = {
-    amount: 10n,
-    asset: await getAsset("USDC"),
-    spender: receiverSpendKey,
-    blinding: toFixedHex(b2),
-  };
-
-  const n2nc = await notecommitment(n2);
-  const n2vc = valcommit(n2, R, r2);
-
-  const bsk = modN(r1 - r2);
-  const Bpk = R.multiply(bsk);
-
-  const contract = await getCircomExampleContract();
-
-  const tree = new MerkleTree(5, [], {
-    hashFunction: poseidonHash2,
-  });
-
-  // already have n1 in tree but not n2
-  tree.bulkInsert([n1nc]);
-
-  const index = tree.indexOf(n1nc);
-
-  const pathElements = tree.path(index).pathElements.map((e) => e.toString());
-
-  const root = `${tree.root}`;
-
-  const nullifier = await nullifierHash(toStr(privateKey), n1, BigInt(index));
-  const Vs = getV(n1.asset);
-  const proofSpend = await contract.spendProve(
-    toStr(privateKey),
-    toStr(n1.amount),
-    n1.blinding,
-    n1.asset,
-    toStr(BigInt(index)),
-    nullifier,
-    root,
-    pathElements,
-    toStr(Vs.x),
-    toStr(Vs.y),
-    toStr(R.x),
-    toStr(R.y),
-    toStr(r1),
-    toStr(n1vc.x),
-    toStr(n1vc.y)
-  );
-
-  const Vo = getV(n2.asset);
-  const proofOutput = await contract.outputProve(
-    toStr(n2.amount),
-    n2.blinding,
-    n2.asset,
-    n2.spender,
-    toStr(Vo.x),
-    toStr(Vo.y),
-    toStr(R.x),
-    toStr(R.y),
-    toStr(r2),
-    toStr(n2vc.x),
-    toStr(n2vc.y)
-  );
-
-  await contract.outputVerify(proofOutput, n2nc);
-  await contract.transact(
-    [
-      {
-        proof: proofSpend,
-        nullifier: n1nc,
-        valueCommitment: [toStr(n1vc.x), toStr(n1vc.y)],
+  await transfer(
+    await ethers.provider.getSigner(),
+    await verifier.getAddress(),
+    10n,
+    privateKey,
+    spendKey,
+    receiverSpendKey,
+    "USDC",
+    {
+      async getNotesUpTo(_amount: bigint, _asset: string) {
+        return spendList;
       },
-    ],
-    [
-      {
-        proof: proofOutput,
-        commitment: n2nc,
-        valueCommitment: [toStr(n2vc.x), toStr(n2vc.y)],
-      },
-    ],
-    [toStr(Bpk.x), toStr(Bpk.y)]
+    }
   );
+  //
+  // const spendProofs: SpendProof[] = [];
+  // const outputProofs: OutputProof[] = [];
+  // let totalRandomness = 0n;
+  //
+  // for (let n1 of spendList) {
+  //   const n1nc = await notecommitment(n1);
+  //   const { Vc: n1vc, r: r1 } = valcommit(n1);
+  //
+  //   const tree = new MerkleTree(5, [], {
+  //     hashFunction: poseidonHash2,
+  //   });
+  //
+  //   tree.insert(n1nc);
+  //   const index = tree.indexOf(n1nc);
+  //   const pathElements = tree.path(index).pathElements.map((e) => e.toString());
+  //   const root = `${tree.root}`;
+  //   const nullifier = await nullifierHash(toStr(privateKey), n1, BigInt(index));
+  //   const Vs = getV(n1.asset);
+  //   const proofSpend = await contract.spendProve(
+  //     toStr(privateKey),
+  //     toStr(n1.amount),
+  //     n1.blinding,
+  //     n1.asset,
+  //     toStr(BigInt(index)),
+  //     nullifier,
+  //     root,
+  //     pathElements,
+  //     toStr(Vs.x),
+  //     toStr(Vs.y),
+  //     toStr(R.x),
+  //     toStr(R.y),
+  //     toStr(r1),
+  //     toStr(n1vc.x),
+  //     toStr(n1vc.y)
+  //   );
+  //   totalRandomness = modN(totalRandomness + r1);
+  //   spendProofs.push({
+  //     proof: proofSpend,
+  //     valueCommitment: [toStr(n1vc.x), toStr(n1vc.y)],
+  //     nullifier: n1nc,
+  //   });
+  // }
+  //
+  // for (let n2 of outputList) {
+  //   const n2nc = await notecommitment(n2);
+  //   const { Vc: n2vc, r: r2 } = valcommit(n2);
+  //
+  //   const Vo = getV(n2.asset);
+  //   const proofOutput = await contract.outputProve(
+  //     toStr(n2.amount),
+  //     n2.blinding,
+  //     n2.asset,
+  //     n2.spender,
+  //     toStr(Vo.x),
+  //     toStr(Vo.y),
+  //     toStr(R.x),
+  //     toStr(R.y),
+  //     toStr(r2),
+  //     toStr(n2vc.x),
+  //     toStr(n2vc.y)
+  //   );
+  //   outputProofs.push({
+  //     proof: proofOutput,
+  //     valueCommitment: [toStr(n2vc.x), toStr(n2vc.y)],
+  //     commitment: n2nc,
+  //   });
+  //   totalRandomness = modN(totalRandomness - r2);
+  // }
+  // // Create sig
+  // const bsk = totalRandomness;
+  // const Bpk = R.multiply(bsk);
+  //
+  // await contract.transact(spendProofs, outputProofs, [
+  //   toStr(Bpk.x),
+  //   toStr(Bpk.y),
+  // ]);
 });
