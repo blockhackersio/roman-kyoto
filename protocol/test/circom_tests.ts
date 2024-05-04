@@ -38,7 +38,9 @@ import { CircomExample__factory } from "../typechain-types";
 import {
   AbiCoder,
   Contract,
+  ContractTransactionReceipt,
   Interface,
+  LogDescription,
   Provider,
   Signer,
   Wallet,
@@ -381,34 +383,15 @@ it("k", async () => {
     Cy: "0x2787c39b80e25c52baf364ee8e23ad23ec2b3651675aab8de2766cd116e56946",
   };
   const proof = await generateGroth16Proof(inputs, "spend");
-const commitment = await notecommitment(note)
+  const commitment = await notecommitment(note);
   const contract = await getCircomExampleContract();
   console.log(proof);
   contract.spendVerify(proof, commitment);
 });
 
-it.only("integrate", async () => {
-  const contract = await getCircomExampleContract();
-  const verifier = contract.getContract();
-  let tree = await buildMerkleTree(verifier as any as Contract);
-  console.log(tree.root);
-  await ensurePoseidon();
-  const spenderPrivate = Wallet.createRandom().privateKey;
-  const receiverPrivate = Wallet.createRandom().privateKey;
-  // const [privateKey, recieverPrivateKey] = getRandomBits(10, 256);
-  console.log("spenderPrivate", spenderPrivate);
-  console.log("receiverPrivate", receiverPrivate);
-  const receiver = await getKeys(BigInt(receiverPrivate));
-  const spender = await getKeys(BigInt(spenderPrivate));
-  const tx = await deposit(
-    await ethers.provider.getSigner(),
-    await verifier.getAddress(),
-    100n,
-    spender,
-    "USDC",
-    tree
-  );
-  const receipt = await tx.wait();
+function getNoteCommitmentEvents(receipt: ContractTransactionReceipt | null) {
+  if (!receipt) throw new Error("receipt was null!");
+
   const decodedLogs = receipt?.logs
     .map((log) => {
       try {
@@ -420,20 +403,105 @@ it.only("integrate", async () => {
       }
     })
     .filter((log) => log !== null);
-  const [event] = decodedLogs!;
-  expect(event?.name).to.equal("NewCommitment");
-  console.log(event?.args);
-  const encryptedEvent = event?.args[2];
-  const note = await decryptNote(
-    spender.privateKey.toString(16),
-    encryptedEvent
+  return decodedLogs.filter((c) => c !== null) as LogDescription[];
+}
+
+type WalletStore = {
+  notes: { note: Note; nullifier: string; index: bigint }[];
+  nullifiers: string[];
+  privateKey: string;
+  getNotesUpTo: (amount: bigint, asset: string) => Promise<Note[]>;
+};
+
+async function extractToStore(
+  hexPrivate: string,
+  store: WalletStore,
+  receipt: ContractTransactionReceipt | null
+) {
+  const events = getNoteCommitmentEvents(receipt);
+  for (let ev of events) {
+    console.log({ ev });
+    if (ev.name === "NewCommitment") {
+      const cypher = ev.args[2] as string;
+      const index = ev.args[1] as bigint;
+      try {
+        const note = await decryptNote(hexPrivate, cypher);
+        const nullifier = await nullifierHash(
+          "0x" + store.privateKey,
+          note,
+          index
+        );
+        console.log("GOT NOT");
+        store.notes.push({
+          index: ev.args[1],
+          nullifier,
+          note,
+        });
+      } catch (err) { }
+    }
+    if (ev.name === "NewNullifier") {
+      store.nullifiers.push(ev.args[0].toString());
+    }
+  }
+  return store;
+}
+
+function getUnspentNotes(store: WalletStore) {
+  return store.notes.filter((note) => {
+    return !store.nullifiers.includes(note.nullifier);
+  });
+}
+
+it.only("integrate", async () => {
+  await ensurePoseidon();
+
+  const contract = await getCircomExampleContract();
+  const verifier = contract.getContract();
+  let tree = await buildMerkleTree(verifier as any as Contract);
+
+  const spenderPrivate = Wallet.createRandom().privateKey;
+  const receiverPrivate = Wallet.createRandom().privateKey;
+  const receiver = await getKeys(BigInt(receiverPrivate));
+  const spender = await getKeys(BigInt(spenderPrivate));
+  const hexPrivate = spender.privateKey.toString(16);
+
+  let store: WalletStore = {
+    notes: [],
+    nullifiers: [],
+    privateKey: hexPrivate,
+    async getNotesUpTo(amount: bigint, asset: string) {
+      const assetId = await getAsset(asset);
+      const notesOfAsset = getUnspentNotes(store).filter(
+        (n) => n.note.asset === assetId
+      );
+      let total = 0n;
+      let notes: Note[] = [];
+      for (let { note } of notesOfAsset) {
+        if(note.amount === 0n) continue;
+        total += note.amount;
+        notes.push(note);
+        if(total > amount) break;
+      }
+      return notes;
+    },
+  };
+
+  let tx = await deposit(
+    await ethers.provider.getSigner(),
+    await verifier.getAddress(),
+    100n,
+    spender,
+    "USDC",
+    tree
   );
-  console.log("NOTE FROM EVENT:", note);
-  // console.log({note, nullifier: nullifierHash(spender.privateKey, note, )})
+
+  let receipt = await tx.wait();
+
+  store = await extractToStore(hexPrivate, store, receipt);
+
   tree = await buildMerkleTree(verifier as any as Contract);
-  console.log("===========================================================");
-  // console.log(tree)
-  await transfer(
+
+  tx = await transfer(
     await ethers.provider.getSigner(),
     await verifier.getAddress(),
     10n,
@@ -441,29 +509,20 @@ it.only("integrate", async () => {
     receiver,
     "USDC",
     tree,
-    {
-      async getNotesUpTo(_amount: bigint, _asset: string) {
-        return [note];
-      },
-    }
+    store
   );
+  receipt = await tx.wait();
+  store = await extractToStore(hexPrivate, store, receipt);
+  tree = await buildMerkleTree(verifier as any as Contract);
 
-  // expect()
-  // console.log(decodedLogs)
-  // //  await transfer(
-  //   await ethers.provider.getSigner(),
-  //   await verifier.getAddress(),
-  //   10n,
-  //   privateKey,
-  //   spendKey,
-  //   receiverSpendKey,
-  //   encryptionKey,
-  //   "USDC",
-  //   tree,
-  //   {
-  //     async getNotesUpTo(_amount: bigint, _asset: string) {
-  //       return spendList;
-  //     },
-  //   }
-  // );
+  tx = await withdraw(
+    await ethers.provider.getSigner(),
+    await verifier.getAddress(),
+    50n,
+    spender,
+    receiver,
+    "USDC",
+    tree,
+    store
+  );
 });

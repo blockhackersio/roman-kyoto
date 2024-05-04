@@ -45,7 +45,7 @@ export class CircomStuff {
     r: string,
     Cx: string,
     Cy: string,
-    commitment:string
+    commitment: string
   ) {
     return await generateGroth16Proof(
       {
@@ -64,7 +64,7 @@ export class CircomStuff {
         r,
         Cx,
         Cy,
-        commitment
+        commitment,
       },
       "spend"
     );
@@ -393,16 +393,13 @@ export async function getKeys(privateKey: bigint) {
 export async function buildMerkleTree(contract: Contract) {
   const filter = contract.filters.NewCommitment();
   const events = (await contract.queryFilter(filter, 0)) as EventLog[];
-  // console.log("buid merkle events:::::--- ", events);
   const leaves = events
     .sort((a, b) => {
       return Number(a.args?.index) - Number(b.args?.index);
     })
     .map((e) => {
-      console.log("e.args.commitment: " + typeof e.args?.commitment);
       return e.args?.commitment.toString();
     });
-  console.log(">>>LEAVES: ", leaves);
   const t = new MerkleTree(5, leaves, {
     hashFunction: poseidonHash2,
     zeroElement:
@@ -420,7 +417,6 @@ export async function encryptNote(publicKey: string, note: Note) {
 }
 
 export async function decryptNote(privkey: string, data: string) {
-  console.log({ privkey });
   const n: Note & { amount: string } = JSON.parse(
     dataDecrypt(privkey, data).toString("utf8")
   );
@@ -431,8 +427,8 @@ async function createProofs(
   spendList: Note[],
   outputList: Note[],
   tree: MerkleTree,
-  senderPrivateKey: bigint,
-  receiverEncryptionKey: string,
+  sender: Keyset,
+  receiver: Keyset,
   contract: CircomStuff
 ) {
   const babyJub = getBabyJubJub();
@@ -449,13 +445,13 @@ async function createProofs(
     const index = tree.indexOf(n1nc);
     const pathElements = tree.path(index).pathElements.map((e) => e.toString());
     const nullifier = await nullifierHash(
-      toStr(senderPrivateKey),
+      toStr(sender.privateKey),
       n1,
       BigInt(index)
     );
     const Vs = getV(n1.asset);
     const proofSpend = await contract.spendProve(
-      toStr(senderPrivateKey),
+      toStr(sender.privateKey),
       toStr(n1.amount),
       n1.blinding,
       n1.asset,
@@ -498,11 +494,19 @@ async function createProofs(
       toStr(n2vc.x),
       toStr(n2vc.y)
     );
+    const keyToEncryptTo =
+      sender.publicKey === n2.spender
+        ? sender.encryptionKey
+        : receiver.encryptionKey;
+    console.log("encryption key" + keyToEncryptTo, { sender, receiver });
+
+    const encryptedOutput = await encryptNote(keyToEncryptTo, n2);
+
     outputProofs.push({
       proof: proofOutput,
       valueCommitment: [toStr(n2vc.x), toStr(n2vc.y)],
       commitment: n2nc,
-      encryptedOutput: await encryptNote(receiverEncryptionKey, n2),
+      encryptedOutput,
     });
     totalRandomness = modN(totalRandomness - r2);
   }
@@ -516,8 +520,8 @@ export async function transfer(
   signer: Signer,
   poolAddress: string,
   amount: bigint,
-  sender:Keyset,
-  receiver:Keyset,
+  sender: Keyset,
+  receiver: Keyset,
   asset: string, // "USDC" | "WBTC" etc.
   tree: MerkleTree,
   notes: NoteStore
@@ -543,13 +547,13 @@ export async function transfer(
     outputList.push(createNote(0n, sender.publicKey, assetId));
   }
 
-  console.log({spendList})
+  console.log({ spendList, outputList });
   const { Bpk, spendProofs, outputProofs } = await createProofs(
     spendList,
     outputList,
     tree,
-    sender.privateKey,
-    receiver.encryptionKey,
+    sender,
+    receiver,
     contract
   );
 
@@ -583,8 +587,8 @@ export async function deposit(
     spendList,
     outputList,
     tree,
-    receiver.privateKey,
-    receiver.encryptionKey,
+    receiver,
+    receiver,
     contract
   );
 
@@ -602,10 +606,8 @@ export async function withdraw(
   signer: Signer,
   poolAddress: string,
   amount: bigint,
-  senderPrivateKey: bigint,
-  senderPublicKey: string,
-  receiverPublicKey: string,
-  receiverEncryptionKey: string,
+  sender: Keyset,
+  receiver: Keyset,
   asset: string, // "USDC" | "WBTC" etc.
   tree: MerkleTree,
   notes: NoteStore
@@ -623,16 +625,17 @@ export async function withdraw(
   const assetId = await getAsset(asset);
   const outputList: Note[] = [];
 
-  // outputList.push(createNote(amount, receiverPublicKey, assetId));
+  outputList.push(createNote(0n, sender.publicKey, assetId));
   if (change > 0n)
-    outputList.push(createNote(change, senderPublicKey, assetId));
+    outputList.push(createNote(change, sender.publicKey, assetId));
+  else outputList.push(createNote(0n, sender.publicKey, assetId));
 
   const { Bpk, spendProofs, outputProofs } = await createProofs(
     spendList,
     outputList,
     tree,
-    senderPrivateKey,
-    receiverEncryptionKey,
+    sender,
+    receiver,
     contract
   );
 
