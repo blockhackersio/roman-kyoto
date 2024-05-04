@@ -1,27 +1,34 @@
 import { useEffect, useState } from "react";
 import { useConnectWallet } from "@web3-onboard/react";
 import { ethers } from "ethers";
-import { Button } from "@chakra-ui/react";
+import { Button, Center, Heading, VStack, Image, Text } from "@chakra-ui/react";
 
 export default function ConnectWallet() {
     const [{ wallet, connecting }, connect, disconnect] = useConnectWallet();
-    const [ethersProvider, setProvider] =
-        useState<ethers.providers.Web3Provider | null>();
-
-    useEffect(() => {
-        // If the wallet has a provider than the wallet is connected
-        if (wallet?.provider) {
-            setProvider(
-                new ethers.providers.Web3Provider(wallet.provider, "any")
-            );
-            // if using ethers v6 this is:
-            // ethersProvider = new ethers.BrowserProvider(wallet.provider, 'any')
-        }
-    }, [wallet]);
 
     return (
-        <Button disabled={connecting} onClick={() => connect()}>
-            Connect
-        </Button>
+        <Center p={4} m={4}>
+            <VStack spacing={4}>
+                <Image
+                    src="https://example.com/wallet-connect-icon.png"
+                    alt="Connect Wallet"
+                    boxSize="150px"
+                />
+                <Heading as="h1" size="xl">
+                    Connect Your Wallet
+                </Heading>
+                <Text fontSize="md" textAlign="center">
+                    Please connect your wallet to interact with the
+                    decentralized application.
+                </Text>
+                <Button
+                    isLoading={connecting}
+                    onClick={() => connect()}
+                    colorScheme="teal"
+                >
+                    Connect Wallet
+                </Button>
+            </VStack>
+        </Center>
     );
 }

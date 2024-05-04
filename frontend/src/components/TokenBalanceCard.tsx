@@ -35,7 +35,8 @@ export default function TokenBalanceCard(props: {
                     </HStack>
                 </CardHeader>
 
-                <Text>Balance: {props.balance}</Text>
+                <Text> Unshielded Balance: {props.balance}</Text>
+                <Text> Shielded Balance: TODO</Text>
             </VStack>
         </Card>
     );

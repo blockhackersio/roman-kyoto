@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import TokenBalanceCard from "./TokenBalanceCard";
-import { HStack } from "@chakra-ui/react";
+import { Heading, HStack, VStack } from "@chakra-ui/react";
 import { USDC, WBTC } from "@/constants/Tokens";
 import { useConnectWallet, useWallets } from "@web3-onboard/react";
 import { getERC20Balance } from "@/helper/ERC20helpers";
@@ -28,21 +28,23 @@ export default function Balances(): JSX.Element {
     }, [wallet]);
 
     return (
-        <>
-            {wallet && (
-                <HStack spacing={3} justify="center" margin={4}>
-                    <TokenBalanceCard
-                        symbol={USDC.symbol}
-                        balance={USDCBalance}
-                        icon={USDC.icon}
-                    />
-                    <TokenBalanceCard
-                        symbol={WBTC.symbol}
-                        balance={WBTCBalance}
-                        icon={WBTC.icon}
-                    />
-                </HStack>
-            )}
-        </>
+        <VStack>
+            <Heading size="md" textAlign="center" mb={4}>
+                Balances
+            </Heading>
+
+            <HStack spacing={3} justify="center">
+                <TokenBalanceCard
+                    symbol={USDC.symbol}
+                    balance={USDCBalance}
+                    icon={USDC.icon}
+                />
+                <TokenBalanceCard
+                    symbol={WBTC.symbol}
+                    balance={WBTCBalance}
+                    icon={WBTC.icon}
+                />
+            </HStack>
+        </VStack>
     );
 }
