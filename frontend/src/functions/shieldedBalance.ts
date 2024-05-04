@@ -20,6 +20,12 @@ export type NewNullifier = {
   nullifier: string;
 };
 
+export type Utxo = {
+  commitment: NewCommitment;
+  note: Note;
+  nullifier?: string;
+};
+
 function attemptNoteDecryption(
   event: NewCommitment,
   userPrivateKey: string
