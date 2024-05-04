@@ -23,7 +23,7 @@ export type NewNullifier = {
 export type Utxo = {
   commitment: NewCommitment;
   note: Note;
-  nullifier?: string;
+  nullifier: string;
 };
 
 function attemptNoteDecryption(
