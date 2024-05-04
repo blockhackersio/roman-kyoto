@@ -1,6 +1,7 @@
 import { chains } from "@/constants/Chains";
 import { USDC, WBTC } from "@/constants/Tokens";
 import { getERC20Balance } from "@/helpers/ERC20helpers";
+import { deposit } from "@/helpers/ShieldedPoolhelpers";
 
 import {
     Button,
@@ -23,18 +24,17 @@ export default function DepositCard(): JSX.Element {
     const [depositAmount, setDepositAmount] = useState<number>();
     const [maxDeposit, setMaxDeposit] = useState<number>(0);
 
-
     useEffect(() => {
         if (wallet) {
             const fetchBalance = async () => {
                 const token = selectedToken === "USDC" ? USDC : WBTC;
-                const balance = await getERC20Balance(
-                    token.contractAddress,
-                    wallet?.accounts[0]?.address || "",
-                    chains.find((chain) => chain.id === token.chainId)
-                        ?.rpcUrl || ""
-                );
-                setMaxDeposit(balance.toNumber());
+                // const balance = await getERC20Balance(
+                //     token.contractAddress,
+                //     wallet?.accounts[0]?.address || "",
+                //     chains.find((chain) => chain.id === token.chainId)
+                //         ?.rpcUrl || ""
+                // );
+                setMaxDeposit(10);
             };
             fetchBalance();
         }
@@ -72,10 +72,7 @@ export default function DepositCard(): JSX.Element {
                 <CardFooter display="flex" justifyContent="center">
                     <Button
                         onClick={
-                            () =>
-                                console.log(
-                                    `Deposit ${depositAmount} ${selectedToken}`
-                                )
+                            () => deposit(depositAmount || 0, selectedToken)
                             // TODO: Implement deposit functionality
                         }
                         isDisabled={

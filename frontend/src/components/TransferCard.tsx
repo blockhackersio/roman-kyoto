@@ -13,6 +13,8 @@ import {
 import { useConnectWallet } from "@web3-onboard/react";
 import { useState, useEffect } from "react";
 import { chains } from "../constants/Chains";
+import { transfer } from "@/helpers/ShieldedPoolhelpers";
+import { ethers } from "ethers";
 
 export default function TransferCard(): JSX.Element {
     const [{ wallet }] = useConnectWallet();
@@ -22,7 +24,7 @@ export default function TransferCard(): JSX.Element {
     const [recipientAddress, setRecipientAddress] = useState("");
     const [transferAmount, setTransferAmount] = useState<number>();
     const [maxTransfer, setMaxTransfer] = useState<number>(0);
-  
+
     useEffect(() => {
         if (wallet) {
             const fetchBalance = async () => {
@@ -40,7 +42,7 @@ export default function TransferCard(): JSX.Element {
     };
 
     const handleChainChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        setSelectedChain(event.target.value);
+        setSelectedChain(Number(event.target.value));
     };
 
     const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,7 +74,10 @@ export default function TransferCard(): JSX.Element {
                         value={recipientAddress}
                         onChange={(e) => setRecipientAddress(e.target.value)}
                         required
-                        pattern="^0x[a-fA-F0-9]{40}$"
+                        isInvalid={
+                            !ethers.utils.isAddress(recipientAddress) &&
+                            recipientAddress !== ""
+                        }
                     />
                     <Input
                         type="number"
@@ -80,15 +85,17 @@ export default function TransferCard(): JSX.Element {
                         onChange={handleAmountChange}
                         max={maxTransfer}
                         placeholder="Enter transfer amount"
-                        required
                     />
                 </Stack>
             </CardBody>
             <CardFooter display="flex" justifyContent="center">
                 <Button
                     onClick={() =>
-                        console.log(
-                            `Transfer ${transferAmount} ${selectedToken}`
+                        transfer(
+                            transferAmount || 0,
+                            recipientAddress,
+                            selectedToken,
+                            selectedChain
                         )
                     }
                     isDisabled={

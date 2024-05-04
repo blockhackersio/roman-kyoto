@@ -1,6 +1,7 @@
 import { chains } from "@/constants/Chains";
 import { USDC, WBTC } from "@/constants/Tokens";
 import { getERC20Balance } from "@/helpers/ERC20helpers";
+import { withdraw } from "@/helpers/ShieldedPoolhelpers";
 import {
     Button,
     Card,
@@ -66,13 +67,7 @@ export default function WithdrawCard(): JSX.Element {
             </CardBody>
             <CardFooter display="flex" justifyContent="center">
                 <Button
-                    onClick={
-                        () =>
-                            console.log(
-                                `Withdraw ${withdrawAmount} ${selectedToken}`
-                            )
-                        // TODO: Implement withdraw functionality
-                    }
+                    onClick={() => withdraw(withdrawAmount || 0, selectedToken)}
                     isDisabled={
                         !wallet || !withdrawAmount || withdrawAmount <= 0
                     }
