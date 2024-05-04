@@ -17,10 +17,11 @@ import { randomBytes } from "@noble/hashes/utils";
 import { ensurePoseidon, poseidonHash, poseidonHash2 } from "./poseidon";
 import { bytesToNumberBE } from "@noble/curves/abstract/utils";
 import MerkleTree from "fixed-merkle-tree";
+import { ethers } from "hardhat";
 export * from "./config";
 
 export class CircomStuff {
-  constructor(private provider: Provider, private address: string) { }
+  constructor(private provider: Signer, private address: string) { }
 
   async spendProve(
     privateKey: string,
@@ -91,6 +92,9 @@ export class CircomStuff {
       "output"
     );
   }
+  getContract() {
+    return CircomExample__factory.connect(this.address, this.provider);
+  }
   async outputVerify(proof: string, commitment: string) {
     const verifier = CircomExample__factory.connect(
       this.address,
@@ -125,12 +129,12 @@ export class CircomStuff {
     outputs: OutputProof[],
     Bpk: [string, string],
     assetId: string,
-    amount: string,
+    amount: string
   ) {
-    console.log({ spends, outputs });
+    console.log({ spends, outputs, Bpk, assetId, amount });
     const verifier = CircomExample__factory.connect(
       this.address,
-      this.provider
+      await ethers.provider.getSigner()
     );
     await verifier.deposit(spends, outputs, Bpk, assetId, amount);
   }
@@ -493,12 +497,12 @@ export async function deposit(
   senderPrivateKey: bigint,
   receiverPublicKey: string,
   asset: string, // "USDC" | "WBTC" etc.
-  tree: MerkleTree,
+  tree: MerkleTree
 ): Promise<void> {
   const babyJub = getBabyJubJub();
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
-  const contract = new CircomStuff(signer.provider, poolAddress);
+  const contract = new CircomStuff(signer, poolAddress);
   const assetId = await getAsset(asset);
 
   const { R, modN, valcommit, getV } = getInitialPoints(babyJub);
@@ -577,10 +581,13 @@ export async function deposit(
   const bsk = totalRandomness;
   const Bpk = R.multiply(bsk);
 
-  await contract.deposit(spendProofs, outputProofs, [
-    toStr(Bpk.x),
-    toStr(Bpk.y),
-  ], assetId, toStr(amount));
+  await contract.deposit(
+    spendProofs,
+    outputProofs,
+    [toStr(Bpk.x), toStr(Bpk.y)],
+    assetId,
+    toStr(amount)
+  );
 }
 
 export async function withdraw(

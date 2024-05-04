@@ -32,15 +32,27 @@ import { Field, mod } from "@noble/curves/abstract/modular";
 import { CircomExample__factory } from "../typechain-types";
 import { AbiCoder, Provider, Signer, keccak256 } from "ethers";
 import { bytesToNumberBE, ensureBytes } from "@noble/curves/abstract/utils";
-
+import hasherArtifact from "../contracts/generated/Hasher.json";
 async function deployVerifierFixture() {
   return ignition.deploy(CircomExampleModule);
 }
 
 export async function getCircomExampleContract() {
   const { verifier } = await loadFixture(deployVerifierFixture);
+  const Hasher = await ethers.getContractFactory(
+    hasherArtifact.abi,
+    hasherArtifact.bytecode
+  );
+  const hasher = await Hasher.deploy();
+  const tx = await hasher.waitForDeployment();
+  const signer = await ethers.provider.getSigner();
+  const hasherAddr = await tx.getAddress();
+  console.log("Hasher deployed to:", hasherAddr);
   const address = await verifier.getAddress();
-  const circomExample = new CircomStuff(ethers.provider, address);
+  const v = CircomExample__factory.connect(address, signer);
+  await v.setHasherAddress(hasherAddr);
+  console.log("after vset hasher");
+  const circomExample = new CircomStuff(await ethers.provider.getSigner(), address);
   return circomExample;
 }
 
@@ -215,7 +227,9 @@ it("transact", async () => {
 });
 
 it("deposit", async () => {
-  const { verifier } = await loadFixture(deployVerifierFixture);
+    const contract = await getCircomExampleContract();
+const verifier = contract.getContract();
+  // const { verifier } = await loadFixture(deployVerifierFixture);
   await ensurePoseidon();
   const [privateKey, recieverPrivateKey, b1] = getRandomBits(10, 253);
   const spendKey = poseidonHash([privateKey]);

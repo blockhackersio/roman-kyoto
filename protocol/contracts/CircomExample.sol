@@ -32,8 +32,8 @@ contract CircomExample is MerkleTreeWithHistory {
     constructor(
         address _spendVerifier,
         address _outputVerifier,
-        bytes memory _hasherBytecode
-    ) MerkleTreeWithHistory(5, _hasherBytecode) {
+        address _hasher
+    ) MerkleTreeWithHistory(5, _hasher) {
         spendVerifier = SpendVerifier(_spendVerifier);
         outputVerifier = OutputVerifier(_outputVerifier);
     }
@@ -154,7 +154,7 @@ contract CircomExample is MerkleTreeWithHistory {
         uint[2] memory _bpk,
         uint256 _assetId,
         uint256 _depositAmount
-    ) public view {
+    ) public {
         // this is the same as G * poseidon(asset) * value of asset being deposited
         EdOnBN254.Affine memory _valueBal = EdOnBN254
             .primeSubgroupGenerator()
