@@ -267,11 +267,6 @@ export async function nullifierHash(
 }
 
 export function getInitialPoints(B: BabyJub) {
-  function getV(asset: string) {
-    const { G } = getInitialPoints(B);
-    const V = G.multiply(BigInt(asset));
-    return V;
-  }
 
   function reddsaSign(a: bigint, A: ExtPointType, msgByteStr: string) {
     // B - base point
@@ -324,6 +319,11 @@ export function getInitialPoints(B: BabyJub) {
     y: B.CURVE.Gy,
   });
   const R = G.multiply(Ro);
+
+  function getV(asset: string) {
+    const V = G.multiply(BigInt(asset));
+    return V;
+  }
 
   function valcommit(n: Note) {
     const r = getRandomBigInt(253);
