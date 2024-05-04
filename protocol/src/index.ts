@@ -8,7 +8,7 @@ import {
   Signer,
   keccak256,
 } from "ethers";
-import { CircomExample__factory } from "../typechain-types";
+import { CircomExample__factory, RK__factory } from "../typechain-types";
 import {
   dataDecrypt,
   dataEncrypt,
@@ -26,7 +26,7 @@ import { getEncryptionPublicKey } from "@metamask/eth-sig-util";
 export * from "./config";
 
 export class CircomStuff {
-  constructor(private provider: Signer, private address: string) { }
+  constructor(private provider: Signer, private address: string) {}
 
   async spendProve(
     privateKey: string,
@@ -139,10 +139,7 @@ export class CircomStuff {
     amount: string,
     root: string
   ) {
-    const verifier = CircomExample__factory.connect(
-      this.address,
-      this.provider
-    );
+    const verifier = RK__factory.connect(this.address, this.provider);
     return await verifier.deposit(spends, outputs, Bpk, assetId, amount, root);
   }
 
@@ -154,10 +151,7 @@ export class CircomStuff {
     amount: string,
     root: string
   ) {
-    const verifier = CircomExample__factory.connect(
-      this.address,
-      this.provider
-    );
+    const verifier = RK__factory.connect(this.address, this.provider);
     return await verifier.withdraw(spends, outputs, Bpk, assetId, amount, root);
   }
 
@@ -534,11 +528,11 @@ export async function transfer(
 ): Promise<ContractTransactionResponse> {
   logAction(
     "Transferring " +
-    amount +
-    " " +
-    asset +
-    " to " +
-    shrtn(toFixedHex(receiver.publicKey))
+      amount +
+      " " +
+      asset +
+      " to " +
+      shrtn(toFixedHex(receiver.publicKey))
   );
 
   if (signer.provider === null) throw new Error("Signer must have a provider");

@@ -1,6 +1,6 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
-import SpendVerifier from "./generated/SpendVerifier";
-import OutputVerifier from "./generated/OutputVerifier";
+import SpendVerifier from "./generated/uspendVerifier";
+import OutputVerifier from "./generated/uoutputVerifier";
 
 export default buildModule("CircomExample", (m) => {
   const { verifier: spendVerifier } = m.useModule(SpendVerifier);
