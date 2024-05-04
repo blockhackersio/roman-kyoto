@@ -11,6 +11,7 @@ import {
     MenuButton,
     MenuItem,
     MenuList,
+    Link,
 } from "@chakra-ui/react";
 import { ChevronDownIcon, MoonIcon, SunIcon } from "@chakra-ui/icons";
 import { useConnectWallet, useSetChain } from "@web3-onboard/react";
@@ -36,7 +37,7 @@ export default function NavBar() {
                     flex={{ base: 1 }}
                     justify={{ base: "center", md: "start" }}
                 >
-                    <Text fontSize="l" fontWeight="bold" marginRight={"0px"}>
+                    <Text fontSize="l" fontWeight="bold" color={"red"}>
                         Roman Kyoto
                     </Text>
                 </Flex>
