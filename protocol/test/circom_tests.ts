@@ -52,7 +52,10 @@ export async function getCircomExampleContract() {
   const v = CircomExample__factory.connect(address, signer);
   await v.setHasherAddress(hasherAddr);
   console.log("after vset hasher");
-  const circomExample = new CircomStuff(await ethers.provider.getSigner(), address);
+  const circomExample = new CircomStuff(
+    await ethers.provider.getSigner(),
+    address
+  );
   return circomExample;
 }
 
@@ -227,8 +230,8 @@ it("transact", async () => {
 });
 
 it("deposit", async () => {
-    const contract = await getCircomExampleContract();
-const verifier = contract.getContract();
+  const contract = await getCircomExampleContract();
+  const verifier = contract.getContract();
   // const { verifier } = await loadFixture(deployVerifierFixture);
   await ensurePoseidon();
   const [privateKey, recieverPrivateKey, b1] = getRandomBits(10, 253);
