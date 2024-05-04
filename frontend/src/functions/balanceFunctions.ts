@@ -1,3 +1,4 @@
+import { Commitment } from "@/models/Commitment";
 import {
   decrypt,
   encrypt,
@@ -6,18 +7,26 @@ import {
 } from "@metamask/eth-sig-util";
 import { Contract, EventLog } from "web3-eth-contract";
 
-// userKey is just private key
+// event NewCommitment(bytes32 commitment, uint256 index, bytes encryptedOutput);
+// event NewNullifier(bytes32 nullifier);
+// event PublicKey(address indexed owner, bytes key);
+
+// userKey is the connected wallets private key
 // Function to retrieve and filter commitments based on decrypted output
 async function getUserCommitments(
   userKey: string,
   contract: Contract
 ): Promise<string[]> {
-  const allEvents: EventLog[] = await contract.getPastEvents("NewCommitment", {
-    fromBlock: 0,
-    toBlock: "latest",
-  });
+  const allCommitmentEvents: EventLog[] = await contract.getPastEvents(
+    "NewCommitment",
+    {
+      fromBlock: 0,
+      toBlock: "latest",
+    }
+  );
 
-  const decryptedOutputs: string[] = allEvents
+  // Can change this to decryptedNotes?? - the output is just a note?
+  const decryptedOutputs: string[] = allCommitmentEvents
     .map((event) => {
       try {
         const decryptedOutput: string = decrypt({
@@ -37,15 +46,18 @@ async function getUserCommitments(
   return decryptedOutputs;
 }
 
-async function getNullifiers(
-  userKey: string,
-  contract: Contract
-): Promise<string[]> {
-  const allNullifiers: EventLog[] = await contract.getPastEvents(
+async function getNullifiers(contract: Contract): Promise<string[]> {
+  const allNullifierEvents: EventLog[] = await contract.getPastEvents(
     "NewNullifier",
     {
       fromBlock: 0,
       toBlock: "latest",
     }
   );
+
+  // Extract the nullifier value from each event and return them as an array
+  const nullifiers: string[] = allNullifierEvents.map(
+    (event) => event.returnValues.nullifier as string
+  );
+  return nullifiers;
 }
