@@ -1,6 +1,6 @@
 export type Note = {
   amount: number;
-  blinding: string;
+  binding: string;
   spenderZKPubKey: string;
   assetECPoint: string;
 };
