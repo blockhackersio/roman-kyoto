@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {MultiplierVerifier} from "./generated/multiplier.sol";
 import {SpendVerifier} from "./generated/spend.sol";
 import {OutputVerifier} from "./generated/output.sol";
+
 import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
 
 import "./EdOnBN254.sol";
@@ -28,9 +29,15 @@ contract CircomExample {
         uint[2] valueCommitment;
     }
 
-    constructor(address _spendVerifier, address _outputVerifier) payable {
+    constructor(
+        address _spendVerifier,
+        address _outputVerifier,
+        bytes memory _hasherBytecode
+    ) MerkleTreeWithHistory(5, _hasherBytecode) {
         spendVerifier = SpendVerifier(_spendVerifier);
         outputVerifier = OutputVerifier(_outputVerifier);
+
+        deployFromBytecode(_hasherBytecode);
     }
 
     function parseProof(
