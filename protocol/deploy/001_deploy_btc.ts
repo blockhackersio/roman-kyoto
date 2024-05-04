@@ -9,8 +9,6 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   const [Deployer] = await ethers.getSigners();
 
-  console.log(Deployer.address);
-
   await deploy("WBTC", {
     contract: "WBTC",
     from: Deployer.address,
@@ -21,4 +19,4 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 };
 
 export default func;
-func.tags = ["btc"];
+func.tags = ["btc", "testbed"];

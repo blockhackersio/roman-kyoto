@@ -8,7 +8,7 @@ import {
   Signer,
   keccak256,
 } from "ethers";
-import { CircomExample__factory } from "../typechain-types";
+import { CircomExample__factory, RK__factory } from "../typechain-types";
 import {
   dataDecrypt,
   dataEncrypt,
@@ -139,10 +139,7 @@ export class CircomStuff {
     amount: string,
     root: string
   ) {
-    const verifier = CircomExample__factory.connect(
-      this.address,
-      this.provider
-    );
+    const verifier = RK__factory.connect(this.address, this.provider);
     return await verifier.deposit(spends, outputs, Bpk, assetId, amount, root);
   }
 
@@ -154,10 +151,7 @@ export class CircomStuff {
     amount: string,
     root: string
   ) {
-    const verifier = CircomExample__factory.connect(
-      this.address,
-      this.provider
-    );
+    const verifier = RK__factory.connect(this.address, this.provider);
     return await verifier.withdraw(spends, outputs, Bpk, assetId, amount, root);
   }
 
@@ -509,8 +503,8 @@ async function createProofs(
   return { Bpk, spendProofs, outputProofs };
 }
 
-function shrtn(str:string) {
-  return str.slice(0,5) + ".." + str.slice(-5)
+function shrtn(str: string) {
+  return str.slice(0, 5) + ".." + str.slice(-5);
 }
 
 export async function transfer(
@@ -523,14 +517,13 @@ export async function transfer(
   tree: MerkleTree,
   notes: NoteStore
 ): Promise<ContractTransactionResponse> {
-  
   logAction(
     "Transferring " +
-    amount +
-    " " +
-    asset +
-    " to " +
-    shrtn(toFixedHex(receiver.publicKey))
+      amount +
+      " " +
+      asset +
+      " to " +
+      shrtn(toFixedHex(receiver.publicKey))
   );
 
   if (signer.provider === null) throw new Error("Signer must have a provider");

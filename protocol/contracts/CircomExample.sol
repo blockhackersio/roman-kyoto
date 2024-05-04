@@ -9,8 +9,6 @@ import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
 
 import "./EdOnBN254.sol";
 
-import "hardhat/console.sol";
-
 contract CircomExample is MerkleTreeWithHistory {
     using EdOnBN254 for *;
 
@@ -201,14 +199,14 @@ contract CircomExample is MerkleTreeWithHistory {
         );
     }
 
-    function deposit(
+    function _deposit(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
         uint[2] memory _bpk,
         uint256 _assetId,
         uint256 _depositAmount,
         uint256 _root
-    ) public {
+    ) internal {
         // this is the same as G * poseidon(asset) * value of asset being deposited
         EdOnBN254.Affine memory _valueBal = EdOnBN254
             .primeSubgroupGenerator()
@@ -219,14 +217,14 @@ contract CircomExample is MerkleTreeWithHistory {
         _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
     }
 
-    function withdraw(
+    function _withdraw(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
         uint[2] memory _bpk,
         uint256 _assetId,
         uint256 _withdrawAmount,
         uint256 _root
-    ) public {
+    ) internal {
         // this is the same as G * poseidon(asset) * value of asset being deposited
         EdOnBN254.Affine memory _valueBal = EdOnBN254
             .primeSubgroupGenerator()
