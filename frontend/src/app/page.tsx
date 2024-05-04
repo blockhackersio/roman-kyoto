@@ -13,6 +13,7 @@ import trustModule from "@web3-onboard/trust";
 import frontierModule from "@web3-onboard/frontier";
 import { chains } from "../constants/Chains";
 import NavBar from "../components/NavBar";
+import Balances from "@/components/Balances";
 
 const injected = injectedModule();
 const coinbase = coinbaseModule();
@@ -28,16 +29,16 @@ const frontier = frontierModule();
 
 const wallets = [
     injected,
-    infinityWallet,
-    keepkey,
-    sequence,
-    trust,
-    frontier,
-    taho,
-    coinbase,
-    dcent,
-    safe,
-    keystone,
+    // infinityWallet,
+    // keepkey,
+    // sequence,
+    // trust,
+    // frontier,
+    // taho,
+    // coinbase,
+    // dcent,
+    // safe,
+    // keystone,
 ];
 
 const appMetadata = {
@@ -60,6 +61,7 @@ export default function Page() {
     return (
         <Web3OnboardProvider web3Onboard={web3Onboard}>
             <NavBar />
+            <Balances />
         </Web3OnboardProvider>
     );
 }

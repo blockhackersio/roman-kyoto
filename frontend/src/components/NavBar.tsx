@@ -1,5 +1,3 @@
-"use client";
-
 import {
     Box,
     Flex,
@@ -61,7 +59,9 @@ export default function NavBar() {
                                 ) {
                                     alert("Invalid chain");
                                 } else {
-                                    setChain({ chainId: value });
+                                    setChain({
+                                        chainId: value,
+                                    });
                                 }
                             }}
                             value={connectedChain?.id}
