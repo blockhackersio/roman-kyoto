@@ -1,5 +1,9 @@
 "use client";
-import { Web3OnboardProvider, init } from "@web3-onboard/react";
+import {
+    Web3OnboardProvider,
+    init,
+    useConnectWallet,
+} from "@web3-onboard/react";
 import injectedModule from "@web3-onboard/injected-wallets";
 import infinityWalletModule from "@web3-onboard/infinity-wallet";
 import safeModule from "@web3-onboard/gnosis";

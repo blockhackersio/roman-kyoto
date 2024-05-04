@@ -22,7 +22,7 @@ export default function TransferCard(): JSX.Element {
     const [recipientAddress, setRecipientAddress] = useState("");
     const [transferAmount, setTransferAmount] = useState<number>();
     const [maxTransfer, setMaxTransfer] = useState<number>(0);
-
+  
     useEffect(() => {
         if (wallet) {
             const fetchBalance = async () => {
