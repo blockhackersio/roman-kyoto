@@ -125,65 +125,17 @@ it("spend", async () => {
   await contract.spendVerify(proof, n1nc);
 });
 
-function reddsaSign(
-  babyJub: BabyJub,
-  a: bigint,
-  A: ExtPointType,
-  msgByteStr: string
-) {
-  // B - base point
-  // a - secret key
-  // A - Public Key
-  // T - random bytes
-  // M - message bytes
-  // --- sign ------
-  // r = H(T||A||M)
-  // R = r * B
-  // S = r + H(R||A||M) * a
-  // R = H(T||A||M) * B
-  // S = H(T||A||M) + H(R||A||M) * a
-  // --- verify ----
-  // c = H(R||A||M)
-  // -B * S + R + c * A == identity
-
-  const abi = new AbiCoder();
-
-  const modN = (a: bigint) => mod(a, babyJub.CURVE.n);
-  const hash = babyJub.CURVE.hash;
-  const B = babyJub.ExtendedPoint.BASE;
-  const T = randomBytes(32);
-  const r = modN(
-    bytesToNumberBE(
-      hash(
-        abi.encode(
-          ["bytes", "uint256", "uint256", "bytes"],
-          [T, A.x, A.y, msgByteStr]
-        )
-      )
-    )
-  );
-  const R = B.multiply(r);
-  const cData = abi.encode(
-    ["uint256", "uint256", "uint256", "uint256", "bytes"],
-    [R.x, R.y, A.x, A.y, msgByteStr]
-  );
-  const hashed = keccak256(cData);
-  const c = modN(BigInt(hashed));
-  const s = modN(r + c * a);
-  return { R, s };
-}
-
 it("Bind signatures", async () => {
   const message = "Hello world";
   const msgBytes = ensureBytes("message", Buffer.from(message, "utf8"));
 
-  const { modN } = getInitialPoints(babyJub);
+  const { modN, reddsaSign } = getInitialPoints(babyJub);
 
   const a = modN(BigInt("0x" + Buffer.from(randomBytes(32)).toString("hex")));
   const A = babyJub.ExtendedPoint.BASE.multiply(a);
 
   const msgByteStr = toFixedHex(msgBytes);
-  const { s, R } = reddsaSign(babyJub, a, A, msgByteStr);
+  const { s, R } = reddsaSign(a, A, msgByteStr);
 
   /////////////////////////////
   // sig is now R and s
