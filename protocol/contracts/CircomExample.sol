@@ -11,7 +11,7 @@ import "./EdOnBN254.sol";
 
 import "hardhat/console.sol";
 
-contract CircomExample is MerkleTreeWithHistory{
+contract CircomExample is MerkleTreeWithHistory {
     using EdOnBN254 for *;
 
     SpendVerifier public spendVerifier;
@@ -36,8 +36,6 @@ contract CircomExample is MerkleTreeWithHistory{
     ) MerkleTreeWithHistory(5, _hasherBytecode) {
         spendVerifier = SpendVerifier(_spendVerifier);
         outputVerifier = OutputVerifier(_outputVerifier);
-
-        // deployFromBytecode(_hasherBytecode);
     }
 
     function parseProof(
@@ -165,6 +163,9 @@ contract CircomExample is MerkleTreeWithHistory{
             .neg();
 
         _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal);
+
+        // deposit we just create 1
+        _insert(outputProof[0].commitment, ZERO_VALUE);
     }
 
     function transact(
