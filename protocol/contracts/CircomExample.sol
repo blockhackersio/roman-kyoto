@@ -80,10 +80,7 @@ contract CircomExample {
         uint256[2] memory _R,
         uint256[2] memory _A,
         bytes memory _message
-    )
-        public
-        view
-    {
+    ) public view {
         EdOnBN254.Affine memory _Rp = EdOnBN254.Affine(_R[0], _R[1]);
         EdOnBN254.Affine memory _Ap = EdOnBN254.Affine(_A[0], _A[1]);
         bytes memory data = abi.encode(_Rp.x, _Rp.y, _Ap.x, _Ap.y, _message);
@@ -97,13 +94,13 @@ contract CircomExample {
             .add(_Ap.mul(_c));
 
         require(_Z.x == 0, "signature is not valid");
-
     }
 
-    function transact(
+    function _transactCheck(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
-        uint[2] memory _bpk
+        uint[2] memory _bpk,
+        EdOnBN254.Affine memory _valueBal
     ) public view {
         EdOnBN254.Affine memory total = EdOnBN254.zero();
 
@@ -128,10 +125,10 @@ contract CircomExample {
                     .neg()
             );
         }
-
+ 
         require(
-            total.add(EdOnBN254.zero().neg()).x == _bpk[0] &&
-                total.add(EdOnBN254.zero().neg()).y == _bpk[1],
+            total.add(_valueBal.neg()).x == _bpk[0] &&
+                total.add(_valueBal.neg()).y == _bpk[1],
             "Sum of values is incorrect"
         );
 
@@ -144,5 +141,21 @@ contract CircomExample {
             OutputProof memory outputProof = _outputProofs[j];
             outputVerify(outputProof.proof, [outputProof.commitment]);
         }
+    }
+
+    function transact(
+        SpendProof[] memory _spendProof,
+        OutputProof[] memory _outputProofs,
+        uint[2] memory _bpk
+    ) public view {
+       EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
+
+      _transactCheck(
+        _spendProof,
+        _outputProofs,
+        _bpk,
+        _valueBal
+      );
+
     }
 }

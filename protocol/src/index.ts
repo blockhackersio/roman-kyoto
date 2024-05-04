@@ -1,6 +1,13 @@
 // export your SDK here
 
-import { AbiCoder, Contract, EventLog, Provider, Signer, keccak256 } from "ethers";
+import {
+  AbiCoder,
+  Contract,
+  EventLog,
+  Provider,
+  Signer,
+  keccak256,
+} from "ethers";
 import { CircomExample__factory } from "../typechain-types";
 import { generateGroth16Proof, toFixedHex } from "./zklib";
 import { ExtPointType, twistedEdwards } from "@noble/curves/abstract/edwards";
@@ -342,7 +349,7 @@ function createNote(amount: bigint, spender: string, asset: string): Note {
 
 export async function buildMerkleTree(contract: Contract) {
   const filter = contract.filters.NewCommitment();
-  const events = await contract.queryFilter(filter, 0) as EventLog[];
+  const events = (await contract.queryFilter(filter, 0)) as EventLog[];
 
   const leaves = events
     .sort((a, b) => a.args?.index - b.args?.index)
@@ -464,7 +471,6 @@ export async function transfer(
   ]);
 }
 
-
 export async function deposit(
   signer: Signer,
   poolAddress: string,
@@ -473,6 +479,7 @@ export async function deposit(
   senderPublicKey: string,
   receiverPublicKey: string,
   asset: string, // "USDC" | "WBTC" etc.
+  tree: MerkleTree,
   notes: NoteStore
 ): Promise<unknown> {
   return "";
