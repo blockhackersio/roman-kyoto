@@ -4,6 +4,8 @@ pragma solidity ^0.8.24;
 import {MultiplierVerifier} from "./generated/multiplier.sol";
 import {SpendVerifier} from "./generated/spend.sol";
 import {OutputVerifier} from "./generated/output.sol";
+import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
+
 import "./EdOnBN254.sol";
 
 import "hardhat/console.sol";

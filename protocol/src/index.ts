@@ -1,8 +1,8 @@
 // export your SDK here
 
-import { AbiCoder, Provider, Signer, keccak256 } from "ethers";
+import { AbiCoder, Contract, EventLog, Provider, Signer, keccak256 } from "ethers";
 import { CircomExample__factory } from "../typechain-types";
-import { generateGroth16Proof } from "./zklib";
+import { generateGroth16Proof, toFixedHex } from "./zklib";
 import { ExtPointType, twistedEdwards } from "@noble/curves/abstract/edwards";
 import { Field, mod } from "@noble/curves/abstract/modular";
 import { keccak_256 } from "@noble/hashes/sha3";
@@ -340,6 +340,22 @@ function createNote(amount: bigint, spender: string, asset: string): Note {
   };
 }
 
+export async function buildMerkleTree(contract: Contract) {
+  const filter = contract.filters.NewCommitment();
+  const events = await contract.queryFilter(filter, 0) as EventLog[];
+
+  const leaves = events
+    .sort((a, b) => a.args?.index - b.args?.index)
+    .map((e) => toFixedHex(e.args?.commitment));
+
+  const t = new MerkleTree(5, leaves, {
+    hashFunction: poseidonHash2,
+    zeroElement:
+      "21663839004416932945382355908790599225266501822907911457504978515578255421292",
+  });
+
+  return t;
+}
 export async function transfer(
   signer: Signer,
   poolAddress: string,
@@ -348,6 +364,7 @@ export async function transfer(
   senderPublicKey: string,
   receiverPublicKey: string,
   asset: string, // "USDC" | "WBTC" etc.
+  tree: MerkleTree,
   notes: NoteStore
 ): Promise<void> {
   const babyJub = getBabyJubJub();
@@ -378,14 +395,9 @@ export async function transfer(
     const n1nc = await notecommitment(n1);
     const { Vc: n1vc, r: r1 } = valcommit(n1);
 
-    const tree = new MerkleTree(5, [], {
-      hashFunction: poseidonHash2,
-    });
-
-    tree.insert(n1nc);
+    const root = `${tree.root}`;
     const index = tree.indexOf(n1nc);
     const pathElements = tree.path(index).pathElements.map((e) => e.toString());
-    const root = `${tree.root}`;
     const nullifier = await nullifierHash(
       toStr(senderPrivateKey),
       n1,
@@ -455,8 +467,11 @@ export async function transfer(
 
 export async function deposit(
   signer: Signer,
+  poolAddress: string,
   amount: bigint,
-  spendKey: string,
+  senderPrivateKey: bigint,
+  senderPublicKey: string,
+  receiverPublicKey: string,
   asset: string, // "USDC" | "WBTC" etc.
   notes: NoteStore
 ): Promise<unknown> {
