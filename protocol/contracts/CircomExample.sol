@@ -68,6 +68,36 @@ contract CircomExample {
         );
     }
 
+    struct RedDSASignature {
+        bytes32 s;
+        bytes32 R;
+    }
+
+    function sigVerify(
+        uint256 _s,
+        uint256[2] memory _R,
+        uint256[2] memory _A,
+        bytes memory _message
+    )
+        public
+        view
+    {
+        EdOnBN254.Affine memory _Rp = EdOnBN254.Affine(_R[0], _R[1]);
+        EdOnBN254.Affine memory _Ap = EdOnBN254.Affine(_A[0], _A[1]);
+        bytes memory data = abi.encode(_Rp.x, _Rp.y, _Ap.x, _Ap.y, _message);
+
+        uint256 _c = uint256(keccak256(data)) % EdOnBN254.N;
+        EdOnBN254.Affine memory _Z = EdOnBN254
+            .primeSubgroupGenerator()
+            .neg()
+            .mul(_s)
+            .add(_Rp)
+            .add(_Ap.mul(_c));
+
+        require(_Z.x == 0, "signature is not valid");
+
+    }
+
     function transact(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
