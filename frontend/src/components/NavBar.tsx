@@ -11,7 +11,6 @@ import {
     MenuButton,
     MenuItem,
     MenuList,
-    Link,
 } from "@chakra-ui/react";
 import { ChevronDownIcon, MoonIcon, SunIcon } from "@chakra-ui/icons";
 import { useConnectWallet, useSetChain } from "@web3-onboard/react";

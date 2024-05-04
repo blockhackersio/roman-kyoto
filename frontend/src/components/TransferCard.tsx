@@ -20,8 +20,8 @@ export default function TransferCard(): JSX.Element {
     const [selectedToken, setSelectedToken] = useState("USDC");
     const [selectedChain, setSelectedChain] = useState(chains[0].id);
     const [recipientAddress, setRecipientAddress] = useState("");
-    const [transferAmount, setTransferAmount] = useState();
-    const [maxTransfer, setMaxTransfer] = useState(0);
+    const [transferAmount, setTransferAmount] = useState<number>();
+    const [maxTransfer, setMaxTransfer] = useState<number>(0);
 
     useEffect(() => {
         if (wallet) {
