@@ -24,6 +24,7 @@
   "license": "ISC",
   "dependencies": {
     "@chainlink/contracts-ccip": "^1.4.0",
+    "@metamask/eth-sig-util": "^7.0.2",
     "@noble/curves": "^1.4.0",
     "@noble/hashes": "^1.4.0",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.6",

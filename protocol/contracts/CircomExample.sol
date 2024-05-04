@@ -117,9 +117,9 @@ contract CircomExample is MerkleTreeWithHistory {
         OutputProof[] memory _outputProofs,
         uint[2] memory _bpk,
         EdOnBN254.Affine memory _valueBal,
-        bytes32 _root
+        uint256 _root
     ) internal {
-        require(isKnownRoot(_root), "Invalid merkle root");
+        require(isKnownRoot(bytes32(_root)), "Invalid merkle root");
 
         for (uint i = 0; i < _spendProof.length; i++) {
             require(
@@ -211,7 +211,7 @@ contract CircomExample is MerkleTreeWithHistory {
         uint[2] memory _bpk,
         uint256 _assetId,
         uint256 _depositAmount,
-        bytes32 _root
+        uint256 _root
     ) public {
         // this is the same as G * poseidon(asset) * value of asset being deposited
         EdOnBN254.Affine memory _valueBal = EdOnBN254
@@ -229,7 +229,7 @@ contract CircomExample is MerkleTreeWithHistory {
         uint[2] memory _bpk,
         uint256 _assetId,
         uint256 _withdrawAmount,
-        bytes32 _root
+        uint256 _root
     ) public {
         // this is the same as G * poseidon(asset) * value of asset being deposited
         EdOnBN254.Affine memory _valueBal = EdOnBN254
@@ -244,7 +244,7 @@ contract CircomExample is MerkleTreeWithHistory {
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
         uint[2] memory _bpk,
-        bytes32 _root
+        uint256 _root
     ) public {
         EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
 

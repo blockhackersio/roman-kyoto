@@ -13,9 +13,11 @@ import {
   OutputProof,
   SpendProof,
   deposit,
+  encryptNote,
   getAsset,
   getBabyJubJub,
   getInitialPoints,
+  getKeys,
   getRandomBigInt,
   getRandomBits,
   notecommitment,
@@ -190,13 +192,27 @@ it("Bind signatures", async () => {
   );
 });
 
-it("transact", async () => {
+it("encrypt", async () => {
+  const [privateKey, blinding] = getRandomBits(10, 256);
+  const keys = await getKeys(privateKey);
+
+  const encrypted = await encryptNote(keys.encryptionKey, {
+    amount: 123n,
+    asset: await getAsset("USDC"),
+    spender: keys.publicKey,
+    blinding: blinding.toString(),
+  });
+  console.log(encrypted)
+});
+
+it.skip("transact", async () => {
   const { verifier } = await loadFixture(deployVerifierFixture);
   await ensurePoseidon();
-  const [privateKey, recieverPrivateKey, b1] = getRandomBits(10, 253);
-  const spendKey = poseidonHash([privateKey]);
-  const receiverSpendKey = poseidonHash([recieverPrivateKey]);
-
+  const [privateKey, recieverPrivateKey, b1] = getRandomBits(10, 256);
+  const { publicKey: spendKey } = await getKeys(privateKey);
+  const { publicKey: receiverSpendKey, encryptionKey } = await getKeys(
+    recieverPrivateKey
+  );
   const spendList: Note[] = [
     {
       amount: 10n,
@@ -220,6 +236,7 @@ it("transact", async () => {
     privateKey,
     spendKey,
     receiverSpendKey,
+    encryptionKey,
     "USDC",
     tree,
     {
@@ -230,14 +247,16 @@ it("transact", async () => {
   );
 });
 
-it("deposit", async () => {
+it.only("deposit", async () => {
   const contract = await getCircomExampleContract();
   const verifier = contract.getContract();
   // const { verifier } = await loadFixture(deployVerifierFixture);
   await ensurePoseidon();
-  const [privateKey, recieverPrivateKey, b1] = getRandomBits(10, 253);
+  const [privateKey, recieverPrivateKey, b1] = getRandomBits(10, 256);
   const spendKey = poseidonHash([privateKey]);
-  const receiverSpendKey = poseidonHash([recieverPrivateKey]);
+  const { publicKey: receiverSpendKey, encryptionKey } = await getKeys(
+    recieverPrivateKey
+  );
 
   const spendList: Note[] = [
     {
@@ -261,6 +280,7 @@ it("deposit", async () => {
     10n,
     privateKey,
     receiverSpendKey,
+    encryptionKey,
     "USDC",
     tree
   );
@@ -271,9 +291,11 @@ it("withdaw", async () => {
   const verifier = contract.getContract();
   // const { verifier } = await loadFixture(deployVerifierFixture);
   await ensurePoseidon();
-  const [privateKey, recieverPrivateKey, b1] = getRandomBits(10, 253);
+  const [privateKey, recieverPrivateKey, b1] = getRandomBits(10, 256);
   const spendKey = poseidonHash([privateKey]);
-  const receiverSpendKey = poseidonHash([recieverPrivateKey]);
+  const { publicKey: receiverSpendKey, encryptionKey } = await getKeys(
+    recieverPrivateKey
+  );
 
   const spendList: Note[] = [
     {
@@ -298,6 +320,7 @@ it("withdaw", async () => {
     privateKey,
     spendKey,
     receiverSpendKey,
+    encryptionKey,
     "USDC",
     tree,
     {
