@@ -23,18 +23,17 @@ export default function DepositCard(): JSX.Element {
     const [depositAmount, setDepositAmount] = useState<number>();
     const [maxDeposit, setMaxDeposit] = useState<number>(0);
 
-
     useEffect(() => {
         if (wallet) {
             const fetchBalance = async () => {
                 const token = selectedToken === "USDC" ? USDC : WBTC;
-                const balance = await getERC20Balance(
-                    token.contractAddress,
-                    wallet?.accounts[0]?.address || "",
-                    chains.find((chain) => chain.id === token.chainId)
-                        ?.rpcUrl || ""
-                );
-                setMaxDeposit(balance.toNumber());
+                // const balance = await getERC20Balance(
+                //     token.contractAddress,
+                //     wallet?.accounts[0]?.address || "",
+                //     chains.find((chain) => chain.id === token.chainId)
+                //         ?.rpcUrl || ""
+                // );
+                // setMaxDeposit(balance.toNumber());
             };
             fetchBalance();
         }

@@ -7,7 +7,7 @@ export const USDC = {
 export const USDC_BASE_SEPOLIA = {
     symbol: "USDC",
     icon: "https://cryptologos.cc/logos/usd-coin-usdc-logo.png",
-    contractAddress: "	0x036CbD53842c5426634e7929541eC2318f3dCF7e", // Placeholder for actual contract address on Base Sepolia
+    contractAddress: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", // Placeholder for actual contract address on Base Sepolia
     chainId: 84532, // Base Sepolia
 };
 
