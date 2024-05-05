@@ -135,17 +135,15 @@ async function main() {
   const { deployments } = hre;
   const [Deployer] = await ethers.getSigners();
 
+  // get our Roman Kyoto Contract Instance
   const RKAddress = (await deployments.get("RK")).address;
-
-  // approve for USDC and WBTC
   const RK = new Contract(
     RKAddress,
     RK__factory.abi,
     Deployer
   ) as unknown as RK;
 
-  const transferAmountUSDC = parseUnits("69", 6);
-
+  // the owner of the note we are spending
   const spender = await getKeys(BigInt(`0x${process.env.PRIVATE_KEY!}`));
   const hexPrivate = spender.privateKey.toString(16);
 
@@ -154,26 +152,28 @@ async function main() {
   await store.logBalances();
 
   const depositReceipt =
-    "0x9ae463489546fdf0315db67680978f56ec0719eeba6ee09e5bef0fafc2652016";
+    "0xfb64d4a9c324f6c595d5f6aca455f183875c12525094d11eb41e282f8062853c"; // TODO change me
 
-  const r = (await Deployer.provider.getTransactionReceipt(
+  const depositEventInfo = (await Deployer.provider.getTransactionReceipt(
     depositReceipt
   )) as ContractTransactionReceipt;
 
-  if (r === null) throw Error("ERRR");
+  if (depositEventInfo === null) throw Error("ERRR");
 
-  store = await extractToStore(hexPrivate, store, r);
+  // update our store (wallet) with the deposit event details
+  store = await extractToStore(hexPrivate, store, depositEventInfo);
 
   const transferReceipt =
-    "0x04a3505fa543de2230fc4447d405ec63b89f03d52b58fd27a5129bc229bf4ce1";
+    "0xfef64958fe0a3297fa54e77784ed6859576b6d744b6b32ca63f1aaff80e2a390"; // TODO change me
 
-  const w = (await Deployer.provider.getTransactionReceipt(
-    transferReceipt
-  )) as ContractTransactionReceipt;
+  const transactionReceiptEvent =
+    (await Deployer.provider.getTransactionReceipt(
+      transferReceipt
+    )) as ContractTransactionReceipt;
 
-  if (w === null) throw Error("ERRR");
+  if (transactionReceiptEvent === null) throw Error("ERRR");
 
-  store = await extractToStore(hexPrivate, store, w);
+  store = await extractToStore(hexPrivate, store, transactionReceiptEvent);
 
   const receiver = await getKeys(
     BigInt(`0x${process.env.RECEIVER_PRIVATE_KEY}`)
@@ -181,7 +181,7 @@ async function main() {
 
   let tree = await buildMerkleTree(RK as any as Contract);
 
-  const withdrawalAmount = parseUnits("2", 6);
+  const withdrawalAmount = parseUnits("9", 6);
 
   // and, we can withdraw them too
   const tx = await withdraw(

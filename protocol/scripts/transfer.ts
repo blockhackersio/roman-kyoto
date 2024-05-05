@@ -143,7 +143,7 @@ async function main() {
     Deployer
   ) as unknown as RK;
 
-  const transferAmountUSDC = parseUnits("1", 6);
+  const transferAmountUSDC = parseUnits("11", 6);
 
   const spender = await getKeys(BigInt(`0x${process.env.PRIVATE_KEY!}`));
   const hexPrivate = spender.privateKey.toString(16);
@@ -153,22 +153,30 @@ async function main() {
   await store.logBalances();
 
   const depositReceipt =
-    "0x9ae463489546fdf0315db67680978f56ec0719eeba6ee09e5bef0fafc2652016";
+    "0xfb64d4a9c324f6c595d5f6aca455f183875c12525094d11eb41e282f8062853c"; // TODO change me
 
-  const r = (await Deployer.provider.getTransactionReceipt(
+  const depositEventInfo = (await Deployer.provider.getTransactionReceipt(
     depositReceipt
   )) as ContractTransactionReceipt;
 
-  if (r === null) throw Error("ERRR");
+  if (depositEventInfo === null) throw Error("ERRR");
 
-  store = await extractToStore(hexPrivate, store, r);
+  // store is how we track our users encrypted notes/balances
+  store = await extractToStore(hexPrivate, store, depositEventInfo);
 
+  // the receiver of the note we are spending
   const receiver = await getKeys(
+    // IRL we don't need this, handing for testing
     BigInt(`0x${process.env.RECEIVER_PRIVATE_KEY}`)
   );
 
-  let tree = await buildMerkleTree(RK as any as Contract);
+  // for our tx events - we need to know the block number of the tx to build our tree
+  const fromBlockNumber = 6664311; // TODO change me
 
+  // we submit the tree as part of any deposit, transact or withdraw function call
+  let tree = await buildMerkleTree(RK as any as Contract, fromBlockNumber);
+
+  // submit our transfer transaction
   const tx = await transfer(
     Deployer,
     RKAddress,

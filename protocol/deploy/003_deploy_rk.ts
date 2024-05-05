@@ -19,6 +19,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   );
 
   const tx = await HasherFactory.deploy();
+  await tx.waitForDeployment();
   const hasherAddress = await tx.getAddress();
 
   await save("Hasher", {
@@ -32,6 +33,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     from: Deployer.address,
     log: true,
     autoMine: true,
+    waitConfirmations: 1,
   });
 
   await deploy("SpendVerifierSource", {
@@ -39,13 +41,18 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     from: Deployer.address,
     log: true,
     autoMine: true,
+    waitConfirmations: 1,
   });
 
   // deploy our EdOnBN254 library
   await hre.deployments.deploy("EdOnBN254", {
     contract: "EdOnBN254",
     from: Deployer.address,
+    log: true,
+    autoMine: true,
+    waitConfirmations: 1,
   });
+
   const SpendVerifierSource = (await hre.deployments.get("SpendVerifierSource"))
     .address;
   const OutputVerifierSource = (
@@ -70,6 +77,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     libraries: {
       EdOnBN254: EdOnBN254,
     },
+    log: true,
+    autoMine: true,
+    waitConfirmations: 1,
   });
 };
 
