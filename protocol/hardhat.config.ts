@@ -62,6 +62,10 @@ const config: HardhatUserConfig = {
       url: "https://rpc.cardona.zkevm-rpc.com/",
       accounts: [process.env.PRIVATE_KEY!],
     },
+    amoy: {
+      url: "https://rpc-amoy.polygon.technology/",
+      accounts: [process.env.PRIVATE_KEY!],
+    },
   },
 
   gasReporter: {
@@ -77,6 +81,7 @@ const config: HardhatUserConfig = {
       goerli: process.env.ETHERSCAN_API_KEY || "",
       mainnet: process.env.ETHERSCAN_API_KEY || "",
       polygon: process.env.POLYGON_API_KEY || "",
+      amoy: process.env.POLYGON_API_KEY || "",
       cardona: process.env.POLYGON_API_KEY || "",
       arbitrumOne: process.env.ARBITRUM_API_KEY || "",
       bsc: process.env.BSC_API_KEY || "",
