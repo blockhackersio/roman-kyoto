@@ -36,7 +36,7 @@ subtask(
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.24",
+    version: "0.8.25",
     settings: {
       optimizer: {
         enabled: true,
@@ -70,6 +70,48 @@ const config: HardhatUserConfig = {
     gasPrice: 21,
     currencyDisplayPrecision: 4,
     coinmarketcap: process.env.COIN_MARKET_CAP_API_KEY,
+  },
+
+  etherscan: {
+    apiKey: {
+      goerli: process.env.ETHERSCAN_API_KEY || "",
+      mainnet: process.env.ETHERSCAN_API_KEY || "",
+      polygon: process.env.POLYGON_API_KEY || "",
+      cardona: process.env.POLYGON_API_KEY || "",
+      arbitrumOne: process.env.ARBITRUM_API_KEY || "",
+      bsc: process.env.BSC_API_KEY || "",
+      bscTestnet: process.env.BSC_API_KEY || "",
+      optimisticEthereum: process.env.OPTIMISM_API_KEY || "",
+      base: process.env.BASE_API_KEY || "",
+      baseSepolia: process.env.BASE_API_KEY || "",
+      sepolia: process.env.ETHERSCAN_API_KEY || "",
+    },
+    customChains: [
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.io",
+        },
+      },
+      {
+        network: "cardona",
+        chainId: 2442,
+        urls: {
+          apiURL: "https://api-testnet.polygonscan.com/api",
+          browserURL: "https://cardona-zkevm.polygonscan.com/",
+        },
+      },
+      {
+        network: "baseSepolia",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://api-sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.io",
+        },
+      },
+    ],
   },
 };
 
