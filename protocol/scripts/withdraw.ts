@@ -154,7 +154,7 @@ async function main() {
   await store.logBalances();
 
   const depositReceipt =
-    "0xcf15f254a59ea5126e3893c1c9382d22d764b53dd3a2c3a99ea71cd31bda563a";
+    "0x9ae463489546fdf0315db67680978f56ec0719eeba6ee09e5bef0fafc2652016";
 
   const r = (await Deployer.provider.getTransactionReceipt(
     depositReceipt
@@ -165,7 +165,7 @@ async function main() {
   store = await extractToStore(hexPrivate, store, r);
 
   const transferReceipt =
-    "0xe8caaf12d3484ce6b8d0897509ab4d6b51595bce1a7375e30e3c42971278452c";
+    "0x04a3505fa543de2230fc4447d405ec63b89f03d52b58fd27a5129bc229bf4ce1";
 
   const w = (await Deployer.provider.getTransactionReceipt(
     transferReceipt

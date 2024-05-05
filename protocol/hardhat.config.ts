@@ -109,6 +109,14 @@ const config: HardhatUserConfig = {
         },
       },
       {
+        network: "amoy",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://api-amoy.polygonscan.com/api",
+          browserURL: "https://amoy.polygonscan.com/",
+        },
+      },
+      {
         network: "baseSepolia",
         chainId: 84532,
         urls: {

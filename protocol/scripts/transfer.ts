@@ -143,7 +143,7 @@ async function main() {
     Deployer
   ) as unknown as RK;
 
-  const transferAmountUSDC = parseUnits("69", 6);
+  const transferAmountUSDC = parseUnits("1", 6);
 
   const spender = await getKeys(BigInt(`0x${process.env.PRIVATE_KEY!}`));
   const hexPrivate = spender.privateKey.toString(16);
@@ -153,7 +153,7 @@ async function main() {
   await store.logBalances();
 
   const depositReceipt =
-    "0xcf15f254a59ea5126e3893c1c9382d22d764b53dd3a2c3a99ea71cd31bda563a";
+    "0x9ae463489546fdf0315db67680978f56ec0719eeba6ee09e5bef0fafc2652016";
 
   const r = (await Deployer.provider.getTransactionReceipt(
     depositReceipt

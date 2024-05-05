@@ -1,0 +1,9 @@
+// ETH Mainnet
+module.exports = [
+  "0xaaCd292B475c6Cd2543DaC465516Ab5d7fCd27f3",
+  "0x0492133d98f7B759a16E652C7c2ed37aac483300",
+  "0x25b406faeD1AD18470664B6258675bDBCCc4Aa49",
+  "0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93",
+  [],
+  [],
+];

@@ -381,7 +381,8 @@ export async function getKeys(privateKey: bigint) {
 
 export async function buildMerkleTree(contract: Contract) {
   const filter = contract.filters.NewCommitment();
-  const events = (await contract.queryFilter(filter, 0)) as EventLog[];
+  // this 2nd number here is the block number where the first takes place
+  const events = (await contract.queryFilter(filter, 6662365)) as EventLog[];
   const leaves = events
     .sort((a, b) => {
       return Number(a.args?.index) - Number(b.args?.index);
