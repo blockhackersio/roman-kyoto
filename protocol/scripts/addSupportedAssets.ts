@@ -30,8 +30,11 @@ async function main() {
   const usdcAssetId = await getAsset("USDC");
   const wbtcAssetId = await getAsset("WBTC");
 
-  await RK.addSupportedAsset(usdcAssetId, usdcAddress, 6n);
-  await RK.addSupportedAsset(wbtcAssetId, wbtcAddress, 18n);
+  let tx = await RK.addSupportedAsset(usdcAssetId, usdcAddress, 6n);
+  await tx.wait();
+
+  tx = await RK.addSupportedAsset(wbtcAssetId, wbtcAddress, 18n);
+  await tx.wait();
 }
 
 main().catch((error) => {

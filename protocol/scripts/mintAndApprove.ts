@@ -30,9 +30,6 @@ async function main() {
   const wbtcAmount = parseEther("10000");
   await WBTC.mint(Deployer.address, wbtcAmount);
   await WBTC.approve(RKAddress, wbtcAmount);
-
-  // approve for USDC and WBTC
-  // const RK = new Contract(RKAddress, RK__factory.abi) as unknown as RK;
 }
 
 main().catch((error) => {
