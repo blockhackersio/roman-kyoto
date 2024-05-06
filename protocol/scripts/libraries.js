@@ -1,0 +1,3 @@
+module.exports = {
+  EdOnBN254: "0xC60B012f38017f512D2069aE3210Ad36075ACA6f",
+};
