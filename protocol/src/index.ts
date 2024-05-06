@@ -279,6 +279,20 @@ export async function nullifierHash(
 }
 
 export function getInitialPoints(B: BabyJub) {
+  function getV(asset: string) {
+    const { G } = getInitialPoints(B);
+    const V = G.multiply(BigInt(asset));
+    return V;
+  }
+
+  function valcommit(n: Note, R: ExtPointType, r: bigint) {
+    const V = getV(n.asset);
+    const vV = V.multiply(modN(n.amount));
+    const rR = R.multiply(modN(r));
+    const Vc = vV.add(rR);
+    return Vc;
+  }
+
   function reddsaSign(a: bigint, A: ExtPointType, msgByteStr: string) {
     // B - base point
     // a - secret key
@@ -346,7 +360,16 @@ export function getInitialPoints(B: BabyJub) {
     return { Vc, r };
   }
 
-  return { G, R, modN, valcommit, getV, reddsaSign };
+  function mintcommit(asset: string, amount: bigint) {
+    const r = getRandomBigInt(253);
+    const V = getV(asset);
+    const vV = amount == 0n ? B.ExtendedPoint.ZERO : V.multiply(modN(amount));
+    const rR = R.multiply(modN(r));
+    const Vc = vV.add(rR);
+    return { Vc, r };
+  }
+
+  return { G, R, modN, valcommit, getV, mintcommit, reddsaSign };
 }
 
 function createNote(amount: bigint, spender: string, asset: string): Note {
@@ -602,6 +625,58 @@ export async function deposit(
   );
 
   return await contract.deposit(
+    spendProofs,
+    outputProofs,
+    [toStr(Bpk.x), toStr(Bpk.y)],
+    assetId,
+    toStr(amount),
+    `${tree.root}`
+  );
+}
+
+export async function burnToCrosschain(
+  signer: Signer,
+  poolAddress: string,
+  amount: bigint,
+  sender: Keyset,
+  receiver: Keyset,
+  asset: string, // "USDC" | "WBTC" etc.
+  tree: MerkleTree,
+  notes: NoteStore
+) {
+  logAction("Sending CROSSCHAIN " + amount + " " + asset);
+
+  if (signer.provider === null) throw new Error("Signer must have a provider");
+
+  const contract = new CircomStuff(signer, poolAddress);
+  const spendList = await notes.getNotesUpTo(amount, asset);
+  const totalSpent = spendList.reduce((t, note) => {
+    return t + note.amount;
+  }, 0n);
+
+  const change = totalSpent - amount;
+  const assetId = await getAsset(asset);
+  const outputList: Note[] = [];
+
+  outputList.push(createNote(0n, sender.publicKey, assetId));
+  if (change > 0n)
+    outputList.push(createNote(change, sender.publicKey, assetId));
+  else outputList.push(createNote(0n, sender.publicKey, assetId));
+
+  const { Bpk, spendProofs, outputProofs } = await createProofs(
+    spendList,
+    outputList,
+    tree,
+    sender,
+    receiver,
+    contract
+  );
+
+  const babyJub = getBabyJubJub();
+  const { R, modN, valcommit, mintcommit, getV } = getInitialPoints(babyJub);
+  // XXX: Todo finishe mint commitment
+  const mintcommitment = mintcommit(await getAsset(asset), amount);
+  return await contract.withdraw(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
