@@ -26,10 +26,10 @@ import { deployAll } from "./utils";
 
 
 export async function getMultiAssetShieldedPoolContract() {
-  const { RK } = await loadFixture(deployAll);
+  const { MASP } = await loadFixture(deployAll);
   const circomExample = new CircomStuff(
     await ethers.provider.getSigner(),
-    await RK.getAddress()
+    await MASP.getAddress()
   );
   return circomExample;
 }

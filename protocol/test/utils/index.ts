@@ -1,6 +1,6 @@
 import hre, { ethers } from "hardhat";
 import {
-  RK,
+  MultiAssetShieldedPool__factory,
   RK__factory,
   USDC,
   USDC__factory,
@@ -58,18 +58,25 @@ export async function deployAll() {
     },
   });
 
-  // hardhat deployments typing fuckin sucks
-  const tempRK = await hre.deployments.get("RKSource");
-  const rkAddress = tempRK.address;
+  // next we deploy our MultiAssetShieldedPool contract for unit tests
+  await hre.deployments.deploy("MASP", {
+    contract: "MaspTest",
+    from: Deployer.address,
+    args: [
+      SpendVerifierSource.address,
+      OutputVerifierSource.address,
+      Hasher.address,
+    ],
+    libraries: {
+      EdOnBN254: EdOnBN254,
+    },
+  });
 
-  const RK = new ethers.Contract(
-    rkAddress,
-    RK__factory.abi,
-    Deployer
-  ) as unknown as RK;
+  const RK =  RK__factory.connect((await hre.deployments.get("RKSource")).address, Deployer)
+  const MASP =  MultiAssetShieldedPool__factory.connect((await hre.deployments.get("MASP")).address, Deployer)
 
   // tell our protocol these erc20s are supported
-  await RK.addSupportedAsset(await getAsset("USDC"), usdcAddress, 6);
-  await RK.addSupportedAsset(await getAsset("WBTC"), wbtcAddress, 18);
-  return { RK, testWBTC, testUSDC, rkAddress };
+  // await RK.addSupportedAsset(await getAsset("USDC"), usdcAddress, 6);
+  // await RK.addSupportedAsset(await getAsset("WBTC"), wbtcAddress, 18);
+  return { RK, MASP, testWBTC, testUSDC  };
 }

@@ -172,7 +172,12 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
 
         require(_outputProofs.length == 2, "only can do 2 outputproofs");
 
-        _insertCommitments(_outputProofs);
+        // Insert all leaves except the last one using pairs as usual
+        _insert(
+            bytes32(_outputProofs[0].commitment),
+            bytes32(_outputProofs[1].commitment)
+        );
+
         emit NewCommitment(
             _outputProofs[0].commitment,
             nextIndex - 2,
@@ -188,14 +193,6 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         for (uint256 i = 0; i < _spendProof.length; i++) {
             emit NewNullifier(_spendProof[i].nullifier);
         }
-    }
-
-    function _insertCommitments(OutputProof[] memory _outputProofs) internal {
-        // Insert all leaves except the last one using pairs as usual
-        _insert(
-            bytes32(_outputProofs[0].commitment),
-            bytes32(_outputProofs[1].commitment)
-        );
     }
 
     function _deposit(
@@ -233,12 +230,12 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
     }
 
-    function transact(
+    function _transact(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
         uint[2] memory _bpk,
         uint256 _root
-    ) public {
+    ) internal {
         EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
 
         _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
