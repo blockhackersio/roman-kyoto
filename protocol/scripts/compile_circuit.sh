@@ -14,6 +14,7 @@ if [ ! -f "$CIRCUIT" ]; then
   exit 1
 fi
 
+FNAME_CAPITALIZED=$(echo "$FNAME" | sed -e 's/[-_]\([a-z]\)/\u\1/g' -e 's/^\([a-z]\)/\u\1/')
 G16ZKEY=./compiled/${FNAME}.zkey
 GENERATE_WITNESS=./compiled/${FNAME}_js/generate_witness.js
 INPUT=./test/circuits/$FNAME.json
@@ -21,7 +22,7 @@ POT=./pot/pot.ptau
 PROOF=./compiled/${FNAME}_proof.json
 PUBLIC=./compiled/${FNAME}_public.json
 R1CS=./compiled/$FNAME.r1cs
-SOL_VERIFIER=./contracts/generated/${FNAME}.sol
+SOL_VERIFIER=./contracts/verifiers/${FNAME_CAPITALIZED}Verifier.sol
 VKEY=./compiled/${FNAME}_verification_key.json
 WASM=./compiled/${FNAME}_js/$FNAME.wasm
 WITNESS=./compiled/$FNAME.wtns
@@ -45,21 +46,8 @@ echo "Export verifier..."
 echo "=========================================="
 pnpm snarkjs zkey export solidityverifier $G16ZKEY $SOL_VERIFIER
 
-FNAME_CAPITALIZED=$(echo "$FNAME" | sed -e 's/[-_]\([a-z]\)/\u\1/g' -e 's/^\([a-z]\)/\u\1/')
 sed -i "s/contract Groth16Verifier/contract ${FNAME_CAPITALIZED}Verifier/g" $SOL_VERIFIER
 
 # pnpm snarkjs groth16 fullprove $INPUT $WASM $ZKEY $PROOF $PUBLIC
 
-mkdir -p ignition/modules/generated
-TARGET_FILE="./ignition/modules/generated/${FNAME_CAPITALIZED}Verifier.ts"
 
-cat > "${TARGET_FILE}" <<EOF
-import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
-
-export default buildModule("${FNAME_CAPITALIZED}Verifier", (m) => {
-  const verifier = m.contract("${FNAME_CAPITALIZED}Verifier", []);
-  return { verifier };
-});
-EOF
-
-echo "File written to ${TARGET_FILE}"

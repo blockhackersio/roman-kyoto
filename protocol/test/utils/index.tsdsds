@@ -1,0 +1,76 @@
+import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+import hre, { ethers } from "hardhat";
+import {RK} from "../../typechain-types"
+export async function deployAll() {
+  await hre.deployments.fixture("testbed");
+  let Deployer: SignerWithAddress;
+
+  // for our testing purposes, the CCIP router can just be a signer
+  let CCIPRouter: SignerWithAddress;
+
+  let RK: RK;
+
+  let testUSDC: USDC;
+  let testWBTC: WBTC;
+  [Deployer, CCIPRouter] = await ethers.getSigners();
+
+  const OutputVerifierSource = await hre.deployments.get(
+    "OutputVerifierSource",
+  );
+
+  const SpendVerifierSource = await hre.deployments.get("SpendVerifierSource");
+
+  const usdcAddress = (await hre.deployments.get("USDC")).address;
+  testUSDC = new ethers.Contract(
+    usdcAddress,
+    USDC__factory.abi,
+    Deployer,
+  ) as unknown as USDC;
+
+  const wbtcAddress = (await hre.deployments.get("WBTC")).address;
+  testWBTC = new ethers.Contract(
+    wbtcAddress,
+    WBTC__factory.abi,
+    Deployer,
+  ) as unknown as WBTC;
+
+  // deploy our EdOnBN254 library
+  await hre.deployments.deploy("EdOnBN254", {
+    contract: "EdOnBN254",
+    from: Deployer.address,
+  });
+  const EdOnBN254 = (await hre.deployments.get("EdOnBN254")).address;
+
+  const Hasher = await hre.deployments.get("Hasher");
+
+  // next we deploy our source RK contract
+  await hre.deployments.deploy("RKSource", {
+    contract: "RK",
+    from: Deployer.address,
+    args: [
+      SpendVerifierSource.address,
+      OutputVerifierSource.address,
+      Hasher.address,
+      CCIPRouter.address,
+      [],
+      [],
+    ],
+    libraries: {
+      EdOnBN254: EdOnBN254,
+    },
+  });
+
+  // hardhat deployments typing fuckin sucks
+  const tempRK = await hre.deployments.get("RKSource");
+  rkAddress = tempRK.address;
+
+  RK = new ethers.Contract(
+    rkAddress,
+    RK__factory.abi,
+    Deployer,
+  ) as unknown as RK;
+
+  // tell our protocol these erc20s are supported
+  await RK.addSupportedAsset(await getAsset("USDC"), usdcAddress, 6);
+  await RK.addSupportedAsset(await getAsset("WBTC"), wbtcAddress, 18);
+}
