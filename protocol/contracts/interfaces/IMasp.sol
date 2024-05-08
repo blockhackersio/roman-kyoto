@@ -17,6 +17,14 @@ struct OutputProof {
 }
 
 interface IMasp {
+    event NewCommitment(
+        uint256 indexed commitment,
+        uint256 indexed index,
+        bytes encryptedOutput
+    );
+
+    event NewNullifier(uint256 indexed nullifier);
+
     function deposit(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
@@ -26,7 +34,7 @@ interface IMasp {
         uint256 _root
     ) external;
 
-     function transact(
+    function transact(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
         uint[2] memory _bpk,

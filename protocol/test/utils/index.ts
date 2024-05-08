@@ -1,5 +1,7 @@
 import hre, { ethers } from "hardhat";
 import {
+  IMasp__factory,
+  MaspTest__factory,
   MultiAssetShieldedPool__factory,
   RK__factory,
   USDC,
@@ -76,7 +78,7 @@ export async function deployAll() {
     (await hre.deployments.get("RKSource")).address,
     Deployer
   );
-  const MASP = MultiAssetShieldedPool__factory.connect(
+  const MASP = IMasp__factory.connect(
     (await hre.deployments.get("MASP")).address,
     Deployer
   );

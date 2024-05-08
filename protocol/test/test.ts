@@ -2,7 +2,6 @@ import { ethers, ignition } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 import {
-  CircomStuff,
   Note,
   buildMerkleTree,
   decryptNote,
@@ -14,9 +13,8 @@ import {
   withdraw,
 } from "../src/index";
 import { ensurePoseidon } from "../src/poseidon";
-import { MultiAssetShieldedPool__factory } from "../typechain-types";
+import { IMasp__factory, MultiAssetShieldedPool__factory } from "../typechain-types";
 import {
-  Contract,
   ContractTransactionReceipt,
   Interface,
   LogDescription,
@@ -26,12 +24,7 @@ import { deployAll } from "./utils";
 
 
 export async function getMultiAssetShieldedPoolContract() {
-  const { MASP } = await loadFixture(deployAll);
-  const circomExample = new CircomStuff(
-    await ethers.provider.getSigner(),
-    await MASP.getAddress()
-  );
-  return circomExample;
+
 }
 
 function getNoteCommitmentEvents(receipt: ContractTransactionReceipt | null) {
@@ -40,7 +33,7 @@ function getNoteCommitmentEvents(receipt: ContractTransactionReceipt | null) {
   const decodedLogs = receipt?.logs
     .map((log) => {
       try {
-        const sm = new Interface(MultiAssetShieldedPool__factory.abi);
+        const sm = new Interface(IMasp__factory.abi);
         return sm.parseLog(log);
       } catch (error) {
         // This log was not from your contract, or not an event your contract emits
@@ -66,6 +59,7 @@ async function extractToStore(
   receipt: ContractTransactionReceipt | null
 ) {
   const events = getNoteCommitmentEvents(receipt);
+
   for (let ev of events) {
     if (ev.name === "NewCommitment") {
       const cypher = ev.args[2] as string;
@@ -146,9 +140,8 @@ function createStore(hexPrivate: string) {
 it("integrate", async () => {
   await ensurePoseidon();
 
-  const contract = await getMultiAssetShieldedPoolContract();
-  const verifier = contract.getContract();
-  let tree = await buildMerkleTree(verifier as any as Contract);
+  const { MASP } = await loadFixture(deployAll);
+  let tree = await buildMerkleTree(MASP);
 
   const spenderPrivate = Wallet.createRandom().privateKey;
   const receiverPrivate = Wallet.createRandom().privateKey;
@@ -159,9 +152,10 @@ it("integrate", async () => {
   let store = createStore(hexPrivate);
 
   await store.logBalances();
+
   let tx = await deposit(
     await ethers.provider.getSigner(),
-    await verifier.getAddress(),
+    await MASP.getAddress(),
     100n,
     spender,
     "USDC",
@@ -174,7 +168,7 @@ it("integrate", async () => {
 
   tx = await deposit(
     await ethers.provider.getSigner(),
-    await verifier.getAddress(),
+    await MASP.getAddress(),
     2n,
     spender,
     "WBTC",
@@ -185,10 +179,10 @@ it("integrate", async () => {
   store = await extractToStore(hexPrivate, store, receipt);
   await store.logBalances();
 
-  tree = await buildMerkleTree(verifier as any as Contract);
+  tree = await buildMerkleTree(MASP);
   tx = await transfer(
     await ethers.provider.getSigner(),
-    await verifier.getAddress(),
+    await MASP.getAddress(),
     10n,
     spender,
     receiver,
@@ -200,11 +194,11 @@ it("integrate", async () => {
   receipt = await tx.wait();
   store = await extractToStore(hexPrivate, store, receipt);
   await store.logBalances();
-  tree = await buildMerkleTree(verifier as any as Contract);
+  tree = await buildMerkleTree(MASP);
 
   tx = await withdraw(
     await ethers.provider.getSigner(),
-    await verifier.getAddress(),
+    await MASP.getAddress(),
     50n,
     spender,
     receiver,

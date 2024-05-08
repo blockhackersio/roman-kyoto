@@ -9,7 +9,8 @@ import {
   keccak256,
 } from "ethers";
 import {
-    IMasp__factory,
+  IMasp,
+  IMasp__factory,
   MultiAssetShieldedPool__factory,
 } from "../typechain-types";
 import {
@@ -28,113 +29,112 @@ import MerkleTree from "fixed-merkle-tree";
 import { getEncryptionPublicKey } from "@metamask/eth-sig-util";
 export * from "./config";
 
-export class CircomStuff {
+export async function outputProve(
+  amount: string,
+  blinding: string,
+  asset: string,
+  publicKey: string,
+  Vx: string,
+  Vy: string,
+  Rx: string,
+  Ry: string,
+  r: string,
+  Cx: string,
+  Cy: string
+) {
+  return await generateGroth16Proof(
+    {
+      amount,
+      blinding,
+      asset,
+      publicKey,
+      Vx,
+      Vy,
+      Rx,
+      Ry,
+      r,
+      Cx,
+      Cy,
+    },
+    "output"
+  );
+}
+
+export async function spendProve(
+  privateKey: string,
+  amount: string,
+  blinding: string,
+  asset: string,
+  pathIndex: string,
+  nullifier: string,
+  root: string,
+  pathElements: string[],
+  Vx: string,
+  Vy: string,
+  Rx: string,
+  Ry: string,
+  r: string,
+  Cx: string,
+  Cy: string,
+  commitment: string
+) {
+  return await generateGroth16Proof(
+    {
+      privateKey,
+      amount,
+      blinding,
+      asset,
+      pathIndex,
+      nullifier,
+      root,
+      pathElements,
+      Vx,
+      Vy,
+      Rx,
+      Ry,
+      r,
+      Cx,
+      Cy,
+      commitment,
+    },
+    "spend"
+  );
+}
+export async function outputVerify(
+  address: string,
+  provider: Signer,
+  proof: string,
+  commitment: string
+) {
+  const verifier = MultiAssetShieldedPool__factory.connect(address, provider);
+  return await verifier.outputVerify(proof, [commitment]);
+}
+
+export async function spendVerify(
+  address: string,
+  provider: Signer,
+  proof: string,
+  commitment: string
+) {
+  const verifier = MultiAssetShieldedPool__factory.connect(address, provider);
+  return await verifier.spendVerify(proof, [commitment]);
+}
+
+export async function verifySig(
+  address: string,
+  provider: Signer,
+  s: string,
+  R: [string, string],
+  A: [string, string],
+  message: string
+) {
+  const verifier = MultiAssetShieldedPool__factory.connect(address, provider);
+
+  await verifier.sigVerify(s, R, A, message);
+}
+
+export class MaspContract {
   constructor(private provider: Signer, private address: string) {}
-
-  async spendProve(
-    privateKey: string,
-    amount: string,
-    blinding: string,
-    asset: string,
-    pathIndex: string,
-    nullifier: string,
-    root: string,
-    pathElements: string[],
-    Vx: string,
-    Vy: string,
-    Rx: string,
-    Ry: string,
-    r: string,
-    Cx: string,
-    Cy: string,
-    commitment: string
-  ) {
-    return await generateGroth16Proof(
-      {
-        privateKey,
-        amount,
-        blinding,
-        asset,
-        pathIndex,
-        nullifier,
-        root,
-        pathElements,
-        Vx,
-        Vy,
-        Rx,
-        Ry,
-        r,
-        Cx,
-        Cy,
-        commitment,
-      },
-      "spend"
-    );
-  }
-
-  async outputProve(
-    amount: string,
-    blinding: string,
-    asset: string,
-    publicKey: string,
-    Vx: string,
-    Vy: string,
-    Rx: string,
-    Ry: string,
-    r: string,
-    Cx: string,
-    Cy: string
-  ) {
-    return await generateGroth16Proof(
-      {
-        amount,
-        blinding,
-        asset,
-        publicKey,
-        Vx,
-        Vy,
-        Rx,
-        Ry,
-        r,
-        Cx,
-        Cy,
-      },
-      "output"
-    );
-  }
-  getContract() {
-    return MultiAssetShieldedPool__factory.connect(this.address, this.provider);
-  }
-
-  async outputVerify(proof: string, commitment: string) {
-    const verifier = MultiAssetShieldedPool__factory.connect(
-      this.address,
-      this.provider
-    );
-    return await verifier.outputVerify(proof, [commitment]);
-  }
-
-  async spendVerify(proof: string, commitment: string) {
-    const verifier = MultiAssetShieldedPool__factory.connect(
-      this.address,
-      this.provider
-    );
-    return await verifier.spendVerify(proof, [commitment]);
-  }
-
-  async verifySig(
-    s: string,
-    R: [string, string],
-    A: [string, string],
-    message: string
-  ) {
-    const verifier = MultiAssetShieldedPool__factory.connect(
-      this.address,
-      this.provider
-    );
-
-    await verifier.sigVerify(s, R, A, message);
-  }
 
   async deposit(
     spends: SpendProof[],
@@ -166,10 +166,7 @@ export class CircomStuff {
     Bpk: [string, string],
     root: string
   ) {
-    const verifier = IMasp__factory.connect(
-      this.address,
-      this.provider
-    );
+    const verifier = IMasp__factory.connect(this.address, this.provider);
     return await verifier.transact(spends, outputs, Bpk, root);
   }
 }
@@ -180,6 +177,7 @@ export type OutputProof = {
   valueCommitment: [string, string];
   encryptedOutput: string;
 };
+
 export type SpendProof = {
   proof: string;
   nullifier: string;
@@ -351,16 +349,7 @@ export function getInitialPoints(B: BabyJub) {
     return { Vc, r };
   }
 
-  function mintcommit(asset: string, amount: bigint) {
-    const r = getRandomBigInt(253);
-    const V = getV(asset);
-    const vV = amount == 0n ? B.ExtendedPoint.ZERO : V.multiply(modN(amount));
-    const rR = R.multiply(modN(r));
-    const Vc = vV.add(rR);
-    return { Vc, r };
-  }
-
-  return { G, R, modN, valcommit, getV, mintcommit, reddsaSign };
+  return { G, R, modN, valcommit, getV, reddsaSign };
 }
 
 function createNote(amount: bigint, spender: string, asset: string): Note {
@@ -372,6 +361,7 @@ function createNote(amount: bigint, spender: string, asset: string): Note {
     blinding: toStr(blinding),
   };
 }
+
 export type Keyset = {
   encryptionKey: string;
   publicKey: string;
@@ -394,15 +384,11 @@ export async function getKeys(privateKey: bigint) {
 }
 
 export async function buildMerkleTree(
-  contract: Contract,
-  blockNumber?: number
+  contract: IMasp,
 ) {
   const filter = contract.filters.NewCommitment();
-  // this 2nd number here is the block number where the first takes place
-  const events = (await contract.queryFilter(
-    filter,
-    blockNumber ?? 6662365
-  )) as EventLog[];
+
+  const events = await contract.queryFilter(filter)
   const leaves = events
     .sort((a, b) => {
       return Number(a.args?.index) - Number(b.args?.index);
@@ -437,8 +423,7 @@ async function createProofs(
   outputList: Note[],
   tree: MerkleTree,
   sender: Keyset,
-  receiver: Keyset,
-  contract: CircomStuff
+  receiver: Keyset
 ) {
   const babyJub = getBabyJubJub();
   const { R, modN, valcommit, getV } = getInitialPoints(babyJub);
@@ -459,7 +444,7 @@ async function createProofs(
       BigInt(index)
     );
     const Vs = getV(n1.asset);
-    const proofSpend = await contract.spendProve(
+    const proofSpend = await spendProve(
       toStr(sender.privateKey),
       toStr(n1.amount),
       n1.blinding,
@@ -490,7 +475,7 @@ async function createProofs(
     const { Vc: n2vc, r: r2 } = valcommit(n2);
 
     const Vo = getV(n2.asset);
-    const proofOutput = await contract.outputProve(
+    const proofOutput = await outputProve(
       toStr(n2.amount),
       n2.blinding,
       n2.asset,
@@ -549,7 +534,7 @@ export async function transfer(
 
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
-  const contract = new CircomStuff(signer, poolAddress);
+  const masp = new MaspContract(signer, poolAddress);
 
   const spendList = await notes.getNotesUpTo(amount, asset);
   const totalSpent = spendList.reduce((t, note) => {
@@ -573,11 +558,10 @@ export async function transfer(
     outputList,
     tree,
     sender,
-    receiver,
-    contract
+    receiver
   );
 
-  return await contract.transact(
+  return await masp.transact(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
@@ -604,7 +588,7 @@ export async function deposit(
   logAction("Depositing " + amount + " " + asset);
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
-  const contract = new CircomStuff(signer, poolAddress);
+  const masp = new MaspContract(signer, poolAddress);
   const assetId = await getAsset(asset);
 
   const spendList: Note[] = [];
@@ -617,11 +601,10 @@ export async function deposit(
     outputList,
     tree,
     receiver,
-    receiver,
-    contract
+    receiver
   );
 
-  return await contract.deposit(
+  return await masp.deposit(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
@@ -630,58 +613,6 @@ export async function deposit(
     `${tree.root}`
   );
 }
-
-// export async function burnToCrosschain(
-//   signer: Signer,
-//   poolAddress: string,
-//   amount: bigint,
-//   sender: Keyset,
-//   receiver: Keyset,
-//   asset: string, // "USDC" | "WBTC" etc.
-//   tree: MerkleTree,
-//   notes: NoteStore
-// ) {
-//   logAction("Sending CROSSCHAIN " + amount + " " + asset);
-//
-//   if (signer.provider === null) throw new Error("Signer must have a provider");
-//
-//   const contract = new CircomStuff(signer, poolAddress);
-//   const spendList = await notes.getNotesUpTo(amount, asset);
-//   const totalSpent = spendList.reduce((t, note) => {
-//     return t + note.amount;
-//   }, 0n);
-//
-//   const change = totalSpent - amount;
-//   const assetId = await getAsset(asset);
-//   const outputList: Note[] = [];
-//
-//   outputList.push(createNote(0n, sender.publicKey, assetId));
-//   if (change > 0n)
-//     outputList.push(createNote(change, sender.publicKey, assetId));
-//   else outputList.push(createNote(0n, sender.publicKey, assetId));
-//
-//   const { Bpk, spendProofs, outputProofs } = await createProofs(
-//     spendList,
-//     outputList,
-//     tree,
-//     sender,
-//     receiver,
-//     contract
-//   );
-//
-//   const babyJub = getBabyJubJub();
-//   const { mintcommit } = getInitialPoints(babyJub);
-//   // XXX: Todo finishe mint commitment
-//   const mintcommitment = mintcommit(await getAsset(asset), amount);
-//   return await contract.withdraw(
-//     spendProofs,
-//     outputProofs,
-//     [toStr(Bpk.x), toStr(Bpk.y)],
-//     assetId,
-//     toStr(amount),
-//     `${tree.root}`
-//   );
-// }
 
 export async function withdraw(
   signer: Signer,
@@ -697,7 +628,7 @@ export async function withdraw(
 
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
-  const contract = new CircomStuff(signer, poolAddress);
+  const masp = new MaspContract(signer, poolAddress);
 
   const spendList = await notes.getNotesUpTo(amount, asset);
   const totalSpent = spendList.reduce((t, note) => {
@@ -718,11 +649,10 @@ export async function withdraw(
     outputList,
     tree,
     sender,
-    receiver,
-    contract
+    receiver
   );
 
-  return await contract.withdraw(
+  return await masp.withdraw(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
