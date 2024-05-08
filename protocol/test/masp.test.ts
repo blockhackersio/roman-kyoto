@@ -9,14 +9,20 @@ import {
   withdraw,
 } from "../src/index";
 import { ensurePoseidon } from "../src/poseidon";
-import {
-  Wallet,
-} from "ethers";
+import { Wallet } from "ethers";
 import { deployMasp } from "./utils";
 import { expect } from "chai";
 import { MaspWallet } from "../src/wallet";
 
 export async function getMultiAssetShieldedPoolContract() {}
+
+it("ensure keys don't fail", async () => {
+  for (let i = 0; i < 100; i++) {
+    const key = Wallet.createRandom().privateKey;
+    // avoid "bad secret keysize" error
+    await getKeys(BigInt(key));
+  }
+});
 
 it("integrate single pool", async () => {
   await ensurePoseidon();

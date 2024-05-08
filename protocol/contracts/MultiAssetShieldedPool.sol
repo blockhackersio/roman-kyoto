@@ -97,6 +97,10 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         uint256 _root
     ) internal {
         require(isKnownRoot(bytes32(_root)), "Invalid merkle root");
+        require(
+            _outputProofs.length % 2 == 0,
+            "outputs must be in multiples of 2"
+        );
 
         for (uint i = 0; i < _spendProof.length; i++) {
             require(
@@ -149,13 +153,12 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
             nullifierHashes[_spendProof[i].nullifier] = true;
         }
 
-        require(_outputProofs.length == 2, "only can do 2 outputproofs");
-
-        // Insert all leaves except the last one using pairs as usual
-        _insert(
-            bytes32(_outputProofs[0].commitment),
-            bytes32(_outputProofs[1].commitment)
-        );
+        for (uint i = 0; i < _outputProofs.length; i += 2) {
+            _insert(
+                bytes32(_outputProofs[i].commitment),
+                bytes32(_outputProofs[i + 1].commitment)
+            );
+        }
 
         emit IMasp.NewCommitment(
             _outputProofs[0].commitment,

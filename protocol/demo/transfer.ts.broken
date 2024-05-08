@@ -1,0 +1,86 @@
+import hre, { ethers } from "hardhat";
+import {
+  Contract,
+  ContractTransactionReceipt,
+  Interface,
+  LogDescription,
+  parseEther,
+  parseUnits,
+} from "ethers";
+
+import { RK__factory, RK } from "../typechain-types";
+import {
+  Note,
+  buildMerkleTree,
+  decryptNote,
+  getAsset,
+  getKeys,
+  nullifierHash,
+  transfer,
+} from "../src";
+
+async function main() {
+  const { deployments } = hre;
+  const [Deployer] = await ethers.getSigners();
+
+  const RKAddress = (await deployments.get("RK")).address;
+
+  // approve for USDC and WBTC
+  const RK = new Contract(
+    RKAddress,
+    RK__factory.abi,
+    Deployer
+  ) as unknown as RK;
+
+  const transferAmountUSDC = parseUnits("11", 6);
+
+  const spender = await getKeys(BigInt(`0x${process.env.PRIVATE_KEY!}`));
+  const hexPrivate = spender.privateKey.toString(16);
+
+  // store is how we track our users encrypted notes/balances
+  let store = createStore(hexPrivate);
+  await store.logBalances();
+
+  const depositReceipt =
+    "0xfb64d4a9c324f6c595d5f6aca455f183875c12525094d11eb41e282f8062853c"; // TODO change me
+
+  const depositEventInfo = (await Deployer.provider.getTransactionReceipt(
+    depositReceipt
+  )) as ContractTransactionReceipt;
+
+  if (depositEventInfo === null) throw Error("ERRR");
+
+  // store is how we track our users encrypted notes/balances
+  store = await extractToStore(hexPrivate, store, depositEventInfo);
+
+  // the receiver of the note we are spending
+  const receiver = await getKeys(
+    // IRL we don't need this, handing for testing
+    BigInt(`0x${process.env.RECEIVER_PRIVATE_KEY}`)
+  );
+
+  // for our tx events - we need to know the block number of the tx to build our tree
+  const fromBlockNumber = 6664311; // TODO change me
+
+  // we submit the tree as part of any deposit, transact or withdraw function call
+  let tree = await buildMerkleTree(RK as any as Contract, fromBlockNumber);
+
+  // submit our transfer transaction
+  const tx = await transfer(
+    Deployer,
+    RKAddress,
+    transferAmountUSDC,
+    spender,
+    receiver,
+    "USDC",
+    tree,
+    store
+  );
+
+  console.log(tx);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

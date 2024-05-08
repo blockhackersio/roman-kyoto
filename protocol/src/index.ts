@@ -100,6 +100,7 @@ export async function spendProve(
     "spend"
   );
 }
+
 export async function outputVerify(
   address: string,
   provider: Signer,
@@ -368,11 +369,10 @@ export type Keyset = {
   privateKey: bigint;
 };
 
-// Use this to get the
+// Use this to get the public keys from a users private key
 export async function getKeys(privateKey: bigint) {
   await ensurePoseidon();
-
-  const encryptionKey = getEncryptionPublicKey(privateKey.toString(16));
+  const encryptionKey = getEncryptionPublicKey(privateKey.toString(16).padStart(64, '0'));
 
   const publicKey = poseidonHash([privateKey]);
 
@@ -432,23 +432,23 @@ async function createProofs(
 
   let totalRandomness = 0n;
 
-  for (let n1 of spendList) {
-    const n1nc = await notecommitment(n1);
-    const { Vc: n1vc, r: r1 } = valcommit(n1);
+  for (let n of spendList) {
+    const nc = await notecommitment(n);
+    const { Vc, r } = valcommit(n);
     const root = `${tree.root}`;
-    const index = tree.indexOf(n1nc);
+    const index = tree.indexOf(nc);
     const pathElements = tree.path(index).pathElements.map((e) => e.toString());
     const nullifier = await nullifierHash(
       toStr(sender.privateKey),
-      n1,
+      n,
       BigInt(index)
     );
-    const Vs = getV(n1.asset);
+    const Vs = getV(n.asset);
     const proofSpend = await spendProve(
       toStr(sender.privateKey),
-      toStr(n1.amount),
-      n1.blinding,
-      n1.asset,
+      toStr(n.amount),
+      n.blinding,
+      n.asset,
       toStr(BigInt(index)),
       nullifier,
       root,
@@ -457,51 +457,51 @@ async function createProofs(
       toStr(Vs.y),
       toStr(R.x),
       toStr(R.y),
-      toStr(r1),
-      toStr(n1vc.x),
-      toStr(n1vc.y),
-      toFixedHex(n1nc)
+      toStr(r),
+      toStr(Vc.x),
+      toStr(Vc.y),
+      toFixedHex(nc)
     );
-    totalRandomness = modN(totalRandomness + r1);
+    totalRandomness = modN(totalRandomness + r);
     spendProofs.push({
       proof: proofSpend,
-      valueCommitment: [toStr(n1vc.x), toStr(n1vc.y)],
+      valueCommitment: [toStr(Vc.x), toStr(Vc.y)],
       nullifier: nullifier,
     });
   }
 
-  for (let n2 of outputList) {
-    const n2nc = await notecommitment(n2);
-    const { Vc: n2vc, r: r2 } = valcommit(n2);
+  for (let n of outputList) {
+    const nc = await notecommitment(n);
+    const { Vc, r } = valcommit(n);
 
-    const Vo = getV(n2.asset);
+    const Vo = getV(n.asset);
     const proofOutput = await outputProve(
-      toStr(n2.amount),
-      n2.blinding,
-      n2.asset,
-      n2.spender,
+      toStr(n.amount),
+      n.blinding,
+      n.asset,
+      n.spender,
       toStr(Vo.x),
       toStr(Vo.y),
       toStr(R.x),
       toStr(R.y),
-      toStr(r2),
-      toStr(n2vc.x),
-      toStr(n2vc.y)
+      toStr(r),
+      toStr(Vc.x),
+      toStr(Vc.y)
     );
     const keyToEncryptTo =
-      sender.publicKey === n2.spender
+      sender.publicKey === n.spender
         ? sender.encryptionKey
         : receiver.encryptionKey;
 
-    const encryptedOutput = await encryptNote(keyToEncryptTo, n2);
+    const encryptedOutput = await encryptNote(keyToEncryptTo, n);
 
     outputProofs.push({
       proof: proofOutput,
-      valueCommitment: [toStr(n2vc.x), toStr(n2vc.y)],
-      commitment: n2nc,
+      valueCommitment: [toStr(Vc.x), toStr(Vc.y)],
+      commitment: nc,
       encryptedOutput,
     });
-    totalRandomness = modN(totalRandomness - r2);
+    totalRandomness = modN(totalRandomness - r);
   }
   // Create sig
   const bsk = totalRandomness;
