@@ -14,7 +14,7 @@ import {
   withdraw,
 } from "../src/index";
 import { ensurePoseidon } from "../src/poseidon";
-import { CircomExample__factory } from "../typechain-types";
+import { MultiAssetShieldedPool__factory } from "../typechain-types";
 import {
   Contract,
   ContractTransactionReceipt,
@@ -25,7 +25,7 @@ import {
 import { deployAll } from "./utils";
 
 
-export async function getCircomExampleContract() {
+export async function getMultiAssetShieldedPoolContract() {
   const { RK } = await loadFixture(deployAll);
   const circomExample = new CircomStuff(
     await ethers.provider.getSigner(),
@@ -40,7 +40,7 @@ function getNoteCommitmentEvents(receipt: ContractTransactionReceipt | null) {
   const decodedLogs = receipt?.logs
     .map((log) => {
       try {
-        const sm = new Interface(CircomExample__factory.abi);
+        const sm = new Interface(MultiAssetShieldedPool__factory.abi);
         return sm.parseLog(log);
       } catch (error) {
         // This log was not from your contract, or not an event your contract emits
@@ -146,7 +146,7 @@ function createStore(hexPrivate: string) {
 it("integrate", async () => {
   await ensurePoseidon();
 
-  const contract = await getCircomExampleContract();
+  const contract = await getMultiAssetShieldedPoolContract();
   const verifier = contract.getContract();
   let tree = await buildMerkleTree(verifier as any as Contract);
 

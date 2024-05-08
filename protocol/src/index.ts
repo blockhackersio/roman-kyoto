@@ -8,7 +8,7 @@ import {
   Signer,
   keccak256,
 } from "ethers";
-import { CircomExample__factory, RK__factory } from "../typechain-types";
+import { MultiAssetShieldedPool__factory, RK__factory } from "../typechain-types";
 import {
   dataDecrypt,
   dataEncrypt,
@@ -100,10 +100,10 @@ export class CircomStuff {
     );
   }
   getContract() {
-    return CircomExample__factory.connect(this.address, this.provider);
+    return MultiAssetShieldedPool__factory.connect(this.address, this.provider);
   }
   async outputVerify(proof: string, commitment: string) {
-    const verifier = CircomExample__factory.connect(
+    const verifier = MultiAssetShieldedPool__factory.connect(
       this.address,
       this.provider
     );
@@ -111,7 +111,7 @@ export class CircomStuff {
   }
 
   async spendVerify(proof: string, commitment: string) {
-    const verifier = CircomExample__factory.connect(
+    const verifier = MultiAssetShieldedPool__factory.connect(
       this.address,
       this.provider
     );
@@ -123,7 +123,7 @@ export class CircomStuff {
     A: [string, string],
     message: string
   ) {
-    const verifier = CircomExample__factory.connect(
+    const verifier = MultiAssetShieldedPool__factory.connect(
       this.address,
       this.provider
     );
@@ -161,7 +161,7 @@ export class CircomStuff {
     Bpk: [string, string],
     root: string
   ) {
-    const verifier = CircomExample__factory.connect(
+    const verifier = MultiAssetShieldedPool__factory.connect(
       this.address,
       this.provider
     );

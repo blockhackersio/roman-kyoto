@@ -8,7 +8,7 @@ import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
 
 import "./EdOnBN254.sol";
 
-contract CircomExample is MerkleTreeWithHistory {
+contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     using EdOnBN254 for *;
 
     SpendVerifier public spendVerifier;

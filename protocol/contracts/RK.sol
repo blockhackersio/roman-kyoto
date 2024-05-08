@@ -5,9 +5,9 @@ import "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
 import "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import "./CircomExample.sol";
+import "./MultiAssetShieldedPool.sol";
 
-contract RK is CircomExample, CCIPReceiver {
+contract RK is MultiAssetShieldedPool, CCIPReceiver {
     /// Chainlink CCIP Router Address - used to send messages across chains
     IRouterClient public immutable router;
 
@@ -55,7 +55,7 @@ contract RK is CircomExample, CCIPReceiver {
         address[] memory _allowlistedRemotes,
         uint64[] memory _allowlistedChains
     )
-        CircomExample(_spendVerifier, _outputVerifier, _merkleHasher)
+        MultiAssetShieldedPool(_spendVerifier, _outputVerifier, _merkleHasher)
         CCIPReceiver(_router)
     {
         router = IRouterClient(_router);
