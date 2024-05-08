@@ -1,7 +1,6 @@
 import { ethers, ignition } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
-import CircomExampleModule from "../ignition/modules/CircomExample";
 import {
   CircomStuff,
   Note,
@@ -23,27 +22,14 @@ import {
   LogDescription,
   Wallet,
 } from "ethers";
-import hasherArtifact from "../contracts/generated/Hasher.json";
-async function deployVerifierFixture() {
-  return ignition.deploy(CircomExampleModule);
-}
+import { deployAll } from "./utils";
+
 
 export async function getCircomExampleContract() {
-  const { verifier } = await loadFixture(deployVerifierFixture);
-  const Hasher = await ethers.getContractFactory(
-    hasherArtifact.abi,
-    hasherArtifact.bytecode
-  );
-  const hasher = await Hasher.deploy();
-  const tx = await hasher.waitForDeployment();
-  const signer = await ethers.provider.getSigner();
-  const hasherAddr = await tx.getAddress();
-  const address = await verifier.getAddress();
-  const v = CircomExample__factory.connect(address, signer);
-  await v.setHasherAddress(hasherAddr);
+  const { RK } = await loadFixture(deployAll);
   const circomExample = new CircomStuff(
     await ethers.provider.getSigner(),
-    address
+    await RK.getAddress()
   );
   return circomExample;
 }

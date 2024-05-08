@@ -1,11 +1,7 @@
 import hre, { ethers } from "hardhat";
 import {
-  MultiplierVerifier,
-  OutputVerifier,
-  SpendVerifier,
   RK,
   RK__factory,
-  ERC20,
   USDC,
   WBTC,
   USDC__factory,
@@ -25,7 +21,6 @@ import {
   decryptNote,
   nullifierHash,
 } from "../src";
-import { poseidonHash, poseidonHash2 } from "../src/poseidon";
 import {
   LogDescription,
   Contract,
@@ -34,9 +29,7 @@ import {
   Wallet,
   parseUnits,
 } from "ethers";
-import { generateGroth16Proof, toFixedHex } from "../src/zklib";
 import { expect } from "chai";
-import { ensureBytes } from "@noble/curves/abstract/utils";
 
 describe("CCIP functionality testing", async () => {
   const sourceChainId = 1;

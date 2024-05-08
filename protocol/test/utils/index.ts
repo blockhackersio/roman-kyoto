@@ -1,37 +1,35 @@
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import hre, { ethers } from "hardhat";
-import {RK} from "../../typechain-types"
+import {
+  RK,
+  RK__factory,
+  USDC,
+  USDC__factory,
+  WBTC,
+  WBTC__factory,
+} from "../../typechain-types";
+import { getAsset } from "../../src";
 export async function deployAll() {
   await hre.deployments.fixture("testbed");
-  let Deployer: SignerWithAddress;
-
-  // for our testing purposes, the CCIP router can just be a signer
-  let CCIPRouter: SignerWithAddress;
-
-  let RK: RK;
-
-  let testUSDC: USDC;
-  let testWBTC: WBTC;
-  [Deployer, CCIPRouter] = await ethers.getSigners();
+  const [Deployer, CCIPRouter] = await ethers.getSigners();
 
   const OutputVerifierSource = await hre.deployments.get(
-    "OutputVerifierSource",
+    "OutputVerifierSource"
   );
 
   const SpendVerifierSource = await hre.deployments.get("SpendVerifierSource");
 
   const usdcAddress = (await hre.deployments.get("USDC")).address;
-  testUSDC = new ethers.Contract(
+  const testUSDC = new ethers.Contract(
     usdcAddress,
     USDC__factory.abi,
-    Deployer,
+    Deployer
   ) as unknown as USDC;
 
   const wbtcAddress = (await hre.deployments.get("WBTC")).address;
-  testWBTC = new ethers.Contract(
+  const testWBTC = new ethers.Contract(
     wbtcAddress,
     WBTC__factory.abi,
-    Deployer,
+    Deployer
   ) as unknown as WBTC;
 
   // deploy our EdOnBN254 library
@@ -62,15 +60,16 @@ export async function deployAll() {
 
   // hardhat deployments typing fuckin sucks
   const tempRK = await hre.deployments.get("RKSource");
-  rkAddress = tempRK.address;
+  const rkAddress = tempRK.address;
 
-  RK = new ethers.Contract(
+  const RK = new ethers.Contract(
     rkAddress,
     RK__factory.abi,
-    Deployer,
+    Deployer
   ) as unknown as RK;
 
   // tell our protocol these erc20s are supported
   await RK.addSupportedAsset(await getAsset("USDC"), usdcAddress, 6);
   await RK.addSupportedAsset(await getAsset("WBTC"), wbtcAddress, 18);
+  return { RK, testWBTC, testUSDC, rkAddress };
 }
