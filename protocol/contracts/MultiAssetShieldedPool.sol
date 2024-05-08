@@ -1,42 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-import {MultiplierVerifier} from "./verifiers/MultiplierVerifier.sol";
 import {SpendVerifier} from "./verifiers/SpendVerifier.sol";
 import {OutputVerifier} from "./verifiers/OutputVerifier.sol";
-
+import {IMasp, SpendProof, OutputProof} from "./interfaces/IMasp.sol";
 import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
 
 import "./EdOnBN254.sol";
 
-contract CircomExample is MerkleTreeWithHistory {
+contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     using EdOnBN254 for *;
 
     SpendVerifier public spendVerifier;
     OutputVerifier public outputVerifier;
 
-    event NewCommitment(
-        uint256 indexed commitment,
-        uint256 indexed index,
-        bytes encryptedOutput
-    );
-
-    event NewNullifier(uint256 indexed nullifier);
-
     mapping(uint256 => bool) public nullifierHashes;
-
-    struct SpendProof {
-        bytes proof;
-        uint256 nullifier;
-        uint[2] valueCommitment;
-    }
-
-    struct OutputProof {
-        bytes proof;
-        uint256 commitment;
-        uint[2] valueCommitment;
-        bytes encryptedOutput;
-    }
 
     constructor(
         address _spendVerifier,
@@ -173,30 +151,27 @@ contract CircomExample is MerkleTreeWithHistory {
 
         require(_outputProofs.length == 2, "only can do 2 outputproofs");
 
-        _insertCommitments(_outputProofs);
-        emit NewCommitment(
+        // Insert all leaves except the last one using pairs as usual
+        _insert(
+            bytes32(_outputProofs[0].commitment),
+            bytes32(_outputProofs[1].commitment)
+        );
+
+        emit IMasp.NewCommitment(
             _outputProofs[0].commitment,
             nextIndex - 2,
             _outputProofs[0].encryptedOutput
         );
 
-        emit NewCommitment(
+        emit IMasp.NewCommitment(
             _outputProofs[1].commitment,
             nextIndex - 1,
             _outputProofs[1].encryptedOutput
         );
 
         for (uint256 i = 0; i < _spendProof.length; i++) {
-            emit NewNullifier(_spendProof[i].nullifier);
+            emit IMasp.NewNullifier(_spendProof[i].nullifier);
         }
-    }
-
-    function _insertCommitments(OutputProof[] memory _outputProofs) internal {
-        // Insert all leaves except the last one using pairs as usual
-        _insert(
-            bytes32(_outputProofs[0].commitment),
-            bytes32(_outputProofs[1].commitment)
-        );
     }
 
     function _deposit(
@@ -234,12 +209,12 @@ contract CircomExample is MerkleTreeWithHistory {
         _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
     }
 
-    function transact(
+    function _transact(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
         uint[2] memory _bpk,
         uint256 _root
-    ) public {
+    ) internal {
         EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
 
         _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
