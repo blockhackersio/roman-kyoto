@@ -8,7 +8,10 @@ import {
   Signer,
   keccak256,
 } from "ethers";
-import { MultiAssetShieldedPool__factory, RK__factory } from "../typechain-types";
+import {
+  MultiAssetShieldedPool__factory,
+  RK__factory,
+} from "../typechain-types";
 import {
   dataDecrypt,
   dataEncrypt,
@@ -279,7 +282,6 @@ export async function nullifierHash(
 }
 
 export function getInitialPoints(B: BabyJub) {
-
   function reddsaSign(a: bigint, A: ExtPointType, msgByteStr: string) {
     // B - base point
     // a - secret key
@@ -627,57 +629,57 @@ export async function deposit(
   );
 }
 
-export async function burnToCrosschain(
-  signer: Signer,
-  poolAddress: string,
-  amount: bigint,
-  sender: Keyset,
-  receiver: Keyset,
-  asset: string, // "USDC" | "WBTC" etc.
-  tree: MerkleTree,
-  notes: NoteStore
-) {
-  logAction("Sending CROSSCHAIN " + amount + " " + asset);
-
-  if (signer.provider === null) throw new Error("Signer must have a provider");
-
-  const contract = new CircomStuff(signer, poolAddress);
-  const spendList = await notes.getNotesUpTo(amount, asset);
-  const totalSpent = spendList.reduce((t, note) => {
-    return t + note.amount;
-  }, 0n);
-
-  const change = totalSpent - amount;
-  const assetId = await getAsset(asset);
-  const outputList: Note[] = [];
-
-  outputList.push(createNote(0n, sender.publicKey, assetId));
-  if (change > 0n)
-    outputList.push(createNote(change, sender.publicKey, assetId));
-  else outputList.push(createNote(0n, sender.publicKey, assetId));
-
-  const { Bpk, spendProofs, outputProofs } = await createProofs(
-    spendList,
-    outputList,
-    tree,
-    sender,
-    receiver,
-    contract
-  );
-
-  const babyJub = getBabyJubJub();
-  const { R, modN, valcommit, mintcommit, getV } = getInitialPoints(babyJub);
-  // XXX: Todo finishe mint commitment
-  const mintcommitment = mintcommit(await getAsset(asset), amount);
-  return await contract.withdraw(
-    spendProofs,
-    outputProofs,
-    [toStr(Bpk.x), toStr(Bpk.y)],
-    assetId,
-    toStr(amount),
-    `${tree.root}`
-  );
-}
+// export async function burnToCrosschain(
+//   signer: Signer,
+//   poolAddress: string,
+//   amount: bigint,
+//   sender: Keyset,
+//   receiver: Keyset,
+//   asset: string, // "USDC" | "WBTC" etc.
+//   tree: MerkleTree,
+//   notes: NoteStore
+// ) {
+//   logAction("Sending CROSSCHAIN " + amount + " " + asset);
+//
+//   if (signer.provider === null) throw new Error("Signer must have a provider");
+//
+//   const contract = new CircomStuff(signer, poolAddress);
+//   const spendList = await notes.getNotesUpTo(amount, asset);
+//   const totalSpent = spendList.reduce((t, note) => {
+//     return t + note.amount;
+//   }, 0n);
+//
+//   const change = totalSpent - amount;
+//   const assetId = await getAsset(asset);
+//   const outputList: Note[] = [];
+//
+//   outputList.push(createNote(0n, sender.publicKey, assetId));
+//   if (change > 0n)
+//     outputList.push(createNote(change, sender.publicKey, assetId));
+//   else outputList.push(createNote(0n, sender.publicKey, assetId));
+//
+//   const { Bpk, spendProofs, outputProofs } = await createProofs(
+//     spendList,
+//     outputList,
+//     tree,
+//     sender,
+//     receiver,
+//     contract
+//   );
+//
+//   const babyJub = getBabyJubJub();
+//   const { mintcommit } = getInitialPoints(babyJub);
+//   // XXX: Todo finishe mint commitment
+//   const mintcommitment = mintcommit(await getAsset(asset), amount);
+//   return await contract.withdraw(
+//     spendProofs,
+//     outputProofs,
+//     [toStr(Bpk.x), toStr(Bpk.y)],
+//     assetId,
+//     toStr(amount),
+//     `${tree.root}`
+//   );
+// }
 
 export async function withdraw(
   signer: Signer,
