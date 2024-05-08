@@ -7,7 +7,7 @@ import {
   WBTC,
   WBTC__factory,
 } from "../../typechain-types";
-import { getAsset } from "../../src";
+
 export async function deployAll() {
   await hre.deployments.fixture("testbed");
   const [Deployer, CCIPRouter] = await ethers.getSigners();
@@ -72,11 +72,17 @@ export async function deployAll() {
     },
   });
 
-  const RK =  RK__factory.connect((await hre.deployments.get("RKSource")).address, Deployer)
-  const MASP =  MultiAssetShieldedPool__factory.connect((await hre.deployments.get("MASP")).address, Deployer)
+  const RK = RK__factory.connect(
+    (await hre.deployments.get("RKSource")).address,
+    Deployer
+  );
+  const MASP = MultiAssetShieldedPool__factory.connect(
+    (await hre.deployments.get("MASP")).address,
+    Deployer
+  );
 
   // tell our protocol these erc20s are supported
   // await RK.addSupportedAsset(await getAsset("USDC"), usdcAddress, 6);
   // await RK.addSupportedAsset(await getAsset("WBTC"), wbtcAddress, 18);
-  return { RK, MASP, testWBTC, testUSDC  };
+  return { RK, MASP, testWBTC, testUSDC };
 }
