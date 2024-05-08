@@ -1,4 +1,4 @@
-import { ethers, ignition } from "hardhat";
+import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 import {
@@ -13,7 +13,7 @@ import {
   withdraw,
 } from "../src/index";
 import { ensurePoseidon } from "../src/poseidon";
-import { IMasp__factory, MultiAssetShieldedPool__factory } from "../typechain-types";
+import { IMasp__factory } from "../typechain-types";
 import {
   ContractTransactionReceipt,
   Interface,
@@ -22,10 +22,7 @@ import {
 } from "ethers";
 import { deployAll } from "./utils";
 
-
-export async function getMultiAssetShieldedPoolContract() {
-
-}
+export async function getMultiAssetShieldedPoolContract() {}
 
 function getNoteCommitmentEvents(receipt: ContractTransactionReceipt | null) {
   if (!receipt) throw new Error("receipt was null!");
@@ -76,7 +73,7 @@ async function extractToStore(
           nullifier,
           note,
         });
-      } catch (err) { }
+      } catch (err) {}
     }
     if (ev.name === "NewNullifier") {
       store.nullifiers.push(ev.args[0].toString());
