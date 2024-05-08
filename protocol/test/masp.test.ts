@@ -18,7 +18,7 @@ import { MaspWallet } from "../src/wallet";
 
 export async function getMultiAssetShieldedPoolContract() {}
 
-it("integrate", async () => {
+it("integrate single pool", async () => {
   await ensurePoseidon();
 
   const { MASP } = await loadFixture(deployAll);
