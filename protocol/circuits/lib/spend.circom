@@ -5,6 +5,7 @@ include "../../node_modules/circomlib/circuits/poseidon.circom";
 include "./keypair.circom";
 include "./merkleproof.circom";
 include "./valcommit.circom";
+include "./mulpoint.circom";
 
 template Spend(levels) {
   signal input root;

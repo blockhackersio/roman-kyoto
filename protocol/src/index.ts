@@ -243,18 +243,19 @@ export function getRandomBits(count: number, bits: number) {
 export function toStr(b: bigint): string {
   return "0x" + b.toString(16);
 }
-export function stringToBytes(str: string) {
-  return BigInt("0x" + Buffer.from(str, "utf-8").toString("hex"));
+
+export function toAssetIdentifier(name: string) {
+  return BigInt("0x" + Buffer.from(name, "utf-8").toString("hex"));
 }
 
-export async function hashToField(bytes: bigint) {
+export async function toAssetGenerator(assetIdentifier: bigint) {
   await ensurePoseidon();
-  return poseidonHash([bytes]);
+  return poseidonHash([assetIdentifier]);
 }
 
-export function getAsset(assetString: string) {
-  const bytes = stringToBytes(assetString);
-  return hashToField(bytes);
+export function getAsset(name: string) {
+  const assetIdentifier = toAssetIdentifier(name);
+  return toAssetGenerator(assetIdentifier);
 }
 
 export async function notecommitment(n: Note): Promise<string> {
