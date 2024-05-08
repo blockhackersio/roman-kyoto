@@ -8,4 +8,4 @@ if [ -z "$NO_CIRCOM" ]; then
     ./scripts/compile_circuit.sh "$circuit_name"
   done
 fi
-pnpm hardhat test ./test/test.ts
+pnpm hardhat test ./test/test.ts --deploy-fixture
