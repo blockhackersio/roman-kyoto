@@ -13,7 +13,7 @@ import {
   Note,
   buildMerkleTree,
   decryptNote,
-  getAsset,
+  getAssetGenerator,
   getKeys,
   nullifierHash,
   transfer,

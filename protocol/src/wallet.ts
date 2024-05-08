@@ -1,5 +1,5 @@
 import { ContractTransactionReceipt, Interface, LogDescription } from "ethers";
-import { Note, decryptNote, getAsset, nullifierHash } from ".";
+import { Note, decryptNote, getAssetGenerator, nullifierHash } from ".";
 import { IMasp__factory } from "../typechain-types";
 
 type MetaNote = { note: Note; nullifier: string; index: bigint };
@@ -36,7 +36,7 @@ export class MaspWallet {
   }
 
   async getNotesUpTo(amount: bigint, asset: string) {
-    const assetId = await getAsset(asset);
+    const assetId = await getAssetGenerator(asset);
     const notesOfAsset = this.getUnspentNotes().filter(
       (n) => n.note.asset === assetId
     );
@@ -79,7 +79,7 @@ export class MaspWallet {
   }
 
   async getBalance(asset: string) {
-    const assetId = await getAsset(asset);
+    const assetId = await getAssetGenerator(asset);
     const notesOfAsset = this.getUnspentNotes().filter(
       (n) => n.note.asset === assetId
     );

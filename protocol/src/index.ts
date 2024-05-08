@@ -253,7 +253,7 @@ export async function toAssetGenerator(assetIdentifier: bigint) {
   return poseidonHash([assetIdentifier]);
 }
 
-export function getAsset(name: string) {
+export function getAssetGenerator(name: string) {
   const assetIdentifier = toAssetIdentifier(name);
   return toAssetGenerator(assetIdentifier);
 }
@@ -544,7 +544,7 @@ export async function transfer(
 
   const change = totalSpent - amount;
 
-  const assetId = await getAsset(asset);
+  const assetId = await getAssetGenerator(asset);
   const outputList: Note[] = [];
 
   outputList.push(createNote(amount, receiver.publicKey, assetId));
@@ -590,7 +590,7 @@ export async function deposit(
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
   const masp = new MaspContract(signer, poolAddress);
-  const assetId = await getAsset(asset);
+  const assetId = await getAssetGenerator(asset);
 
   const spendList: Note[] = [];
   const outputList: Note[] = [
@@ -637,7 +637,7 @@ export async function withdraw(
   }, 0n);
 
   const change = totalSpent - amount;
-  const assetId = await getAsset(asset);
+  const assetId = await getAssetGenerator(asset);
   const outputList: Note[] = [];
 
   outputList.push(createNote(0n, sender.publicKey, assetId));

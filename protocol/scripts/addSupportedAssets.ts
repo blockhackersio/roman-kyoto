@@ -9,7 +9,7 @@ import {
   WBTC__factory,
   WBTC,
 } from "../typechain-types";
-import { getAsset } from "../src";
+import { getAssetGenerator } from "../src";
 
 async function main() {
   const [Deployer] = await ethers.getSigners();
@@ -27,8 +27,8 @@ async function main() {
   const wbtcAddress = (await deployments.get("WBTC")).address;
   const usdcAddress = (await deployments.get("USDC")).address;
 
-  const usdcAssetId = await getAsset("USDC");
-  const wbtcAssetId = await getAsset("WBTC");
+  const usdcAssetId = await getAssetGenerator("USDC");
+  const wbtcAssetId = await getAssetGenerator("WBTC");
 
   let tx = await RK.addSupportedAsset(usdcAssetId, usdcAddress, 6n);
   await tx.wait();

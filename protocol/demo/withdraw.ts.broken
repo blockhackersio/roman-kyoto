@@ -13,7 +13,7 @@ import {
   Note,
   buildMerkleTree,
   decryptNote,
-  getAsset,
+  getAssetGenerator,
   getKeys,
   nullifierHash,
   transfer,
@@ -41,7 +41,7 @@ const createStore = (hexPrivate: string) => {
     nullifiers: [],
     privateKey: hexPrivate,
     async getNotesUpTo(amount: bigint, asset: string) {
-      const assetId = await getAsset(asset);
+      const assetId = await getAssetGenerator(asset);
       const notesOfAsset = getUnspentNotes(store).filter(
         (n) => n.note.asset === assetId
       );
@@ -56,7 +56,7 @@ const createStore = (hexPrivate: string) => {
       return notes;
     },
     async getBalance(asset: string) {
-      const assetId = await getAsset(asset);
+      const assetId = await getAssetGenerator(asset);
       const notesOfAsset = getUnspentNotes(store).filter(
         (n) => n.note.asset === assetId
       );
