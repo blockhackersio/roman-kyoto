@@ -1,8 +1,6 @@
 import hre, { ethers } from "hardhat";
 import {
   IMasp__factory,
-  MaspTest__factory,
-  MultiAssetShieldedPool__factory,
   RK__factory,
   USDC,
   USDC__factory,
@@ -87,4 +85,45 @@ export async function deployAll() {
   // await RK.addSupportedAsset(await getAsset("USDC"), usdcAddress, 6);
   // await RK.addSupportedAsset(await getAsset("WBTC"), wbtcAddress, 18);
   return { RK, MASP, testWBTC, testUSDC };
+}
+
+export async function deployMasp() {
+  await hre.deployments.fixture("testbed");
+  const [Deployer] = await ethers.getSigners();
+
+  const OutputVerifierSource = await hre.deployments.get(
+    "OutputVerifierSource"
+  );
+
+  const SpendVerifierSource = await hre.deployments.get("SpendVerifierSource");
+
+  // deploy our EdOnBN254 library
+  await hre.deployments.deploy("EdOnBN254", {
+    contract: "EdOnBN254",
+    from: Deployer.address,
+  });
+  const EdOnBN254 = (await hre.deployments.get("EdOnBN254")).address;
+
+  const Hasher = await hre.deployments.get("Hasher");
+
+  // next we deploy our MultiAssetShieldedPool contract for unit tests
+  await hre.deployments.deploy("MASP", {
+    contract: "MaspTest",
+    from: Deployer.address,
+    args: [
+      SpendVerifierSource.address,
+      OutputVerifierSource.address,
+      Hasher.address,
+    ],
+    libraries: {
+      EdOnBN254: EdOnBN254,
+    },
+  });
+
+  const MASP = IMasp__factory.connect(
+    (await hre.deployments.get("MASP")).address,
+    Deployer
+  );
+
+  return { MASP };
 }

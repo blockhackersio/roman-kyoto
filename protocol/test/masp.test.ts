@@ -12,7 +12,7 @@ import { ensurePoseidon } from "../src/poseidon";
 import {
   Wallet,
 } from "ethers";
-import { deployAll } from "./utils";
+import { deployMasp } from "./utils";
 import { expect } from "chai";
 import { MaspWallet } from "../src/wallet";
 
@@ -21,7 +21,7 @@ export async function getMultiAssetShieldedPoolContract() {}
 it("integrate single pool", async () => {
   await ensurePoseidon();
 
-  const { MASP } = await loadFixture(deployAll);
+  const { MASP } = await loadFixture(deployMasp);
   const maspAddress = await MASP.getAddress();
   const signer = await ethers.provider.getSigner();
 
