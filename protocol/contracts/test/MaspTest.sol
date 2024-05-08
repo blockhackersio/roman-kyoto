@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-import "../MultiAssetShieldedPool.sol";
+import {MultiAssetShieldedPool} from "../MultiAssetShieldedPool.sol";
+import {IMasp, SpendProof, OutputProof} from "../interfaces/IMasp.sol";
 
-contract MaspTest is MultiAssetShieldedPool {
+contract MaspTest is IMasp, MultiAssetShieldedPool {
     constructor(
         address _spendVerifier,
         address _outputVerifier,
@@ -18,7 +19,6 @@ contract MaspTest is MultiAssetShieldedPool {
         uint256 _depositAmount,
         uint256 _root
     ) external {
-        // call our deposit function (the proofs are verified in this function)
         _deposit(
             _spendProof,
             _outputProofs,

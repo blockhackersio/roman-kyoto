@@ -9,8 +9,8 @@ import {
   keccak256,
 } from "ethers";
 import {
+    IMasp__factory,
   MultiAssetShieldedPool__factory,
-  RK__factory,
 } from "../typechain-types";
 import {
   dataDecrypt,
@@ -105,6 +105,7 @@ export class CircomStuff {
   getContract() {
     return MultiAssetShieldedPool__factory.connect(this.address, this.provider);
   }
+
   async outputVerify(proof: string, commitment: string) {
     const verifier = MultiAssetShieldedPool__factory.connect(
       this.address,
@@ -120,6 +121,7 @@ export class CircomStuff {
     );
     return await verifier.spendVerify(proof, [commitment]);
   }
+
   async verifySig(
     s: string,
     R: [string, string],
@@ -142,7 +144,7 @@ export class CircomStuff {
     amount: string,
     root: string
   ) {
-    const verifier = RK__factory.connect(this.address, this.provider);
+    const verifier = IMasp__factory.connect(this.address, this.provider);
     return await verifier.deposit(spends, outputs, Bpk, assetId, amount, root);
   }
 
@@ -154,7 +156,7 @@ export class CircomStuff {
     amount: string,
     root: string
   ) {
-    const verifier = RK__factory.connect(this.address, this.provider);
+    const verifier = IMasp__factory.connect(this.address, this.provider);
     return await verifier.withdraw(spends, outputs, Bpk, assetId, amount, root);
   }
 
@@ -164,7 +166,7 @@ export class CircomStuff {
     Bpk: [string, string],
     root: string
   ) {
-    const verifier = MultiAssetShieldedPool__factory.connect(
+    const verifier = IMasp__factory.connect(
       this.address,
       this.provider
     );

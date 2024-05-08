@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {SpendVerifier} from "./verifiers/SpendVerifier.sol";
 import {OutputVerifier} from "./verifiers/OutputVerifier.sol";
-
+import {SpendProof, OutputProof} from "./interfaces/IMasp.sol";
 import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
 
 import "./EdOnBN254.sol";
@@ -23,19 +23,6 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     event NewNullifier(uint256 indexed nullifier);
 
     mapping(uint256 => bool) public nullifierHashes;
-
-    struct SpendProof {
-        bytes proof;
-        uint256 nullifier;
-        uint[2] valueCommitment;
-    }
-
-    struct OutputProof {
-        bytes proof;
-        uint256 commitment;
-        uint[2] valueCommitment;
-        bytes encryptedOutput;
-    }
 
     constructor(
         address _spendVerifier,
