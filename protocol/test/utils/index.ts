@@ -7,10 +7,11 @@ import {
   WBTC,
   WBTC__factory,
 } from "../../typechain-types";
+import { getAsset } from "../../src/index";
 
-export async function deployAll() {
+export async function deployRK() {
   await hre.deployments.fixture("testbed");
-  const [Deployer, CCIPRouter] = await ethers.getSigners();
+  const [Deployer] = await ethers.getSigners();
 
   const OutputVerifierSource = await hre.deployments.get(
     "OutputVerifierSource"
@@ -49,23 +50,6 @@ export async function deployAll() {
       SpendVerifierSource.address,
       OutputVerifierSource.address,
       Hasher.address,
-      CCIPRouter.address,
-      [],
-      [],
-    ],
-    libraries: {
-      EdOnBN254: EdOnBN254,
-    },
-  });
-
-  // next we deploy our MultiAssetShieldedPool contract for unit tests
-  await hre.deployments.deploy("MASP", {
-    contract: "MaspTest",
-    from: Deployer.address,
-    args: [
-      SpendVerifierSource.address,
-      OutputVerifierSource.address,
-      Hasher.address,
     ],
     libraries: {
       EdOnBN254: EdOnBN254,
@@ -76,15 +60,12 @@ export async function deployAll() {
     (await hre.deployments.get("RKSource")).address,
     Deployer
   );
-  const MASP = IMasp__factory.connect(
-    (await hre.deployments.get("MASP")).address,
-    Deployer
-  );
 
   // tell our protocol these erc20s are supported
-  // await RK.addSupportedAsset(await getAsset("USDC"), usdcAddress, 6);
-  // await RK.addSupportedAsset(await getAsset("WBTC"), wbtcAddress, 18);
-  return { RK, MASP, testWBTC, testUSDC };
+  await RK.addSupportedAsset(await getAsset("USDC"), usdcAddress, 6);
+  await RK.addSupportedAsset(await getAsset("WBTC"), wbtcAddress, 18);
+
+  return { RK, testWBTC, testUSDC, Deployer, rkAddress: await RK.getAddress() };
 }
 
 export async function deployMasp() {

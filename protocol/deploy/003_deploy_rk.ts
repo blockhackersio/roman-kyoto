@@ -61,19 +61,10 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const EdOnBN254 = (await hre.deployments.get("EdOnBN254")).address;
   const Hasher = (await hre.deployments.get("Hasher")).address;
 
-  const CCIPRouter = "0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93";
-
   await deploy("RK", {
     contract: "RK",
     from: Deployer.address,
-    args: [
-      SpendVerifierSource,
-      OutputVerifierSource,
-      Hasher,
-      CCIPRouter,
-      [],
-      [],
-    ],
+    args: [SpendVerifierSource, OutputVerifierSource, Hasher],
     libraries: {
       EdOnBN254: EdOnBN254,
     },
