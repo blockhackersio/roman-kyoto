@@ -7,7 +7,6 @@ import {
   WBTC,
   WBTC__factory,
 } from "../../typechain-types";
-import { getAssetGenerator } from "../../src/index";
 
 export async function deployRK() {
   await hre.deployments.fixture("testbed");
@@ -62,8 +61,8 @@ export async function deployRK() {
   );
 
   // tell our protocol these erc20s are supported
-  await RK.addSupportedAsset(await getAssetGenerator("USDC"), usdcAddress, 6);
-  await RK.addSupportedAsset(await getAssetGenerator("WBTC"), wbtcAddress, 18);
+  await RK.addSupportedAsset("USDC", usdcAddress, 6);
+  await RK.addSupportedAsset("WBTC", wbtcAddress, 18);
 
   return { RK, testWBTC, testUSDC, Deployer, rkAddress: await RK.getAddress() };
 }

@@ -2,9 +2,7 @@
 
 import {
   AbiCoder,
-  Contract,
   ContractTransactionResponse,
-  EventLog,
   Signer,
   keccak256,
 } from "ethers";
@@ -32,7 +30,8 @@ export * from "./config";
 export async function outputProve(
   amount: string,
   blinding: string,
-  asset: string,
+  assetGenerator: string,
+  assetIdentifier: string,
   publicKey: string,
   Vx: string,
   Vy: string,
@@ -46,7 +45,8 @@ export async function outputProve(
     {
       amount,
       blinding,
-      asset,
+      assetGenerator,
+      assetIdentifier,
       publicKey,
       Vx,
       Vy,
@@ -135,7 +135,7 @@ export async function verifySig(
 }
 
 export class MaspContract {
-  constructor(private provider: Signer, private address: string) {}
+  constructor(private provider: Signer, private address: string) { }
 
   async deposit(
     spends: SpendProof[],
@@ -248,39 +248,12 @@ export function toAssetIdentifier(name: string) {
   return BigInt("0x" + Buffer.from(name, "utf-8").toString("hex"));
 }
 
-export async function toAssetGenerator(assetIdentifier: bigint) {
-  await ensurePoseidon();
-  return poseidonHash([assetIdentifier]);
-}
-
-export function getAssetGenerator(name: string) {
-  const assetIdentifier = toAssetIdentifier(name);
-  return toAssetGenerator(assetIdentifier);
-}
-
-export async function notecommitment(n: Note): Promise<string> {
-  return poseidonHash([n.amount, n.spender, n.blinding, n.asset]);
-}
-
 export function signature(
   privateKey: string,
   commitment: string,
   index: bigint
 ): string {
   return poseidonHash([privateKey, commitment, index]);
-}
-
-export async function nullifierHash(
-  privateKey: string,
-  n: Note,
-  index: bigint
-): Promise<string> {
-  const commitment = await notecommitment(n);
-  return poseidonHash([
-    commitment,
-    index,
-    signature(privateKey, commitment, index),
-  ]);
 }
 
 export function getInitialPoints(B: BabyJub) {
@@ -336,14 +309,44 @@ export function getInitialPoints(B: BabyJub) {
   });
   const R = G.multiply(Ro);
 
-  function getV(asset: string) {
-    const V = G.multiply(BigInt(asset));
-    return V;
+  async function toAssetGenerator(assetIdentifier: bigint) {
+    await ensurePoseidon();
+    return BigInt("0b"+BigInt(poseidonHash([assetIdentifier])).toString(2).slice(1)).toString();
   }
 
-  function valcommit(n: Note) {
+  function getAssetGenerator(name: string) {
+    const assetIdentifier = toAssetIdentifier(name);
+    return toAssetGenerator(assetIdentifier);
+  }
+
+  function getV(asset: string) {
+    const V = B.ExtendedPoint.BASE.multiply(BigInt(asset));
+    return V;
+  }
+  async function notecommitment(n: Note): Promise<string> {
+    return poseidonHash([
+      n.amount,
+      n.spender,
+      n.blinding,
+      await getAssetGenerator(n.asset),
+    ]);
+  }
+  async function nullifierHash(
+    privateKey: string,
+    n: Note,
+    index: bigint
+  ): Promise<string> {
+    const commitment = await notecommitment(n);
+    return poseidonHash([
+      commitment,
+      index,
+      signature(privateKey, commitment, index),
+    ]);
+  }
+
+  async function valcommit(n: Note) {
     const r = getRandomBigInt(253);
-    const V = getV(n.asset);
+    const V = getV(await getAssetGenerator(n.asset));
     const vV =
       n.amount == 0n ? B.ExtendedPoint.ZERO : V.multiply(modN(n.amount));
     const rR = R.multiply(modN(r));
@@ -351,7 +354,18 @@ export function getInitialPoints(B: BabyJub) {
     return { Vc, r };
   }
 
-  return { G, R, modN, valcommit, getV, reddsaSign };
+  return {
+    G,
+    R,
+    modN,
+    valcommit,
+    getV,
+    reddsaSign,
+    toAssetGenerator,
+    nullifierHash,
+    getAssetGenerator,
+    notecommitment,
+  };
 }
 
 function createNote(amount: bigint, spender: string, asset: string): Note {
@@ -373,7 +387,9 @@ export type Keyset = {
 // Use this to get the public keys from a users private key
 export async function getKeys(privateKey: bigint) {
   await ensurePoseidon();
-  const encryptionKey = getEncryptionPublicKey(privateKey.toString(16).padStart(64, '0'));
+  const encryptionKey = getEncryptionPublicKey(
+    privateKey.toString(16).padStart(64, "0")
+  );
 
   const publicKey = poseidonHash([privateKey]);
 
@@ -384,12 +400,10 @@ export async function getKeys(privateKey: bigint) {
   };
 }
 
-export async function buildMerkleTree(
-  contract: IMasp,
-) {
+export async function buildMerkleTree(contract: IMasp) {
   const filter = contract.filters.NewCommitment();
 
-  const events = await contract.queryFilter(filter)
+  const events = await contract.queryFilter(filter);
   const leaves = events
     .sort((a, b) => {
       return Number(a.args?.index) - Number(b.args?.index);
@@ -427,7 +441,15 @@ async function createProofs(
   receiver: Keyset
 ) {
   const babyJub = getBabyJubJub();
-  const { R, modN, valcommit, getV } = getInitialPoints(babyJub);
+  const {
+    R,
+    modN,
+    getAssetGenerator,
+    notecommitment,
+    nullifierHash,
+    valcommit,
+    getV,
+  } = getInitialPoints(babyJub);
   const spendProofs: SpendProof[] = [];
   const outputProofs: OutputProof[] = [];
 
@@ -435,7 +457,7 @@ async function createProofs(
 
   for (let n of spendList) {
     const nc = await notecommitment(n);
-    const { Vc, r } = valcommit(n);
+    const { Vc, r } = await valcommit(n);
     const root = `${tree.root}`;
     const index = tree.indexOf(nc);
     const pathElements = tree.path(index).pathElements.map((e) => e.toString());
@@ -444,12 +466,12 @@ async function createProofs(
       n,
       BigInt(index)
     );
-    const Vs = getV(n.asset);
+    const Vs = getV(await getAssetGenerator(n.asset));
     const proofSpend = await spendProve(
       toStr(sender.privateKey),
       toStr(n.amount),
       n.blinding,
-      n.asset,
+      await getAssetGenerator(n.asset),
       toStr(BigInt(index)),
       nullifier,
       root,
@@ -473,13 +495,14 @@ async function createProofs(
 
   for (let n of outputList) {
     const nc = await notecommitment(n);
-    const { Vc, r } = valcommit(n);
+    const { Vc, r } = await valcommit(n);
 
-    const Vo = getV(n.asset);
+    const Vo = getV(await getAssetGenerator(n.asset));
     const proofOutput = await outputProve(
       toStr(n.amount),
       n.blinding,
-      n.asset,
+      await getAssetGenerator(n.asset),
+      toStr(toAssetIdentifier(n.asset)),
       n.spender,
       toStr(Vo.x),
       toStr(Vo.y),
@@ -526,11 +549,11 @@ export async function transfer(
 ): Promise<ContractTransactionResponse> {
   logAction(
     "Transferring " +
-      amount +
-      " " +
-      asset +
-      " to " +
-      shrtn(toFixedHex(receiver.publicKey))
+    amount +
+    " " +
+    asset +
+    " to " +
+    shrtn(toFixedHex(receiver.publicKey))
   );
 
   if (signer.provider === null) throw new Error("Signer must have a provider");
@@ -544,14 +567,13 @@ export async function transfer(
 
   const change = totalSpent - amount;
 
-  const assetId = await getAssetGenerator(asset);
   const outputList: Note[] = [];
 
-  outputList.push(createNote(amount, receiver.publicKey, assetId));
+  outputList.push(createNote(amount, receiver.publicKey, asset));
   if (change > 0n) {
-    outputList.push(createNote(change, sender.publicKey, assetId));
+    outputList.push(createNote(change, sender.publicKey, asset));
   } else {
-    outputList.push(createNote(0n, sender.publicKey, assetId));
+    outputList.push(createNote(0n, sender.publicKey, asset));
   }
 
   const { Bpk, spendProofs, outputProofs } = await createProofs(
@@ -590,12 +612,11 @@ export async function deposit(
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
   const masp = new MaspContract(signer, poolAddress);
-  const assetId = await getAssetGenerator(asset);
 
   const spendList: Note[] = [];
   const outputList: Note[] = [
-    createNote(amount, receiver.publicKey, assetId),
-    createNote(0n, receiver.publicKey, assetId),
+    createNote(amount, receiver.publicKey, asset),
+    createNote(0n, receiver.publicKey, asset),
   ];
   const { Bpk, spendProofs, outputProofs } = await createProofs(
     spendList,
@@ -609,7 +630,7 @@ export async function deposit(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
-    assetId,
+    asset,
     toStr(amount),
     `${tree.root}`
   );
@@ -637,13 +658,11 @@ export async function withdraw(
   }, 0n);
 
   const change = totalSpent - amount;
-  const assetId = await getAssetGenerator(asset);
   const outputList: Note[] = [];
 
-  outputList.push(createNote(0n, sender.publicKey, assetId));
-  if (change > 0n)
-    outputList.push(createNote(change, sender.publicKey, assetId));
-  else outputList.push(createNote(0n, sender.publicKey, assetId));
+  outputList.push(createNote(0n, sender.publicKey, asset));
+  if (change > 0n) outputList.push(createNote(change, sender.publicKey, asset));
+  else outputList.push(createNote(0n, sender.publicKey, asset));
 
   const { Bpk, spendProofs, outputProofs } = await createProofs(
     spendList,
@@ -657,7 +676,7 @@ export async function withdraw(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
-    assetId,
+    asset,
     toStr(amount),
     `${tree.root}`
   );

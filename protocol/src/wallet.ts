@@ -1,5 +1,5 @@
 import { ContractTransactionReceipt, Interface, LogDescription } from "ethers";
-import { Note, decryptNote, getAssetGenerator, nullifierHash } from ".";
+import { Note, decryptNote, getBabyJubJub, getInitialPoints } from ".";
 import { IMasp__factory } from "../typechain-types";
 
 type MetaNote = { note: Note; nullifier: string; index: bigint };
@@ -21,13 +21,13 @@ function getNoteCommitmentEvents(receipt: ContractTransactionReceipt | null) {
   return decodedLogs.filter((c) => c !== null) as LogDescription[];
 }
 
-
 export class MaspWallet {
   constructor(
     private privateKey: string,
     private notes: MetaNote[],
-    private nullifiers: string[]
-  ) {}
+    private nullifiers: string[],
+    private babyJub = getBabyJubJub()
+  ) { }
 
   getUnspentNotes() {
     return this.notes.filter((note) => {
@@ -36,9 +36,8 @@ export class MaspWallet {
   }
 
   async getNotesUpTo(amount: bigint, asset: string) {
-    const assetId = await getAssetGenerator(asset);
     const notesOfAsset = this.getUnspentNotes().filter(
-      (n) => n.note.asset === assetId
+      (n) => n.note.asset === asset
     );
     let total = 0n;
     let notes: Note[] = [];
@@ -53,6 +52,7 @@ export class MaspWallet {
 
   async updateFromReceipt(receipt: ContractTransactionReceipt | null) {
     const events = getNoteCommitmentEvents(receipt);
+    const { nullifierHash } = getInitialPoints(this.babyJub);
 
     for (let ev of events) {
       if (ev.name === "NewCommitment") {
@@ -70,7 +70,7 @@ export class MaspWallet {
             nullifier,
             note,
           });
-        } catch (err) {}
+        } catch (err) { }
       }
       if (ev.name === "NewNullifier") {
         this.nullifiers.push(ev.args[0].toString());
@@ -79,9 +79,8 @@ export class MaspWallet {
   }
 
   async getBalance(asset: string) {
-    const assetId = await getAssetGenerator(asset);
     const notesOfAsset = this.getUnspentNotes().filter(
-      (n) => n.note.asset === assetId
+      (n) => n.note.asset === asset
     );
     return notesOfAsset.reduce((total, note) => {
       return total + note.note.amount;

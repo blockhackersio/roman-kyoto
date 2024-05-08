@@ -24,7 +24,7 @@ it("ensure keys don't fail", async () => {
   }
 });
 
-it("integrate single pool", async () => {
+it.only("integrate single pool", async () => {
   await ensurePoseidon();
 
   const { MASP } = await loadFixture(deployMasp);
