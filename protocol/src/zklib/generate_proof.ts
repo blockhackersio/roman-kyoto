@@ -6,7 +6,6 @@ export async function generateGroth16Proof(
   inputs: CircuitSignals,
   circuitName: string = "hello"
 ) {
-  console.log({ inputs });
   const wasmLocation = getWasmFileLocation(circuitName);
   const zkeyLocation = getZkeyFileLocation(circuitName);
   const { proof } = await groth16.fullProve(inputs, wasmLocation, zkeyLocation);
