@@ -323,18 +323,6 @@ export async function buildMerkleTree(contract: IMasp) {
   return t;
 }
 
-export async function encryptNote(publicKey: string, note: Note) {
-  const str = JSON.stringify({ ...note, amount: note.amount.toString() });
-
-  return dataEncrypt(publicKey, Buffer.from(str, "utf8"));
-}
-
-export async function decryptNote(privkey: string, data: string) {
-  const n: Note & { amount: string } = JSON.parse(
-    dataDecrypt(privkey, data).toString("utf8")
-  );
-  return { ...n, amount: BigInt(n.amount) };
-}
 
 async function createProofs(
   spendList: Note[],
@@ -409,7 +397,7 @@ async function createProofs(
         ? sender.encryptionKey
         : receiver.encryptionKey;
 
-    const encryptedOutput = await encryptNote(keyToEncryptTo, n);
+    const encryptedOutput = n.encrypt(keyToEncryptTo);
 
     outputProofs.push({
       proof: proofOutput,

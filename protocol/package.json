@@ -44,7 +44,8 @@
     "mocha": "^10.4.0",
     "rollup": "^4.14.2",
     "snarkjs": "^0.7.3",
-    "solc": "0.8.24"
+    "solc": "0.8.24",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@rollup/plugin-json": "^6.1.0",
