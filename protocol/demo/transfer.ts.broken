@@ -12,7 +12,6 @@ import { RK__factory, RK } from "../typechain-types";
 import {
   Note,
   buildMerkleTree,
-  decryptNote,
   getAsset,
   getKeys,
   nullifierHash,

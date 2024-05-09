@@ -45,7 +45,6 @@ it("integrate single pool", async () => {
 
   expect(await wallet.getBalance("USDC")).to.equal(0n);
   expect(await wallet.getBalance("WBTC")).to.equal(0n);
-
   let tx = await deposit(signer, maspAddress, 100n, spender, "USDC", tree);
 
   let receipt = await tx.wait();

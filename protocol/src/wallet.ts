@@ -1,12 +1,11 @@
 import { ContractTransactionReceipt, Interface, LogDescription } from "ethers";
-import { Note, decryptNote, getAsset, nullifierHash } from ".";
 import { IMasp__factory } from "../typechain-types";
+import { Note } from "./note";
 
 type MetaNote = { note: Note; nullifier: string; index: bigint };
 
 function getNoteCommitmentEvents(receipt: ContractTransactionReceipt | null) {
   if (!receipt) throw new Error("receipt was null!");
-
   const decodedLogs = receipt?.logs
     .map((log) => {
       try {
@@ -21,13 +20,12 @@ function getNoteCommitmentEvents(receipt: ContractTransactionReceipt | null) {
   return decodedLogs.filter((c) => c !== null) as LogDescription[];
 }
 
-
 export class MaspWallet {
   constructor(
     private privateKey: string,
     private notes: MetaNote[],
     private nullifiers: string[]
-  ) {}
+  ) { }
 
   getUnspentNotes() {
     return this.notes.filter((note) => {
@@ -36,9 +34,8 @@ export class MaspWallet {
   }
 
   async getNotesUpTo(amount: bigint, asset: string) {
-    const assetId = await getAsset(asset);
     const notesOfAsset = this.getUnspentNotes().filter(
-      (n) => n.note.asset === assetId
+      (n) => n.note.asset.getSymbol() === asset
     );
     let total = 0n;
     let notes: Note[] = [];
@@ -59,18 +56,14 @@ export class MaspWallet {
         const cypher = ev.args[2] as string;
         const index = ev.args[1] as bigint;
         try {
-          const note = await decryptNote(this.privateKey, cypher);
-          const nullifier = await nullifierHash(
-            "0x" + this.privateKey,
-            note,
-            index
-          );
+          const note = Note.decrypt(this.privateKey, cypher);
+          const nullifier = await note.nullifier("0x" + this.privateKey, index);
           this.notes.push({
             index: ev.args[1],
             nullifier,
             note,
           });
-        } catch (err) {}
+        } catch (err) { }
       }
       if (ev.name === "NewNullifier") {
         this.nullifiers.push(ev.args[0].toString());
@@ -79,10 +72,9 @@ export class MaspWallet {
   }
 
   async getBalance(asset: string) {
-    const assetId = await getAsset(asset);
-    const notesOfAsset = this.getUnspentNotes().filter(
-      (n) => n.note.asset === assetId
-    );
+    const notesOfAsset = this.getUnspentNotes().filter((n) => {
+      return n.note.asset.getSymbol() === asset;
+    });
     return notesOfAsset.reduce((total, note) => {
       return total + note.note.amount;
     }, 0n);
