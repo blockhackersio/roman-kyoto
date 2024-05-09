@@ -2,6 +2,8 @@ pragma circom 2.0.0;
 
 include "../../node_modules/circomlib/circuits/poseidon.circom";
 include "./valcommit.circom";
+include "../../node_modules/circomlib/circuits/bitify.circom";
+include "../../node_modules/circomlib/circuits/escalarmulany.circom";
 
 template Output() {
 
@@ -34,11 +36,11 @@ template Output() {
   assetHasher.inputs[0] <== assetId;
   assetHasher.out === assetIdHash;
 
-/*  component assetVb = BabyGPbk();
+  component assetVb = BabyGPbk();
   assetVb.in <== assetIdHash;
   Vx === assetVb.Ax;
   Vy === assetVb.Ay;
-*/  
+  
   component valcommit = ValueCommitment();
   valcommit.Vx <== Vx;
   valcommit.Vy <== Vy;
@@ -61,13 +63,13 @@ template BabyGPbk() {
         5472060717959818805561601436314318772137091100104008585924551046643952123905
     ];
 
-    component pvkBits = Num2Bits(253);
+    component pvkBits = Num2Bits(254);
     pvkBits.in <== in;
 
-    component mulFix = EscalarMulFix(253, BASE);
+    component mulFix = EscalarMulFix(254, BASE);
 
     var i;
-    for (i=0; i<253; i++) {
+    for (i=0; i<254; i++) {
         mulFix.e[i] <== pvkBits.out[i];
     }
     Ax  <== mulFix.out[0];

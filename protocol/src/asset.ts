@@ -1,4 +1,4 @@
-import { G, BASE8, modN } from "./curve";
+import { G, modN } from "./curve";
 import { ensurePoseidon, poseidonHash } from "./poseidon";
 console.log("G.x", G.x);
 console.log("G.y", G.y);
@@ -16,7 +16,7 @@ export class Asset {
   async getIdHash() {
     await ensurePoseidon();
     const id = this.getId();
-    return poseidonHash([id]);
+    return modN(BigInt(poseidonHash([id])));
   }
 
   async getValueBase() {
