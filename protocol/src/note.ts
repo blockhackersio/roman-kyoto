@@ -1,7 +1,17 @@
 import { getRandomBigInt } from "./curve";
+import { ensurePoseidon, poseidonHash } from "./poseidon";
 import { toStr } from "./utils";
 import { dataDecrypt, dataEncrypt } from "./zklib";
 import { z } from "zod";
+
+export async function signature(
+  privateKey: string,
+  commitment: string,
+  index: bigint
+): Promise<string> {
+  await ensurePoseidon();
+  return poseidonHash([privateKey, commitment, index]);
+}
 
 export class Note {
   constructor(
@@ -23,6 +33,21 @@ export class Note {
   encrypt(publicKey: string) {
     const jsonStr = this.serialize();
     return dataEncrypt(publicKey, Buffer.from(jsonStr, "utf8"));
+  }
+
+  async commitment() {
+    await ensurePoseidon();
+    return poseidonHash([this.amount, this.spender, this.blinding, this.asset]);
+  }
+
+  async nullifier(privateKey: string, index: bigint) {
+    await ensurePoseidon();
+    const commitment = await this.commitment();
+    return poseidonHash([
+      commitment,
+      index,
+      await signature(privateKey, commitment, index),
+    ]);
   }
 
   private static fromJsonNote({ asset, amount, blinding, spender }: JsonNote) {
@@ -52,5 +77,3 @@ const JsonNoteSchema = z.object({
 });
 
 type JsonNote = z.infer<typeof JsonNoteSchema>;
-
-

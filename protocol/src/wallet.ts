@@ -1,5 +1,5 @@
 import { ContractTransactionReceipt, Interface, LogDescription } from "ethers";
-import { getAsset, nullifierHash } from ".";
+import { getAsset } from ".";
 import { IMasp__factory } from "../typechain-types";
 import { Note } from "./note";
 
@@ -61,9 +61,8 @@ export class MaspWallet {
         const index = ev.args[1] as bigint;
         try {
           const note = await Note.decrypt(this.privateKey, cypher);
-          const nullifier = await nullifierHash(
+          const nullifier = await note.nullifier(
             "0x" + this.privateKey,
-            note,
             index
           );
           this.notes.push({

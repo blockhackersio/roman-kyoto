@@ -197,31 +197,6 @@ export function getAsset(assetString: string) {
   return hashToField(bytes);
 }
 
-export async function notecommitment(n: Note): Promise<string> {
-  return poseidonHash([n.amount, n.spender, n.blinding, n.asset]);
-}
-
-export function signature(
-  privateKey: string,
-  commitment: string,
-  index: bigint
-): string {
-  return poseidonHash([privateKey, commitment, index]);
-}
-
-export async function nullifierHash(
-  privateKey: string,
-  n: Note,
-  index: bigint
-): Promise<string> {
-  const commitment = await notecommitment(n);
-  return poseidonHash([
-    commitment,
-    index,
-    signature(privateKey, commitment, index),
-  ]);
-}
-
 function reddsaSign(a: bigint, A: ExtPointType, msgByteStr: string) {
   // B - base point
   // a - secret key
@@ -323,7 +298,6 @@ export async function buildMerkleTree(contract: IMasp) {
   return t;
 }
 
-
 async function createProofs(
   spendList: Note[],
   outputList: Note[],
@@ -337,14 +311,14 @@ async function createProofs(
   let totalRandomness = 0n;
 
   for (let n of spendList) {
-    const nc = await notecommitment(n);
+    const nc = await n.commitment();
+    // const nc = await notecommitment(n);
     const { Vc, r } = valcommit(n);
     const root = `${tree.root}`;
     const index = tree.indexOf(nc);
     const pathElements = tree.path(index).pathElements.map((e) => e.toString());
-    const nullifier = await nullifierHash(
+    const nullifier = await n.nullifier(
       toStr(sender.privateKey),
-      n,
       BigInt(index)
     );
     const Vs = getV(n.asset);
@@ -375,7 +349,7 @@ async function createProofs(
   }
 
   for (let n of outputList) {
-    const nc = await notecommitment(n);
+    const nc = await n.commitment();
     const { Vc, r } = valcommit(n);
 
     const Vo = getV(n.asset);
