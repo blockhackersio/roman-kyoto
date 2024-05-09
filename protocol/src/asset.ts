@@ -1,10 +1,21 @@
+import { ExtPointType } from "@noble/curves/abstract/edwards";
 import { G, modN } from "./curve";
 import { ensurePoseidon, poseidonHash } from "./poseidon";
 import { toStr } from "./utils";
-console.log("G.x", G.x);
-console.log("G.y", G.y);
+
+export async function hashToCurve(s: string): Promise<ExtPointType> {
+  await ensurePoseidon()
+  return G.multiply(
+    modN(
+      BigInt(
+        poseidonHash([BigInt("0x" + Buffer.from(s, "utf-8").toString("hex"))])
+      )
+    )
+  );
+}
+
 export class Asset {
-  constructor(private symbol: string) { }
+  constructor(private symbol: string) {}
 
   getId() {
     return BigInt("0x" + Buffer.from(this.symbol, "utf-8").toString("hex"));

@@ -4,12 +4,8 @@ import { Contract, parseEther, parseUnits } from "ethers";
 import {
   RK__factory,
   RK,
-  USDC__factory,
-  USDC,
-  WBTC__factory,
-  WBTC,
 } from "../typechain-types";
-import { getAsset } from "../src";
+import { Asset } from "../src/asset";
 
 async function main() {
   const [Deployer] = await ethers.getSigners();
@@ -27,8 +23,8 @@ async function main() {
   const wbtcAddress = (await deployments.get("WBTC")).address;
   const usdcAddress = (await deployments.get("USDC")).address;
 
-  const usdcAssetId = await getAsset("USDC");
-  const wbtcAssetId = await getAsset("WBTC");
+  const usdcAssetId = await Asset.fromTicker("USDC").getIdHash()
+  const wbtcAssetId = await Asset.fromTicker("WBTC").getIdHash();
 
   let tx = await RK.addSupportedAsset(usdcAssetId, usdcAddress, 6n);
   await tx.wait();

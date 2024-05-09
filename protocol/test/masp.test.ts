@@ -14,7 +14,7 @@ import { deployMasp } from "./utils";
 import { expect } from "chai";
 import { MaspWallet } from "../src/wallet";
 
-export async function getMultiAssetShieldedPoolContract() {}
+export async function getMultiAssetShieldedPoolContract() { }
 
 it("ensure keys don't fail", async () => {
   for (let i = 0; i < 100; i++) {
@@ -48,6 +48,7 @@ it("integrate single pool", async () => {
   let tx = await deposit(signer, maspAddress, 100n, spender, "USDC", tree);
 
   let receipt = await tx.wait();
+
   // wallet = await extractToStore(privateKey, wallet, receipt);
   await wallet.updateFromReceipt(receipt);
   await wallet.logBalances();
@@ -56,7 +57,6 @@ it("integrate single pool", async () => {
   expect(await wallet.getBalance("WBTC")).to.equal(0n);
 
   tx = await deposit(signer, maspAddress, 2n, spender, "WBTC", tree);
-
   receipt = await tx.wait();
   await wallet.updateFromReceipt(receipt);
   await wallet.logBalances();

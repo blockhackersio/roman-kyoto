@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
 import "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 import "./MultiAssetShieldedPool.sol";
 
 contract RK is MultiAssetShieldedPool {
@@ -46,10 +45,13 @@ contract RK is MultiAssetShieldedPool {
     function deposit(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
-        uint[2] memory _bpk,
+        uint256[2] memory _bpk,
         uint256 _assetId,
         uint256 _depositAmount,
-        uint256 _root
+        uint256 _root,
+        uint256[2] memory _R,
+        uint256 _s,
+        bytes memory _hash
     ) external {
         // transfer the users asset to this address
         SupportedAsset memory _asset = assetToAddress[_assetId];
@@ -69,7 +71,10 @@ contract RK is MultiAssetShieldedPool {
             _bpk,
             _assetId,
             _depositAmount,
-            _root
+            _root,
+            _R,
+            _s,
+            _hash
         );
     }
 
@@ -79,7 +84,10 @@ contract RK is MultiAssetShieldedPool {
         uint[2] memory _bpk,
         uint256 _assetId,
         uint256 _withdrawAmount,
-        uint256 _root
+        uint256 _root,
+        uint256[2] memory _R,
+        uint256 _s,
+        bytes memory _hash
     ) external {
         SupportedAsset memory _asset = assetToAddress[_assetId];
         require(_asset.assetAddress != address(0), "Asset not supported");
@@ -90,7 +98,10 @@ contract RK is MultiAssetShieldedPool {
             _bpk,
             _assetId,
             _withdrawAmount,
-            _root
+            _root,
+            _R,
+            _s,
+            _hash
         );
 
         // transfer the asset to this contract
@@ -101,8 +112,11 @@ contract RK is MultiAssetShieldedPool {
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
         uint[2] memory _bpk,
-        uint256 _root
+        uint256 _root,
+        uint256[2] memory _R,
+        uint256 _s,
+        bytes memory _hash
     ) external {
-        _transact(_spendProof, _outputProofs, _bpk, _root);
+        _transact(_spendProof, _outputProofs, _bpk, _root, _R, _s, _hash);
     }
 }
