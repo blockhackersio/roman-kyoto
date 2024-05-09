@@ -23,6 +23,8 @@ import { bytesToNumberBE } from "@noble/curves/abstract/utils";
 import MerkleTree from "fixed-merkle-tree";
 import { getEncryptionPublicKey } from "@metamask/eth-sig-util";
 import { B, G, getRandomBigInt, R } from "./curve";
+import { Note } from "./note";
+import { toStr } from "./utils";
 export * from "./config";
 
 export async function outputProve(
@@ -181,9 +183,6 @@ export type SpendProof = {
   valueCommitment: [string, string];
 };
 
-export function toStr(b: bigint): string {
-  return "0x" + b.toString(16);
-}
 export function stringToBytes(str: string) {
   return BigInt("0x" + Buffer.from(str, "utf-8").toString("hex"));
 }
@@ -280,16 +279,6 @@ function valcommit(n: Note) {
   const rR = R.multiply(modN(r));
   const Vc = vV.add(rR);
   return { Vc, r };
-}
-
-function createNote(amount: bigint, spender: string, asset: string): Note {
-  const blinding = getRandomBigInt(253);
-  return {
-    amount,
-    spender,
-    asset,
-    blinding: toStr(blinding),
-  };
 }
 
 export type Keyset = {
@@ -473,11 +462,11 @@ export async function transfer(
   const assetId = await getAsset(asset);
   const outputList: Note[] = [];
 
-  outputList.push(createNote(amount, receiver.publicKey, assetId));
+  outputList.push(Note.create(amount, receiver.publicKey, assetId));
   if (change > 0n) {
-    outputList.push(createNote(change, sender.publicKey, assetId));
+    outputList.push(Note.create(change, sender.publicKey, assetId));
   } else {
-    outputList.push(createNote(0n, sender.publicKey, assetId));
+    outputList.push(Note.create(0n, sender.publicKey, assetId));
   }
 
   const { Bpk, spendProofs, outputProofs } = await createProofs(
@@ -520,8 +509,8 @@ export async function deposit(
 
   const spendList: Note[] = [];
   const outputList: Note[] = [
-    createNote(amount, receiver.publicKey, assetId),
-    createNote(0n, receiver.publicKey, assetId),
+    Note.create(amount, receiver.publicKey, assetId),
+    Note.create(0n, receiver.publicKey, assetId),
   ];
 
   const { Bpk, spendProofs, outputProofs } = await createProofs(
@@ -567,10 +556,10 @@ export async function withdraw(
   const assetId = await getAsset(asset);
   const outputList: Note[] = [];
 
-  outputList.push(createNote(0n, sender.publicKey, assetId));
+  outputList.push(Note.create(0n, sender.publicKey, assetId));
   if (change > 0n)
-    outputList.push(createNote(change, sender.publicKey, assetId));
-  else outputList.push(createNote(0n, sender.publicKey, assetId));
+    outputList.push(Note.create(change, sender.publicKey, assetId));
+  else outputList.push(Note.create(0n, sender.publicKey, assetId));
 
   const { Bpk, spendProofs, outputProofs } = await createProofs(
     spendList,
@@ -589,13 +578,6 @@ export async function withdraw(
     `${tree.root}`
   );
 }
-
-export type Note = {
-  amount: bigint;
-  spender: string;
-  blinding: string;
-  asset: string;
-};
 
 export type NoteStore = {
   // getUnspentNotes(): Record<string, Note[]>;
