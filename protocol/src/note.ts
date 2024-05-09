@@ -1,4 +1,4 @@
-import { getV } from "./asset";
+import { Asset } from "./asset";
 import { B, R, getRandomBigInt, modN } from "./curve";
 import { ensurePoseidon, poseidonHash } from "./poseidon";
 import { toStr } from "./utils";
@@ -15,19 +15,23 @@ export async function signature(
 }
 
 export class Note {
+  public asset: Asset;
+
   constructor(
     public amount: bigint,
     public spender: string,
     public blinding: string,
-    public asset: string
-  ) { }
+    assetName: string
+  ) {
+    this.asset = Asset.fromTicker(assetName);
+  }
 
   serialize() {
     return JSON.stringify({
       amount: this.amount.toString(),
       spender: this.spender,
       blinding: this.blinding,
-      asset: this.asset,
+      asset: this.asset.getSymbol(),
     });
   }
 
@@ -38,7 +42,12 @@ export class Note {
 
   async commitment() {
     await ensurePoseidon();
-    return poseidonHash([this.amount, this.spender, this.blinding, this.asset]);
+    return poseidonHash([
+      this.amount,
+      this.spender,
+      this.blinding,
+      await this.asset.getIdentifierHash(),
+    ]);
   }
 
   async nullifier(privateKey: string, index: bigint) {
@@ -53,7 +62,7 @@ export class Note {
 
   async valcommit() {
     const r = getRandomBigInt(253);
-    const V = getV(this.asset);
+    const V = await this.asset.getValueBase();
     const vV =
       this.amount == 0n ? B.ExtendedPoint.ZERO : V.multiply(modN(this.amount));
     const rR = R.multiply(modN(r));
@@ -65,7 +74,7 @@ export class Note {
     return new Note(BigInt(amount), spender, blinding, asset);
   }
 
-  static async decrypt(privkey: string, data: string) {
+  static decrypt(privkey: string, data: string) {
     return Note.deserialize(dataDecrypt(privkey, data).toString("utf8"));
   }
 

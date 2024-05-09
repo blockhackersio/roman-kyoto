@@ -20,7 +20,7 @@ import { getEncryptionPublicKey } from "@metamask/eth-sig-util";
 import { B, modN, R } from "./curve";
 import { Note } from "./note";
 import { toStr } from "./utils";
-import { getV } from "./asset";
+import { Asset } from "./asset";
 export * from "./config";
 
 export async function outputProve(
@@ -179,20 +179,6 @@ export type SpendProof = {
   valueCommitment: [string, string];
 };
 
-export function stringToBytes(str: string) {
-  return BigInt("0x" + Buffer.from(str, "utf-8").toString("hex"));
-}
-
-export async function hashToField(bytes: bigint) {
-  await ensurePoseidon();
-  return poseidonHash([bytes]);
-}
-
-export function getAsset(assetString: string) {
-  const bytes = stringToBytes(assetString);
-  return hashToField(bytes);
-}
-
 function reddsaSign(a: bigint, A: ExtPointType, msgByteStr: string) {
   // B - base point
   // a - secret key
@@ -300,12 +286,12 @@ async function createProofs(
       toStr(sender.privateKey),
       BigInt(index)
     );
-    const Vs = getV(n.asset);
+    const Vs = await n.asset.getValueBase();
     const proofSpend = await spendProve(
       toStr(sender.privateKey),
       toStr(n.amount),
       n.blinding,
-      n.asset,
+      await n.asset.getIdentifierHash(),
       toStr(BigInt(index)),
       nullifier,
       root,
@@ -331,11 +317,11 @@ async function createProofs(
     const nc = await n.commitment();
     const { Vc, r } = await n.valcommit();
 
-    const Vo = getV(n.asset);
+    const Vo = await n.asset.getValueBase();
     const proofOutput = await outputProve(
       toStr(n.amount),
       n.blinding,
-      n.asset,
+      await n.asset.getIdentifierHash(),
       n.spender,
       toStr(Vo.x),
       toStr(Vo.y),
@@ -401,14 +387,13 @@ export async function transfer(
 
   const change = totalSpent - amount;
 
-  const assetId = await getAsset(asset);
   const outputList: Note[] = [];
 
-  outputList.push(Note.create(amount, receiver.publicKey, assetId));
+  outputList.push(Note.create(amount, receiver.publicKey, asset));
   if (change > 0n) {
-    outputList.push(Note.create(change, sender.publicKey, assetId));
+    outputList.push(Note.create(change, sender.publicKey, asset));
   } else {
-    outputList.push(Note.create(0n, sender.publicKey, assetId));
+    outputList.push(Note.create(0n, sender.publicKey, asset));
   }
 
   const { Bpk, spendProofs, outputProofs } = await createProofs(
@@ -447,14 +432,12 @@ export async function deposit(
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
   const masp = new MaspContract(signer, poolAddress);
-  const assetId = await getAsset(asset);
 
   const spendList: Note[] = [];
   const outputList: Note[] = [
-    Note.create(amount, receiver.publicKey, assetId),
-    Note.create(0n, receiver.publicKey, assetId),
+    Note.create(amount, receiver.publicKey, asset),
+    Note.create(0n, receiver.publicKey, asset),
   ];
-
   const { Bpk, spendProofs, outputProofs } = await createProofs(
     spendList,
     outputList,
@@ -467,7 +450,7 @@ export async function deposit(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
-    assetId,
+    await Asset.fromTicker(asset).getIdentifierHash(),
     toStr(amount),
     `${tree.root}`
   );
@@ -495,13 +478,12 @@ export async function withdraw(
   }, 0n);
 
   const change = totalSpent - amount;
-  const assetId = await getAsset(asset);
   const outputList: Note[] = [];
 
-  outputList.push(Note.create(0n, sender.publicKey, assetId));
+  outputList.push(Note.create(0n, sender.publicKey, asset));
   if (change > 0n)
-    outputList.push(Note.create(change, sender.publicKey, assetId));
-  else outputList.push(Note.create(0n, sender.publicKey, assetId));
+    outputList.push(Note.create(change, sender.publicKey, asset));
+  else outputList.push(Note.create(0n, sender.publicKey, asset));
 
   const { Bpk, spendProofs, outputProofs } = await createProofs(
     spendList,
@@ -515,7 +497,7 @@ export async function withdraw(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
-    assetId,
+    await Asset.fromTicker(asset).getIdentifierHash(),
     toStr(amount),
     `${tree.root}`
   );
