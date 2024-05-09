@@ -8,9 +8,11 @@ calculate_hash() {
 
 build_circuits() {
   for file in ./circuits/*; do
-    circuit_file=$(basename "$file")
-    circuit_name=${circuit_file%.*}
-    ./scripts/compile_circuit.sh "$circuit_name"
+    if [ -f "$file" ]; then
+      circuit_file=$(basename "$file")
+      circuit_name=${circuit_file%.*}
+      ./scripts/compile_circuit.sh "$circuit_name"
+    fi
   done
 }
 

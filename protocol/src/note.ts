@@ -46,7 +46,7 @@ export class Note {
       this.amount,
       this.spender,
       this.blinding,
-      await this.asset.getIdentifierHash(),
+      await this.asset.getIdHash(),
     ]);
   }
 

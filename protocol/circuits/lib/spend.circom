@@ -28,7 +28,6 @@ template Spend(levels) {
 
   component keypair = Keypair();
   keypair.privateKey <== privateKey;
-  //publicKey <== keypair.publicKey;
 
   component commitmentHasher = Poseidon(4);
   commitmentHasher.inputs[0] <== amount;
