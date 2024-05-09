@@ -1,3 +1,5 @@
+# DONT USE THIS
+
 # zk-starter
 ![Solidity](https://img.shields.io/badge/-Solidity-363636?style=flat-square&logo=solidity&logoColor=white)
 ![Circom](https://img.shields.io/badge/-Circom-AA4F8B?style=flat-square&logo=circom&logoColor=white)
