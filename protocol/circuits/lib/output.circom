@@ -7,7 +7,7 @@ template Output() {
 
   signal input amount;
   signal input blinding;
-  signal input asset;
+  signal input assetIdHash;
   signal input publicKey;
 
   // Value commit
@@ -26,7 +26,7 @@ template Output() {
   commitmentHasher.inputs[0] <== amount;
   commitmentHasher.inputs[1] <== publicKey;
   commitmentHasher.inputs[2] <== blinding;
-  commitmentHasher.inputs[3] <== asset;
+  commitmentHasher.inputs[3] <== assetIdHash;
   commitment <== commitmentHasher.out;
 
   component valcommit = ValueCommitment();

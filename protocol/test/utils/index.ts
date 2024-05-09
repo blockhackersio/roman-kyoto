@@ -62,8 +62,8 @@ export async function deployRK() {
   );
 
   // tell our protocol these erc20s are supported
-  await RK.addSupportedAsset(await Asset.fromTicker("USDC").getIdentifierHash(), usdcAddress, 6);
-  await RK.addSupportedAsset(await Asset.fromTicker("WBTC").getIdentifierHash(), wbtcAddress, 18);
+  await RK.addSupportedAsset(await Asset.fromTicker("USDC").getIdHash(), usdcAddress, 6);
+  await RK.addSupportedAsset(await Asset.fromTicker("WBTC").getIdHash(), wbtcAddress, 18);
 
   return { RK, testWBTC, testUSDC, Deployer, rkAddress: await RK.getAddress() };
 }

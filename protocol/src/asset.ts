@@ -4,7 +4,7 @@ import { ensurePoseidon, poseidonHash } from "./poseidon";
 export class Asset {
   constructor(private symbol: string) { }
 
-  getIdentifier() {
+  private getId() {
     return BigInt("0x" + Buffer.from(this.symbol, "utf-8").toString("hex"));
   }
 
@@ -12,13 +12,13 @@ export class Asset {
     return this.symbol;
   }
 
-  async getIdentifierHash() {
+  async getIdHash() {
     await ensurePoseidon();
-    return poseidonHash([this.getIdentifier()]);
+    return poseidonHash([this.getId()]);
   }
 
   async getValueBase() {
-    const assetHash = await this.getIdentifierHash();
+    const assetHash = await this.getIdHash();
     return G.multiply(BigInt(assetHash));
   }
 

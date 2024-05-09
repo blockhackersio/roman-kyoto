@@ -26,7 +26,7 @@ export * from "./config";
 export async function outputProve(
   amount: string,
   blinding: string,
-  asset: string,
+  assetIdHash: string,
   publicKey: string,
   Vx: string,
   Vy: string,
@@ -40,7 +40,7 @@ export async function outputProve(
     {
       amount,
       blinding,
-      asset,
+      assetIdHash,
       publicKey,
       Vx,
       Vy,
@@ -291,7 +291,7 @@ async function createProofs(
       toStr(sender.privateKey),
       toStr(n.amount),
       n.blinding,
-      await n.asset.getIdentifierHash(),
+      await n.asset.getIdHash(),
       toStr(BigInt(index)),
       nullifier,
       root,
@@ -321,7 +321,7 @@ async function createProofs(
     const proofOutput = await outputProve(
       toStr(n.amount),
       n.blinding,
-      await n.asset.getIdentifierHash(),
+      await n.asset.getIdHash(),
       n.spender,
       toStr(Vo.x),
       toStr(Vo.y),
@@ -450,7 +450,7 @@ export async function deposit(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
-    await Asset.fromTicker(asset).getIdentifierHash(),
+    await Asset.fromTicker(asset).getIdHash(),
     toStr(amount),
     `${tree.root}`
   );
@@ -497,7 +497,7 @@ export async function withdraw(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
-    await Asset.fromTicker(asset).getIdentifierHash(),
+    await Asset.fromTicker(asset).getIdHash(),
     toStr(amount),
     `${tree.root}`
   );
