@@ -36,8 +36,6 @@ export function getBabyJubJub() {
 export const B = getBabyJubJub();
 
 function getInitialPoints(B: BabyJub) {
-  const [Ro] = getRandomBits(2, 253);
-
   const G = B.ExtendedPoint.fromAffine({
     x: B.CURVE.Gx,
     y: B.CURVE.Gy,
@@ -45,11 +43,15 @@ function getInitialPoints(B: BabyJub) {
   const BASE = B.ExtendedPoint.BASE;
   const BASE8 = BASE.multiply(8n);
 
-  const R = G.multiply(Ro);
-  return { G, R, BASE, BASE8 };
+  return { G, BASE, BASE8 };
 }
+export const { G, BASE, BASE8 } = getInitialPoints(B);
 
-export const { G, R, BASE, BASE8 } = getInitialPoints(B);
+// hashToCurve("__ROMAN_KYOTO_R")
+export const R = B.ExtendedPoint.fromAffine({
+  x: 6822643173076850086669063981200675861034234425876310494228829770726075732893n,
+  y: 9156654395656950371299901424185770236726741503478930161752204964343448620279n,
+});
 
 export function getRandomBigInt(bits: number) {
   const bytes = Math.ceil(bits / 8);
@@ -74,5 +76,5 @@ export function getRandomBigInt(bits: number) {
 export function getRandomBits(count: number, bits: number) {
   return new Array(count).fill(0).map(() => getRandomBigInt(bits));
 }
-
+console.log("n = " + B.CURVE.n);
 export const modN = (a: bigint) => mod(a, B.CURVE.n);

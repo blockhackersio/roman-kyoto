@@ -68,25 +68,57 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         bytes32 R;
     }
 
-    function sigVerify(
+    function _sigVerify(
         uint256 _s,
         uint256[2] memory _R,
         uint256[2] memory _A,
         bytes memory _message
-    ) public view {
+    ) internal view {
+        EdOnBN254.Affine memory _BASE = EdOnBN254.Affine(
+            6822643173076850086669063981200675861034234425876310494228829770726075732893,
+            9156654395656950371299901424185770236726741503478930161752204964343448620279
+        );
         EdOnBN254.Affine memory _Rp = EdOnBN254.Affine(_R[0], _R[1]);
         EdOnBN254.Affine memory _Ap = EdOnBN254.Affine(_A[0], _A[1]);
         bytes memory data = abi.encode(_Rp.x, _Rp.y, _Ap.x, _Ap.y, _message);
-
         uint256 _c = uint256(keccak256(data)) % EdOnBN254.N;
-        EdOnBN254.Affine memory _Z = EdOnBN254
-            .primeSubgroupGenerator()
-            .neg()
-            .mul(_s)
-            .add(_Rp)
-            .add(_Ap.mul(_c));
+        EdOnBN254.Affine memory _Z = _BASE.neg().mul(_s).add(_Rp).add(
+            _Ap.mul(_c)
+        );
 
         require(_Z.x == 0, "signature is not valid");
+    }
+
+    function _checkHash(
+        SpendProof[] memory _spendProof,
+        OutputProof[] memory _outputProofs,
+        bytes memory _hash
+    ) pure internal {
+        uint256[] memory nullifiers = new uint256[](_spendProof.length);
+        uint256[] memory commitments = new uint256[](_outputProofs.length);
+        uint256[] memory valueCommitments = new uint256[](
+            _spendProof.length * 2 + _outputProofs.length * 2
+        );
+
+        uint256 vcIndex = 0;
+        for (uint256 i = 0; i < _spendProof.length; i++) {
+            nullifiers[i] = _spendProof[i].nullifier;
+            valueCommitments[vcIndex++] = _spendProof[i].valueCommitment[0];
+            valueCommitments[vcIndex++] = _spendProof[i].valueCommitment[1];
+        }
+
+        for (uint256 i = 0; i < _outputProofs.length; i++) {
+            commitments[i] = _outputProofs[i].commitment;
+            valueCommitments[vcIndex++] = _outputProofs[i].valueCommitment[0];
+            valueCommitments[vcIndex++] = _outputProofs[i].valueCommitment[1];
+        }
+
+        require(
+            keccak256(
+                abi.encodePacked(nullifiers, commitments, valueCommitments)
+            ) == bytes32(_hash),
+            "Hashes must match"
+        );
     }
 
     function _transactCheck(
@@ -183,8 +215,13 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         uint[2] memory _bpk,
         uint256 _assetId,
         uint256 _depositAmount,
-        uint256 _root
+        uint256 _root,
+        uint256[2] memory _R,
+        uint256 _s,
+        bytes memory _hash
     ) internal {
+        _checkHash(_spendProof, _outputProofs, _hash);
+
         // this is the same as G * poseidon(asset) * value of asset being deposited
         EdOnBN254.Affine memory _valueBal = EdOnBN254
             .primeSubgroupGenerator()
@@ -192,22 +229,31 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
             .mul(_depositAmount)
             .neg();
 
+        _sigVerify(_s, _R, _bpk, _hash);
+
         _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
     }
 
     function _withdraw(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
-        uint[2] memory _bpk,
+        uint256[2] memory _bpk,
         uint256 _assetId,
         uint256 _withdrawAmount,
-        uint256 _root
+        uint256 _root,
+        uint256[2] memory _R,
+        uint256 _s,
+        bytes memory _hash
     ) internal {
+        _checkHash(_spendProof, _outputProofs, _hash);
+
         // this is the same as G * poseidon(asset) * value of asset being deposited
         EdOnBN254.Affine memory _valueBal = EdOnBN254
             .primeSubgroupGenerator()
             .mul(_assetId)
             .mul(_withdrawAmount);
+
+        _sigVerify(_s, _R, _bpk, _hash);
 
         _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
     }
@@ -216,9 +262,16 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
         uint[2] memory _bpk,
-        uint256 _root
+        uint256 _root,
+        uint256[2] memory _R,
+        uint256 _s,
+        bytes memory _hash
     ) internal {
+        _checkHash(_spendProof, _outputProofs, _hash);
+
         EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
+
+        _sigVerify(_s, _R, _bpk, _hash);
 
         _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
     }

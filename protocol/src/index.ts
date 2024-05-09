@@ -11,13 +11,12 @@ import {
 } from "../typechain-types";
 import { generateGroth16Proof, toFixedHex } from "./zklib";
 import { ExtPointType } from "@noble/curves/abstract/edwards";
-import { mod } from "@noble/curves/abstract/modular";
 import { randomBytes } from "@noble/hashes/utils";
 import { ensurePoseidon, poseidonHash, poseidonHash2 } from "./poseidon";
 import { bytesToNumberBE } from "@noble/curves/abstract/utils";
 import MerkleTree from "fixed-merkle-tree";
 import { getEncryptionPublicKey } from "@metamask/eth-sig-util";
-import { B, modN, R } from "./curve";
+import { B, R, modN } from "./curve";
 import { Note } from "./note";
 import { toStr } from "./utils";
 import { Asset } from "./asset";
@@ -117,21 +116,8 @@ export async function spendVerify(
   return await verifier.spendVerify(proof, [commitment]);
 }
 
-export async function verifySig(
-  address: string,
-  provider: Signer,
-  s: string,
-  R: [string, string],
-  A: [string, string],
-  message: string
-) {
-  const verifier = MultiAssetShieldedPool__factory.connect(address, provider);
-
-  await verifier.sigVerify(s, R, A, message);
-}
-
 export class MaspContract {
-  constructor(private provider: Signer, private address: string) { }
+  constructor(private provider: Signer, private address: string) {}
 
   async deposit(
     spends: SpendProof[],
@@ -139,10 +125,24 @@ export class MaspContract {
     Bpk: [string, string],
     assetId: string,
     amount: string,
-    root: string
+    root: string,
+    sigRx: string,
+    sigRy: string,
+    sigS: string,
+    hash: string
   ) {
     const verifier = IMasp__factory.connect(this.address, this.provider);
-    return await verifier.deposit(spends, outputs, Bpk, assetId, amount, root);
+    return await verifier.deposit(
+      spends,
+      outputs,
+      Bpk,
+      assetId,
+      amount,
+      root,
+      [sigRx, sigRy],
+      sigS,
+      hash
+    );
   }
 
   async withdraw(
@@ -151,20 +151,46 @@ export class MaspContract {
     Bpk: [string, string],
     assetId: string,
     amount: string,
-    root: string
+    root: string,
+    sigRx: string,
+    sigRy: string,
+    sigS: string,
+    hash: string
   ) {
     const verifier = IMasp__factory.connect(this.address, this.provider);
-    return await verifier.withdraw(spends, outputs, Bpk, assetId, amount, root);
+    return await verifier.withdraw(
+      spends,
+      outputs,
+      Bpk,
+      assetId,
+      amount,
+      root,
+      [sigRx, sigRy],
+      sigS,
+      hash
+    );
   }
 
   async transact(
     spends: SpendProof[],
     outputs: OutputProof[],
     Bpk: [string, string],
-    root: string
+    root: string,
+    sigRx: string,
+    sigRy: string,
+    sigS: string,
+    hash: string
   ) {
     const verifier = IMasp__factory.connect(this.address, this.provider);
-    return await verifier.transact(spends, outputs, Bpk, root);
+    return await verifier.transact(
+      spends,
+      outputs,
+      Bpk,
+      root,
+      [sigRx, sigRy],
+      sigS,
+      hash
+    );
   }
 }
 
@@ -181,7 +207,12 @@ export type SpendProof = {
   valueCommitment: [string, string];
 };
 
-function reddsaSign(a: bigint, A: ExtPointType, msgByteStr: string) {
+export function reddsaSign(
+  RR: ExtPointType,
+  a: bigint,
+  A: ExtPointType,
+  msgByteStr: string
+) {
   // B - base point
   // a - secret key
   // A - Public Key
@@ -196,12 +227,10 @@ function reddsaSign(a: bigint, A: ExtPointType, msgByteStr: string) {
   // --- verify ----
   // c = H(R||A||M)
   // -B * S + R + c * A == identity
-
   const abi = new AbiCoder();
 
-  const modN = (a: bigint) => mod(a, B.CURVE.n);
   const hash = B.CURVE.hash;
-  const BA = B.ExtendedPoint.BASE;
+  const BA = RR;
   const T = randomBytes(32);
   const r = modN(
     bytesToNumberBE(
@@ -218,7 +247,9 @@ function reddsaSign(a: bigint, A: ExtPointType, msgByteStr: string) {
     ["uint256", "uint256", "uint256", "uint256", "bytes"],
     [R.x, R.y, A.x, A.y, msgByteStr]
   );
+
   const hashed = keccak256(cData);
+
   const c = modN(BigInt(hashed));
   const s = modN(r + c * a);
   return { R, s };
@@ -266,7 +297,7 @@ export async function buildMerkleTree(contract: IMasp) {
   return t;
 }
 
-async function createProofs(
+async function prepareTx(
   spendList: Note[],
   outputList: Note[],
   tree: MerkleTree,
@@ -353,7 +384,67 @@ async function createProofs(
   // Create sig
   const bsk = totalRandomness;
   const Bpk = R.multiply(bsk);
-  return { Bpk, spendProofs, outputProofs };
+
+  const encoded = encodeTxInputs(spendProofs, outputProofs);
+  const hash = keccak256(encoded);
+  const sig = reddsaSign(R, bsk, Bpk, hash);
+
+  // verify sig clientside...
+
+  const abi = new AbiCoder();
+  const cData = abi.encode(
+    ["uint256", "uint256", "uint256", "uint256", "bytes"],
+    [sig.R.x, sig.R.y, Bpk.x, Bpk.y, hash]
+  );
+  const hashed = keccak256(cData);
+  const c = modN(BigInt(hashed));
+
+  // Check sig on frontend
+  const valid = R.negate()
+    .multiply(sig.s)
+    .add(sig.R)
+    .add(Bpk.multiply(c))
+    .equals(B.ExtendedPoint.ZERO);
+
+  if (!valid) throw new Error("Signature is not valid!");
+
+  return { sig, Bpk, spendProofs, outputProofs, hash };
+}
+
+function encodeTxInputs(
+  spendProofs: SpendProof[],
+  outputProofs: OutputProof[]
+) {
+  const nullifiers = [];
+  const valueCommitments = [];
+  const commitments = [];
+
+  for (let { nullifier, valueCommitment } of spendProofs) {
+    nullifiers.push(nullifier);
+    valueCommitments.push(valueCommitment);
+  }
+
+  for (let { commitment, valueCommitment } of outputProofs) {
+    commitments.push(commitment);
+    valueCommitments.push(valueCommitment);
+  }
+
+  const abi = new AbiCoder();
+  const encodeTypes = [
+    ...nullifiers.map(() => "uint256"),
+    ...commitments.map(() => "uint256"),
+    ...valueCommitments.flatMap(() => ["uint256", "uint256"]),
+  ];
+
+  const encodeData = [
+    ...nullifiers,
+    ...commitments,
+    ...valueCommitments.flatMap((a) => a),
+  ];
+
+  const encoded = abi.encode(encodeTypes, encodeData);
+
+  return encoded;
 }
 
 function shrtn(str: string) {
@@ -372,11 +463,11 @@ export async function transfer(
 ): Promise<ContractTransactionResponse> {
   logAction(
     "Transferring " +
-    amount +
-    " " +
-    asset +
-    " to " +
-    shrtn(toFixedHex(receiver.publicKey))
+      amount +
+      " " +
+      asset +
+      " to " +
+      shrtn(toFixedHex(receiver.publicKey))
   );
 
   if (signer.provider === null) throw new Error("Signer must have a provider");
@@ -399,7 +490,7 @@ export async function transfer(
     outputList.push(Note.create(0n, sender.publicKey, asset));
   }
 
-  const { Bpk, spendProofs, outputProofs } = await createProofs(
+  const { sig, Bpk, spendProofs, outputProofs, hash } = await prepareTx(
     spendList,
     outputList,
     tree,
@@ -407,20 +498,26 @@ export async function transfer(
     receiver
   );
 
+  const sigRx = toStr(sig.R.x);
+  const sigRy = toStr(sig.R.y);
+  const sigS = toStr(sig.s);
+
   return await masp.transact(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
-    `${tree.root}`
+    `${tree.root}`,
+    sigRx,
+    sigRy,
+    sigS,
+    hash
   );
 }
 
 function logAction(str: string) {
-  console.log("\n\n");
   console.log("-----------------------------------------------");
   console.log(" " + str);
   console.log("-----------------------------------------------");
-  console.log("\n\n");
 }
 
 export async function deposit(
@@ -441,7 +538,7 @@ export async function deposit(
     Note.create(amount, receiver.publicKey, asset),
     Note.create(0n, receiver.publicKey, asset),
   ];
-  const { Bpk, spendProofs, outputProofs } = await createProofs(
+  const { sig, Bpk, spendProofs, outputProofs, hash } = await prepareTx(
     spendList,
     outputList,
     tree,
@@ -449,13 +546,21 @@ export async function deposit(
     receiver
   );
 
+  const sigRx = toStr(sig.R.x);
+  const sigRy = toStr(sig.R.y);
+  const sigS = toStr(sig.s);
+
   return await masp.deposit(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
     await Asset.fromTicker(asset).getIdHash(),
     toStr(amount),
-    `${tree.root}`
+    `${tree.root}`,
+    sigRx,
+    sigRy,
+    sigS,
+    hash
   );
 }
 
@@ -488,7 +593,7 @@ export async function withdraw(
     outputList.push(Note.create(change, sender.publicKey, asset));
   else outputList.push(Note.create(0n, sender.publicKey, asset));
 
-  const { Bpk, spendProofs, outputProofs } = await createProofs(
+  const { sig, Bpk, spendProofs, outputProofs, hash } = await prepareTx(
     spendList,
     outputList,
     tree,
@@ -496,13 +601,21 @@ export async function withdraw(
     receiver
   );
 
+  const sigRx = toStr(sig.R.x);
+  const sigRy = toStr(sig.R.y);
+  const sigS = toStr(sig.s);
   return await masp.withdraw(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
     await Asset.fromTicker(asset).getIdHash(),
     toStr(amount),
-    `${tree.root}`
+    `${tree.root}`,
+     sigRx,
+    sigRy,
+    sigS,
+    hash
+
   );
 }
 
