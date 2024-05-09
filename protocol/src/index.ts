@@ -266,7 +266,7 @@ export async function buildMerkleTree(contract: IMasp) {
   return t;
 }
 
-async function createProofs(
+async function prepareTx(
   spendList: Note[],
   outputList: Note[],
   tree: MerkleTree,
@@ -399,7 +399,7 @@ export async function transfer(
     outputList.push(Note.create(0n, sender.publicKey, asset));
   }
 
-  const { Bpk, spendProofs, outputProofs } = await createProofs(
+  const { Bpk, spendProofs, outputProofs } = await prepareTx(
     spendList,
     outputList,
     tree,
@@ -416,11 +416,9 @@ export async function transfer(
 }
 
 function logAction(str: string) {
-  console.log("\n\n");
   console.log("-----------------------------------------------");
   console.log(" " + str);
   console.log("-----------------------------------------------");
-  console.log("\n\n");
 }
 
 export async function deposit(
@@ -441,7 +439,7 @@ export async function deposit(
     Note.create(amount, receiver.publicKey, asset),
     Note.create(0n, receiver.publicKey, asset),
   ];
-  const { Bpk, spendProofs, outputProofs } = await createProofs(
+  const { Bpk, spendProofs, outputProofs } = await prepareTx(
     spendList,
     outputList,
     tree,
@@ -488,7 +486,7 @@ export async function withdraw(
     outputList.push(Note.create(change, sender.publicKey, asset));
   else outputList.push(Note.create(0n, sender.publicKey, asset));
 
-  const { Bpk, spendProofs, outputProofs } = await createProofs(
+  const { Bpk, spendProofs, outputProofs } = await prepareTx(
     spendList,
     outputList,
     tree,

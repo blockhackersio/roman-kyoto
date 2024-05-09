@@ -85,7 +85,6 @@ export class MaspWallet {
     const balances = await Promise.all(
       assets.map((asset) => this.getBalance(asset))
     );
-    console.log("Balance");
     console.table(
       balances.map((bal, i) => ({
         Asset: assets[i],
