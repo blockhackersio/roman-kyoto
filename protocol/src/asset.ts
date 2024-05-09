@@ -1,6 +1,7 @@
-import { G } from "./curve";
+import { G, BASE8, modN } from "./curve";
 import { ensurePoseidon, poseidonHash } from "./poseidon";
-
+console.log("G.x", G.x);
+console.log("G.y", G.y);
 export class Asset {
   constructor(private symbol: string) { }
 
@@ -14,12 +15,13 @@ export class Asset {
 
   async getIdHash() {
     await ensurePoseidon();
-    return poseidonHash([this.getId()]);
+    const id = this.getId();
+    return poseidonHash([id]);
   }
 
   async getValueBase() {
     const assetHash = await this.getIdHash();
-    return G.multiply(BigInt(assetHash));
+    return G.multiply(modN(BigInt(assetHash)));
   }
 
   static fromTicker(symbol: string) {

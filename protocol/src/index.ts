@@ -26,6 +26,7 @@ export * from "./config";
 export async function outputProve(
   amount: string,
   blinding: string,
+  assetId: string,
   assetIdHash: string,
   publicKey: string,
   Vx: string,
@@ -40,6 +41,7 @@ export async function outputProve(
     {
       amount,
       blinding,
+      assetId,
       assetIdHash,
       publicKey,
       Vx,
@@ -321,6 +323,7 @@ async function createProofs(
     const proofOutput = await outputProve(
       toStr(n.amount),
       n.blinding,
+      toStr(n.asset.getId()),
       await n.asset.getIdHash(),
       n.spender,
       toStr(Vo.x),
