@@ -9,12 +9,7 @@ import {
   IMasp__factory,
   MultiAssetShieldedPool__factory,
 } from "../typechain-types";
-import {
-  dataDecrypt,
-  dataEncrypt,
-  generateGroth16Proof,
-  toFixedHex,
-} from "./zklib";
+import { generateGroth16Proof, toFixedHex } from "./zklib";
 import { ExtPointType } from "@noble/curves/abstract/edwards";
 import { mod } from "@noble/curves/abstract/modular";
 import { randomBytes } from "@noble/hashes/utils";
@@ -22,9 +17,10 @@ import { ensurePoseidon, poseidonHash, poseidonHash2 } from "./poseidon";
 import { bytesToNumberBE } from "@noble/curves/abstract/utils";
 import MerkleTree from "fixed-merkle-tree";
 import { getEncryptionPublicKey } from "@metamask/eth-sig-util";
-import { B, G, getRandomBigInt, R } from "./curve";
+import { B, modN, R } from "./curve";
 import { Note } from "./note";
 import { toStr } from "./utils";
+import { getV } from "./asset";
 export * from "./config";
 
 export async function outputProve(
@@ -240,22 +236,6 @@ function reddsaSign(a: bigint, A: ExtPointType, msgByteStr: string) {
   return { R, s };
 }
 
-const modN = (a: bigint) => mod(a, B.CURVE.n);
-
-function getV(asset: string) {
-  const V = G.multiply(BigInt(asset));
-  return V;
-}
-
-function valcommit(n: Note) {
-  const r = getRandomBigInt(253);
-  const V = getV(n.asset);
-  const vV = n.amount == 0n ? B.ExtendedPoint.ZERO : V.multiply(modN(n.amount));
-  const rR = R.multiply(modN(r));
-  const Vc = vV.add(rR);
-  return { Vc, r };
-}
-
 export type Keyset = {
   encryptionKey: string;
   publicKey: string;
@@ -312,8 +292,7 @@ async function createProofs(
 
   for (let n of spendList) {
     const nc = await n.commitment();
-    // const nc = await notecommitment(n);
-    const { Vc, r } = valcommit(n);
+    const { Vc, r } = await n.valcommit();
     const root = `${tree.root}`;
     const index = tree.indexOf(nc);
     const pathElements = tree.path(index).pathElements.map((e) => e.toString());
@@ -350,7 +329,7 @@ async function createProofs(
 
   for (let n of outputList) {
     const nc = await n.commitment();
-    const { Vc, r } = valcommit(n);
+    const { Vc, r } = await n.valcommit();
 
     const Vo = getV(n.asset);
     const proofOutput = await outputProve(
@@ -381,6 +360,7 @@ async function createProofs(
     });
     totalRandomness = modN(totalRandomness - r);
   }
+
   // Create sig
   const bsk = totalRandomness;
   const Bpk = R.multiply(bsk);

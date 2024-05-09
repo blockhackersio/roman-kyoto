@@ -1,5 +1,5 @@
 import { twistedEdwards } from "@noble/curves/abstract/edwards";
-import { Field } from "@noble/curves/abstract/modular";
+import { Field, mod } from "@noble/curves/abstract/modular";
 import { keccak_256 } from "@noble/hashes/sha3";
 import { randomBytes } from "@noble/hashes/utils";
 
@@ -74,3 +74,4 @@ export function getRandomBits(count: number, bits: number) {
 }
 
 
+export const modN = (a: bigint) => mod(a, B.CURVE.n);

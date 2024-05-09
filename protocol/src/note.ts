@@ -1,4 +1,5 @@
-import { getRandomBigInt } from "./curve";
+import { getV } from "./asset";
+import { B, R, getRandomBigInt, modN } from "./curve";
 import { ensurePoseidon, poseidonHash } from "./poseidon";
 import { toStr } from "./utils";
 import { dataDecrypt, dataEncrypt } from "./zklib";
@@ -48,6 +49,16 @@ export class Note {
       index,
       await signature(privateKey, commitment, index),
     ]);
+  }
+
+  async valcommit() {
+    const r = getRandomBigInt(253);
+    const V = getV(this.asset);
+    const vV =
+      this.amount == 0n ? B.ExtendedPoint.ZERO : V.multiply(modN(this.amount));
+    const rR = R.multiply(modN(r));
+    const Vc = vV.add(rR);
+    return { Vc, r };
   }
 
   private static fromJsonNote({ asset, amount, blinding, spender }: JsonNote) {
