@@ -171,7 +171,6 @@ it("integrate single pool", async () => {
 
   let receipt = await tx.wait();
 
-  // wallet = await extractToStore(privateKey, wallet, receipt);
   await wallet.updateFromReceipt(receipt);
   await wallet.logBalances();
 
