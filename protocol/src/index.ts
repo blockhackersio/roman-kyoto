@@ -53,11 +53,9 @@ export async function transfer(
   const outputList: Note[] = [];
 
   outputList.push(Note.create(amount, receiver.publicKey, asset));
-  if (change > 0n) {
-    outputList.push(Note.create(change, sender.publicKey, asset));
-  } else {
-    outputList.push(Note.create(0n, sender.publicKey, asset));
-  }
+  outputList.push(
+    Note.create(change > 0n ? change : 0n, sender.publicKey, asset)
+  );
 
   const { sig, Bpk, spendProofs, outputProofs, hash } = await prepareTx(
     spendList,
@@ -96,9 +94,11 @@ export async function deposit(
   logAction("Depositing " + amount + " " + asset);
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
+  // If we are only depositing there are no spend notes
   const spendList: Note[] = [];
   const outputList: Note[] = [
     Note.create(amount, receiver.publicKey, asset),
+    // Need to add a zero note to ensure there are multiples of 2
     Note.create(0n, receiver.publicKey, asset),
   ];
 
@@ -147,10 +147,12 @@ export async function withdraw(
   const change = totalSpent - amount;
   const outputList: Note[] = [];
 
+  // create change note
+  outputList.push(
+    Note.create(change > 0n ? change : 0n, sender.publicKey, asset)
+  );
+  // create a zero note so that we have a multiple of 2 notes
   outputList.push(Note.create(0n, sender.publicKey, asset));
-  if (change > 0n)
-    outputList.push(Note.create(change, sender.publicKey, asset));
-  else outputList.push(Note.create(0n, sender.publicKey, asset));
 
   const { sig, Bpk, spendProofs, outputProofs, hash } = await prepareTx(
     spendList,
