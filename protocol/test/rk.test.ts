@@ -1,10 +1,11 @@
 import { ethers } from "hardhat";
-import { withdraw, deposit, transfer, buildMerkleTree, getKeys } from "../src";
+import { withdraw, deposit, transfer, buildMerkleTree } from "../src";
 import { Wallet, parseUnits } from "ethers";
 import { expect } from "chai";
 import { deployRK } from "./utils";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { MaspWallet } from "../src/wallet";
+import { getKeys } from "../src/keypair";
 
 describe("CCIP functionality testing", async () => {
   it("integrate", async () => {
