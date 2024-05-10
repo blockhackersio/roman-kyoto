@@ -76,5 +76,5 @@ export function getRandomBigInt(bits: number) {
 export function getRandomBits(count: number, bits: number) {
   return new Array(count).fill(0).map(() => getRandomBigInt(bits));
 }
-console.log("n = " + B.CURVE.n);
+
 export const modN = (a: bigint) => mod(a, B.CURVE.n);
