@@ -70,9 +70,9 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
 
     function _sigVerify(
         uint256 _s,
-        uint256[2] memory _R,
-        uint256[2] memory _A,
-        bytes memory _message
+        uint256[2] calldata _R,
+        uint256[2] calldata _A,
+        bytes calldata _message
     ) internal view {
         EdOnBN254.Affine memory _BASE = EdOnBN254.Affine(
             6822643173076850086669063981200675861034234425876310494228829770726075732893,
@@ -90,9 +90,9 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     }
 
     function _checkHash(
-        SpendProof[] memory _spendProof,
-        OutputProof[] memory _outputProofs,
-        bytes memory _hash
+        SpendProof[] calldata _spendProof,
+        OutputProof[] calldata _outputProofs,
+        bytes calldata _hash
     ) pure internal {
         uint256[] memory nullifiers = new uint256[](_spendProof.length);
         uint256[] memory commitments = new uint256[](_outputProofs.length);
@@ -210,15 +210,15 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     }
 
     function _deposit(
-        SpendProof[] memory _spendProof,
-        OutputProof[] memory _outputProofs,
-        uint[2] memory _bpk,
+        SpendProof[] calldata _spendProof,
+        OutputProof[] calldata _outputProofs,
+        uint[2] calldata _bpk,
         uint256 _assetId,
         uint256 _depositAmount,
         uint256 _root,
-        uint256[2] memory _R,
+        uint256[2] calldata _R,
         uint256 _s,
-        bytes memory _hash
+        bytes calldata _hash
     ) internal {
         _checkHash(_spendProof, _outputProofs, _hash);
 
@@ -235,15 +235,15 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     }
 
     function _withdraw(
-        SpendProof[] memory _spendProof,
-        OutputProof[] memory _outputProofs,
-        uint256[2] memory _bpk,
+        SpendProof[] calldata _spendProof,
+        OutputProof[] calldata _outputProofs,
+        uint256[2] calldata _bpk,
         uint256 _assetId,
         uint256 _withdrawAmount,
         uint256 _root,
-        uint256[2] memory _R,
+        uint256[2] calldata _R,
         uint256 _s,
-        bytes memory _hash
+        bytes calldata _hash
     ) internal {
         _checkHash(_spendProof, _outputProofs, _hash);
 
@@ -259,13 +259,13 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     }
 
     function _transact(
-        SpendProof[] memory _spendProof,
-        OutputProof[] memory _outputProofs,
-        uint[2] memory _bpk,
+        SpendProof[] calldata _spendProof,
+        OutputProof[] calldata _outputProofs,
+        uint[2] calldata _bpk,
         uint256 _root,
-        uint256[2] memory _R,
+        uint256[2] calldata _R,
         uint256 _s,
-        bytes memory _hash
+        bytes calldata _hash
     ) internal {
         _checkHash(_spendProof, _outputProofs, _hash);
 
