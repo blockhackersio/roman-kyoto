@@ -44,7 +44,6 @@ function encodeTxInputs(
   return encoded;
 }
 
-
 export async function outputProve(
   amount: string,
   blinding: string,
@@ -119,6 +118,79 @@ export async function spendProve(
   );
 }
 
+async function processSpend(spender: Keyset, tree: MerkleTree, n: Note) {
+  const nc = await n.commitment();
+  const { Vc, r } = await n.valcommit();
+  const root = `${tree.root}`;
+  const index = tree.indexOf(nc);
+  const pathElements = tree.path(index).pathElements.map((e) => e.toString());
+  const nullifier = await n.nullifier(toStr(spender.privateKey), BigInt(index));
+  const Vs = await n.asset.getValueBase();
+  const proofSpend = await spendProve(
+    toStr(spender.privateKey),
+    toStr(n.amount),
+    n.blinding,
+    await n.asset.getIdHash(),
+    toStr(BigInt(index)),
+    nullifier,
+    root,
+    pathElements,
+    toStr(Vs.x),
+    toStr(Vs.y),
+    toStr(R.x),
+    toStr(R.y),
+    toStr(r),
+    toStr(Vc.x),
+    toStr(Vc.y),
+    toFixedHex(nc)
+  );
+  return {
+    r,
+    spendProof: {
+      proof: proofSpend,
+      valueCommitment: [toStr(Vc.x), toStr(Vc.y)] as [string, string],
+      nullifier: nullifier,
+    },
+  };
+}
+
+async function processOutput(sender: Keyset, receiver: Keyset, n: Note) {
+  const nc = await n.commitment();
+  const { Vc, r } = await n.valcommit();
+
+  const Vo = await n.asset.getValueBase();
+  const proofOutput = await outputProve(
+    toStr(n.amount),
+    n.blinding,
+    toStr(n.asset.getId()),
+    await n.asset.getIdHash(),
+    n.spender,
+    toStr(Vo.x),
+    toStr(Vo.y),
+    toStr(R.x),
+    toStr(R.y),
+    toStr(r),
+    toStr(Vc.x),
+    toStr(Vc.y)
+  );
+  const keyToEncryptTo =
+    sender.publicKey === n.spender
+      ? sender.encryptionKey
+      : receiver.encryptionKey;
+
+  const encryptedOutput = n.encrypt(keyToEncryptTo);
+
+  return {
+    r,
+    outputProof: {
+      proof: proofOutput,
+      valueCommitment: [toStr(Vc.x), toStr(Vc.y)] as [string,string],
+      commitment: nc,
+      encryptedOutput,
+    },
+  };
+}
+
 export async function prepareTx(
   spendList: Note[],
   outputList: Note[],
@@ -126,81 +198,20 @@ export async function prepareTx(
   sender: Keyset,
   receiver: Keyset
 ) {
-  const spendProofs: SpendProof[] = [];
-  const outputProofs: OutputProof[] = [];
-
   let totalRandomness = 0n;
+  const outputProofs: OutputProof[] = [];
+  const spendProofs: SpendProof[] = [];
 
   for (let n of spendList) {
-    const nc = await n.commitment();
-    const { Vc, r } = await n.valcommit();
-    const root = `${tree.root}`;
-    const index = tree.indexOf(nc);
-    const pathElements = tree.path(index).pathElements.map((e) => e.toString());
-    const nullifier = await n.nullifier(
-      toStr(sender.privateKey),
-      BigInt(index)
-    );
-    const Vs = await n.asset.getValueBase();
-    const proofSpend = await spendProve(
-      toStr(sender.privateKey),
-      toStr(n.amount),
-      n.blinding,
-      await n.asset.getIdHash(),
-      toStr(BigInt(index)),
-      nullifier,
-      root,
-      pathElements,
-      toStr(Vs.x),
-      toStr(Vs.y),
-      toStr(R.x),
-      toStr(R.y),
-      toStr(r),
-      toStr(Vc.x),
-      toStr(Vc.y),
-      toFixedHex(nc)
-    );
-    totalRandomness = modN(totalRandomness + r);
-    spendProofs.push({
-      proof: proofSpend,
-      valueCommitment: [toStr(Vc.x), toStr(Vc.y)],
-      nullifier: nullifier,
-    });
+    const result = await processSpend(sender, tree, n);
+    totalRandomness = modN(totalRandomness + result.r);
+    spendProofs.push(result.spendProof);
   }
 
-  for (let n of outputList) {
-    const nc = await n.commitment();
-    const { Vc, r } = await n.valcommit();
-
-    const Vo = await n.asset.getValueBase();
-    const proofOutput = await outputProve(
-      toStr(n.amount),
-      n.blinding,
-      toStr(n.asset.getId()),
-      await n.asset.getIdHash(),
-      n.spender,
-      toStr(Vo.x),
-      toStr(Vo.y),
-      toStr(R.x),
-      toStr(R.y),
-      toStr(r),
-      toStr(Vc.x),
-      toStr(Vc.y)
-    );
-    const keyToEncryptTo =
-      sender.publicKey === n.spender
-        ? sender.encryptionKey
-        : receiver.encryptionKey;
-
-    const encryptedOutput = n.encrypt(keyToEncryptTo);
-
-    outputProofs.push({
-      proof: proofOutput,
-      valueCommitment: [toStr(Vc.x), toStr(Vc.y)],
-      commitment: nc,
-      encryptedOutput,
-    });
-    totalRandomness = modN(totalRandomness - r);
+  for(let n of outputList) {
+    const result = await processOutput(sender, receiver, n);
+    totalRandomness = modN(totalRandomness - result.r);
+    outputProofs.push(result.outputProof);
   }
 
   // Create sig
@@ -218,4 +229,3 @@ export async function prepareTx(
 
   return { sig, Bpk, spendProofs, outputProofs, hash };
 }
-
