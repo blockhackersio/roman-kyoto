@@ -43,15 +43,15 @@ contract RK is MultiAssetShieldedPool {
     }
 
     function deposit(
-        SpendProof[] memory _spendProof,
-        OutputProof[] memory _outputProofs,
-        uint256[2] memory _bpk,
+        SpendProof[] calldata _spendProof,
+        OutputProof[] calldata _outputProofs,
+        uint256[2] calldata _bpk,
         uint256 _assetId,
         uint256 _depositAmount,
         uint256 _root,
-        uint256[2] memory _R,
+        uint256[2] calldata _R,
         uint256 _s,
-        bytes memory _hash
+        bytes calldata _hash
     ) external {
         // transfer the users asset to this address
         SupportedAsset memory _asset = assetToAddress[_assetId];
@@ -79,15 +79,15 @@ contract RK is MultiAssetShieldedPool {
     }
 
     function withdraw(
-        SpendProof[] memory _spendProof,
-        OutputProof[] memory _outputProofs,
-        uint[2] memory _bpk,
+        SpendProof[] calldata _spendProof,
+        OutputProof[] calldata _outputProofs,
+        uint[2] calldata _bpk,
         uint256 _assetId,
         uint256 _withdrawAmount,
         uint256 _root,
-        uint256[2] memory _R,
+        uint256[2] calldata _R,
         uint256 _s,
-        bytes memory _hash
+        bytes calldata _hash
     ) external {
         SupportedAsset memory _asset = assetToAddress[_assetId];
         require(_asset.assetAddress != address(0), "Asset not supported");
@@ -109,13 +109,13 @@ contract RK is MultiAssetShieldedPool {
     }
 
     function transact(
-        SpendProof[] memory _spendProof,
-        OutputProof[] memory _outputProofs,
-        uint[2] memory _bpk,
+        SpendProof[] calldata _spendProof,
+        OutputProof[] calldata _outputProofs,
+        uint[2] calldata _bpk,
         uint256 _root,
-        uint256[2] memory _R,
+        uint256[2] calldata _R,
         uint256 _s,
-        bytes memory _hash
+        bytes calldata _hash
     ) external {
         _transact(_spendProof, _outputProofs, _bpk, _root, _R, _s, _hash);
     }
