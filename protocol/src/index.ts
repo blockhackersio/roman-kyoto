@@ -240,6 +240,7 @@ export async function bridge(
        spends,
        outputs,
        bridges,
+       // XXX: fix this....  
   //     `${tree.root}`,
   //     [toStr(sig.R.x), toStr(sig.R.y)],
   //     toStr(sig.s),
