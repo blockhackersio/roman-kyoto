@@ -1,17 +1,15 @@
 import { AbiCoder, keccak256 } from "ethers";
-import { OutputProof, SpendProof } from ".";
-import { Note } from "./note";
+import { Bridge, Output, Spend } from ".";
+import { Note, toXY } from "./note";
 import MerkleTree from "fixed-merkle-tree";
 import { toStr } from "./utils";
 import { generateGroth16Proof, toFixedHex } from "./zklib";
 import { R, modN } from "./curve";
 import { reddsaSign, reddsaVerify } from "./reddsa";
 import { Keyset } from "./keypair";
+import { ValueCommitment } from "./vc";
 
-function encodeTxInputs(
-  spendProofs: SpendProof[],
-  outputProofs: OutputProof[]
-) {
+function encodeTxInputs(spendProofs: Spend[], outputProofs: Output[]) {
   const nullifiers = [];
   const valueCommitments = [];
   const commitments = [];
@@ -120,7 +118,7 @@ export async function spendProve(
 
 async function processSpend(spender: Keyset, tree: MerkleTree, n: Note) {
   const nc = await n.commitment();
-  const { Vc, r } = await n.valcommit();
+  const vc = ValueCommitment.fromNote(n);
   const root = `${tree.root}`;
   const index = tree.indexOf(nc);
   const pathElements = tree.path(index).pathElements.map((e) => e.toString());
@@ -129,26 +127,22 @@ async function processSpend(spender: Keyset, tree: MerkleTree, n: Note) {
   const proofSpend = await spendProve(
     toStr(spender.privateKey),
     toStr(n.amount),
-    n.blinding,
-    await n.asset.getIdHash(),
+    toStr(n.blinding),
+    toStr(await n.asset.getIdHash()),
     toStr(BigInt(index)),
     nullifier,
     root,
     pathElements,
-    toStr(Vs.x),
-    toStr(Vs.y),
-    toStr(R.x),
-    toStr(R.y),
-    toStr(r),
-    toStr(Vc.x),
-    toStr(Vc.y),
+    ...toXY(Vs),
+    ...toXY(R),
+    ...(await vc.toRXY()),
     toFixedHex(nc)
   );
   return {
-    r,
-    spendProof: {
+    r: vc.getRandomness(),
+    spend: {
       proof: proofSpend,
-      valueCommitment: [toStr(Vc.x), toStr(Vc.y)] as [string, string],
+      valueCommitment: await vc.toXY(),
       nullifier: nullifier,
     },
   };
@@ -156,23 +150,20 @@ async function processSpend(spender: Keyset, tree: MerkleTree, n: Note) {
 
 async function processOutput(sender: Keyset, receiver: Keyset, n: Note) {
   const nc = await n.commitment();
-  const { Vc, r } = await n.valcommit();
-
+  const vc = ValueCommitment.fromNote(n);
   const Vo = await n.asset.getValueBase();
+
   const proofOutput = await outputProve(
     toStr(n.amount),
-    n.blinding,
+    toStr(n.blinding),
     toStr(n.asset.getId()),
-    await n.asset.getIdHash(),
-    n.spender,
-    toStr(Vo.x),
-    toStr(Vo.y),
-    toStr(R.x),
-    toStr(R.y),
-    toStr(r),
-    toStr(Vc.x),
-    toStr(Vc.y)
+    toStr(await n.asset.getIdHash()),
+    toStr(n.spender),
+    ...toXY(Vo),
+    ...toXY(R),
+    ...(await vc.toRXY())
   );
+
   const keyToEncryptTo =
     sender.publicKey === n.spender
       ? sender.encryptionKey
@@ -181,10 +172,10 @@ async function processOutput(sender: Keyset, receiver: Keyset, n: Note) {
   const encryptedOutput = n.encrypt(keyToEncryptTo);
 
   return {
-    r,
-    outputProof: {
+    r: vc.getRandomness(),
+    output: {
       proof: proofOutput,
-      valueCommitment: [toStr(Vc.x), toStr(Vc.y)] as [string,string],
+      valueCommitment: await vc.toXY(),
       commitment: nc,
       encryptedOutput,
     },
@@ -194,31 +185,49 @@ async function processOutput(sender: Keyset, receiver: Keyset, n: Note) {
 export async function prepareTx(
   spendList: Note[],
   outputList: Note[],
+  bridgeList: { note: Note; chainId: string; destination: string }[],
   tree: MerkleTree,
   sender: Keyset,
   receiver: Keyset
 ) {
   let totalRandomness = 0n;
-  const outputProofs: OutputProof[] = [];
-  const spendProofs: SpendProof[] = [];
+  const outputs: Output[] = [];
+  const spends: Spend[] = [];
+  const bridges: Bridge[] = [];
 
   for (let n of spendList) {
     const result = await processSpend(sender, tree, n);
     totalRandomness = modN(totalRandomness + result.r);
-    spendProofs.push(result.spendProof);
+    spends.push(result.spend);
   }
 
-  for(let n of outputList) {
+  for (let n of outputList) {
     const result = await processOutput(sender, receiver, n);
     totalRandomness = modN(totalRandomness - result.r);
-    outputProofs.push(result.outputProof);
+    outputs.push(result.output);
+  }
+
+  for (let { note, chainId, destination } of bridgeList) {
+    const result = await processOutput(sender, receiver, note);
+
+    const { proof } = result.output;
+  const vc = ValueCommitment.fromNote(note);
+    const encryptedOutput = vc.encrypt(sender.encryptionKey);
+
+    bridges.push({
+      valueCommitment: await vc.toXY(),
+      encryptedOutput,
+      proof,
+      chainId,
+      destination,
+    });
   }
 
   // Create sig
   const bsk = totalRandomness;
   const Bpk = R.multiply(bsk);
 
-  const encoded = encodeTxInputs(spendProofs, outputProofs);
+  const encoded = encodeTxInputs(spends, outputs);
   const hash = keccak256(encoded);
   const sig = reddsaSign(R, bsk, Bpk, hash);
 
@@ -227,5 +236,5 @@ export async function prepareTx(
 
   if (!valid) throw new Error("Signature is not valid!");
 
-  return { sig, Bpk, spendProofs, outputProofs, hash };
+  return { sig, Bpk, spends, outputs, bridges, hash };
 }

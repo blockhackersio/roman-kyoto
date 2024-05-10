@@ -2,7 +2,10 @@ import MerkleTree from "fixed-merkle-tree";
 import { poseidonHash2 } from "./poseidon";
 import { IMasp } from "../typechain-types";
 
-export function toStr(b: bigint): string {
+export function toStr(b: bigint|string): string {
+  if(typeof b === 'string'){
+    return b
+  }
   return "0x" + b.toString(16);
 }
 

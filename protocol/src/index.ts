@@ -9,16 +9,24 @@ import { Keyset } from "./keypair";
 import { IMasp__factory } from "../typechain-types";
 export * from "./config";
 
-export type OutputProof = {
+export type Output = {
   proof: string;
   commitment: string;
   valueCommitment: [string, string];
   encryptedOutput: string;
 };
 
-export type SpendProof = {
+export type Spend = {
   proof: string;
   nullifier: string;
+  valueCommitment: [string, string];
+};
+
+export type Bridge = {
+  proof: string; // must know that value commitment is valid
+  chainId: string;
+  destination: string;
+  encryptedOutput: string;
   valueCommitment: [string, string];
 };
 
@@ -57,9 +65,10 @@ export async function transfer(
     Note.create(change > 0n ? change : 0n, sender.publicKey, asset)
   );
 
-  const { sig, Bpk, spendProofs, outputProofs, hash } = await prepareTx(
+  const { sig, Bpk, spends, outputs, hash } = await prepareTx(
     spendList,
     outputList,
+    [],
     tree,
     sender,
     receiver
@@ -67,8 +76,8 @@ export async function transfer(
   const masp = IMasp__factory.connect(poolAddress, signer);
 
   return await masp.transact(
-    spendProofs,
-    outputProofs,
+    spends,
+    outputs,
     [toStr(Bpk.x), toStr(Bpk.y)],
     `${tree.root}`,
     [toStr(sig.R.x), toStr(sig.R.y)],
@@ -102,9 +111,10 @@ export async function deposit(
     Note.create(0n, receiver.publicKey, asset),
   ];
 
-  const { sig, Bpk, spendProofs, outputProofs, hash } = await prepareTx(
+  const { sig, Bpk, spends, outputs, hash } = await prepareTx(
     spendList,
     outputList,
+    [],
     tree,
     receiver,
     receiver
@@ -113,8 +123,8 @@ export async function deposit(
   const masp = IMasp__factory.connect(poolAddress, signer);
 
   return await masp.deposit(
-    spendProofs,
-    outputProofs,
+    spends,
+    outputs,
     [toStr(Bpk.x), toStr(Bpk.y)],
     await Asset.fromTicker(asset).getIdHash(),
     toStr(amount),
@@ -154,9 +164,10 @@ export async function withdraw(
   // create a zero note so that we have a multiple of 2 notes
   outputList.push(Note.create(0n, sender.publicKey, asset));
 
-  const { sig, Bpk, spendProofs, outputProofs, hash } = await prepareTx(
+  const { sig, Bpk, spends, outputs, hash } = await prepareTx(
     spendList,
     outputList,
+    [],
     tree,
     sender,
     receiver
@@ -165,8 +176,8 @@ export async function withdraw(
   const masp = IMasp__factory.connect(poolAddress, signer);
 
   return await masp.withdraw(
-    spendProofs,
-    outputProofs,
+    spends,
+    outputs,
     [toStr(Bpk.x), toStr(Bpk.y)],
     await Asset.fromTicker(asset).getIdHash(),
     toStr(amount),
@@ -175,6 +186,66 @@ export async function withdraw(
     toStr(sig.s),
     hash
   );
+}
+
+export async function bridge(
+  signer: Signer,
+  fromPoolAddress: string,
+  toPoolAddress: string,
+  amount: bigint,
+  sender: Keyset,
+  receiver: Keyset,
+  asset: string, // "USDC" | "WBTC" etc.
+  tree: MerkleTree,
+  chainId: string,
+  notes: NoteStore
+): Promise<ContractTransactionResponse> {
+  logAction("Bridging " + amount + " " + asset + " to " + toPoolAddress);
+  if (signer.provider === null) throw new Error("Signer must have a provider");
+
+  const spendList = await notes.getNotesUpTo(amount, asset);
+  const totalSpent = spendList.reduce((t, note) => {
+    return t + note.amount;
+  }, 0n);
+
+  const change = totalSpent - amount;
+  const outputList: Note[] = [];
+
+  // create change note
+  outputList.push(
+    Note.create(change > 0n ? change : 0n, sender.publicKey, asset)
+  );
+
+  // create a zero note so that we have a multiple of 2 notes
+  outputList.push(Note.create(0n, sender.publicKey, asset));
+
+  const bridgeNote = {
+    chainId,
+    destination: toPoolAddress,
+    note: Note.create(amount, sender.publicKey, asset),
+  };
+
+  const { sig, Bpk, spends, outputs, bridges, hash } = await prepareTx(
+    spendList,
+    outputList,
+    [bridgeNote],
+    tree,
+    sender,
+    receiver
+  );
+
+    const masp = IMasp__factory.connect(fromPoolAddress, signer);
+  
+    return await masp.bridge(
+       spends,
+       outputs,
+       bridges,
+  //     `${tree.root}`,
+  //     [toStr(sig.R.x), toStr(sig.R.y)],
+  //     toStr(sig.s),
+  //     hash,
+  //     [toStr(mintComm.Vc.x), toStr(mintComm.Vc.y)]
+  //   );
 }
 
 export type NoteStore = {

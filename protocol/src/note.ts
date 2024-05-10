@@ -1,9 +1,11 @@
+import { ExtPointType } from "@noble/curves/abstract/edwards";
 import { Asset } from "./asset";
-import { B, R, getRandomBigInt, modN } from "./curve";
+import { getRandomBigInt } from "./curve";
 import { ensurePoseidon, poseidonHash } from "./poseidon";
 import { toStr } from "./utils";
 import { dataDecrypt, dataEncrypt } from "./zklib";
 import { z } from "zod";
+import { ValueCommitment } from "./vc";
 
 export async function signature(
   privateKey: string,
@@ -60,16 +62,6 @@ export class Note {
     ]);
   }
 
-  async valcommit() {
-    const r = getRandomBigInt(253);
-    const V = await this.asset.getValueBase();
-    const vV =
-      this.amount == 0n ? B.ExtendedPoint.ZERO : V.multiply(modN(this.amount));
-    const rR = R.multiply(modN(r));
-    const Vc = vV.add(rR);
-    return { Vc, r };
-  }
-
   private static fromJsonNote({ asset, amount, blinding, spender }: JsonNote) {
     return new Note(BigInt(amount), spender, blinding, asset);
   }
@@ -87,6 +79,10 @@ export class Note {
     const blinding = toStr(getRandomBigInt(253));
     return new Note(amount, spender, blinding, asset);
   }
+}
+
+export function toXY(point: ExtPointType): [string, string] {
+  return [toStr(point.x), toStr(point.y)];
 }
 
 const JsonNoteSchema = z.object({
