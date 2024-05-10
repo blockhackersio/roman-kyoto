@@ -1,10 +1,8 @@
 import { ContractTransactionResponse, Signer } from "ethers";
-import { IMasp } from "../typechain-types";
 import { toFixedHex } from "./zklib";
-import { poseidonHash2 } from "./poseidon";
 import MerkleTree from "fixed-merkle-tree";
 import { Note } from "./note";
-import { toStr } from "./utils";
+import { shrtn, toStr } from "./utils";
 import { Asset } from "./asset";
 import { prepareTx } from "./tx";
 import { MaspContract } from "./pool";
@@ -23,30 +21,6 @@ export type SpendProof = {
   nullifier: string;
   valueCommitment: [string, string];
 };
-
-export async function buildMerkleTree(contract: IMasp) {
-  const filter = contract.filters.NewCommitment();
-
-  const events = await contract.queryFilter(filter);
-  const leaves = events
-    .sort((a, b) => {
-      return Number(a.args?.index) - Number(b.args?.index);
-    })
-    .map((e) => {
-      return e.args?.commitment.toString();
-    });
-  const t = new MerkleTree(5, leaves, {
-    hashFunction: poseidonHash2,
-    zeroElement:
-      "21663839004416932945382355908790599225266501822907911457504978515578255421292",
-  });
-
-  return t;
-}
-
-function shrtn(str: string) {
-  return str.slice(0, 5) + ".." + str.slice(-5);
-}
 
 export async function transfer(
   signer: Signer,

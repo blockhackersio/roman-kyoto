@@ -2,7 +2,6 @@ import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 import {
-  buildMerkleTree,
   deposit,
   transfer,
   withdraw,
@@ -13,6 +12,7 @@ import { deployMasp } from "./utils";
 import { expect } from "chai";
 import { MaspWallet } from "../src/wallet";
 import { getKeys } from "../src/keypair";
+import { buildMerkleTree } from "../src/utils";
 
 export async function getMultiAssetShieldedPoolContract() { }
 
