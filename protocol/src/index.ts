@@ -5,8 +5,8 @@ import { Note } from "./note";
 import { shrtn, toStr } from "./utils";
 import { Asset } from "./asset";
 import { prepareTx } from "./tx";
-import { MaspContract } from "./pool";
 import { Keyset } from "./keypair";
+import { IMasp__factory } from "../typechain-types";
 export * from "./config";
 
 export type OutputProof = {
@@ -43,8 +43,6 @@ export async function transfer(
 
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
-  const masp = new MaspContract(signer, poolAddress);
-
   const spendList = await notes.getNotesUpTo(amount, asset);
   const totalSpent = spendList.reduce((t, note) => {
     return t + note.amount;
@@ -68,19 +66,15 @@ export async function transfer(
     sender,
     receiver
   );
-
-  const sigRx = toStr(sig.R.x);
-  const sigRy = toStr(sig.R.y);
-  const sigS = toStr(sig.s);
+  const masp = IMasp__factory.connect(poolAddress, signer);
 
   return await masp.transact(
     spendProofs,
     outputProofs,
     [toStr(Bpk.x), toStr(Bpk.y)],
     `${tree.root}`,
-    sigRx,
-    sigRy,
-    sigS,
+    [toStr(sig.R.x), toStr(sig.R.y)],
+    toStr(sig.s),
     hash
   );
 }
@@ -102,13 +96,12 @@ export async function deposit(
   logAction("Depositing " + amount + " " + asset);
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
-  const masp = new MaspContract(signer, poolAddress);
-
   const spendList: Note[] = [];
   const outputList: Note[] = [
     Note.create(amount, receiver.publicKey, asset),
     Note.create(0n, receiver.publicKey, asset),
   ];
+
   const { sig, Bpk, spendProofs, outputProofs, hash } = await prepareTx(
     spendList,
     outputList,
@@ -117,9 +110,7 @@ export async function deposit(
     receiver
   );
 
-  const sigRx = toStr(sig.R.x);
-  const sigRy = toStr(sig.R.y);
-  const sigS = toStr(sig.s);
+  const masp = IMasp__factory.connect(poolAddress, signer);
 
   return await masp.deposit(
     spendProofs,
@@ -128,9 +119,8 @@ export async function deposit(
     await Asset.fromTicker(asset).getIdHash(),
     toStr(amount),
     `${tree.root}`,
-    sigRx,
-    sigRy,
-    sigS,
+    [toStr(sig.R.x), toStr(sig.R.y)],
+    toStr(sig.s),
     hash
   );
 }
@@ -148,8 +138,6 @@ export async function withdraw(
   logAction("Withdrawing " + amount + " " + asset);
 
   if (signer.provider === null) throw new Error("Signer must have a provider");
-
-  const masp = new MaspContract(signer, poolAddress);
 
   const spendList = await notes.getNotesUpTo(amount, asset);
   const totalSpent = spendList.reduce((t, note) => {
@@ -172,9 +160,8 @@ export async function withdraw(
     receiver
   );
 
-  const sigRx = toStr(sig.R.x);
-  const sigRy = toStr(sig.R.y);
-  const sigS = toStr(sig.s);
+  const masp = IMasp__factory.connect(poolAddress, signer);
+
   return await masp.withdraw(
     spendProofs,
     outputProofs,
@@ -182,9 +169,8 @@ export async function withdraw(
     await Asset.fromTicker(asset).getIdHash(),
     toStr(amount),
     `${tree.root}`,
-    sigRx,
-    sigRy,
-    sigS,
+    [toStr(sig.R.x), toStr(sig.R.y)],
+    toStr(sig.s),
     hash
   );
 }
