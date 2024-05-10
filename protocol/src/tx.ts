@@ -9,17 +9,19 @@ import { reddsaSign, reddsaVerify } from "./reddsa";
 import { Keyset } from "./keypair";
 import { ValueCommitment } from "./vc";
 
-function encodeTxInputs(spendProofs: Spend[], outputProofs: Output[]) {
+
+// TODO: add bridges to hash
+function encodeTxInputs(spends: Spend[], outputs: Output[],bridges:Bridge[]) {
   const nullifiers = [];
   const valueCommitments = [];
   const commitments = [];
 
-  for (let { nullifier, valueCommitment } of spendProofs) {
+  for (let { nullifier, valueCommitment } of spends) {
     nullifiers.push(nullifier);
     valueCommitments.push(valueCommitment);
   }
 
-  for (let { commitment, valueCommitment } of outputProofs) {
+  for (let { commitment, valueCommitment } of outputs) {
     commitments.push(commitment);
     valueCommitments.push(valueCommitment);
   }
@@ -211,7 +213,7 @@ export async function prepareTx(
     const result = await processOutput(sender, receiver, note);
 
     const { proof } = result.output;
-  const vc = ValueCommitment.fromNote(note);
+    const vc = ValueCommitment.fromNote(note);
     const encryptedOutput = vc.encrypt(sender.encryptionKey);
 
     bridges.push({
@@ -227,7 +229,7 @@ export async function prepareTx(
   const bsk = totalRandomness;
   const Bpk = R.multiply(bsk);
 
-  const encoded = encodeTxInputs(spends, outputs);
+  const encoded = encodeTxInputs(spends, outputs, bridges);
   const hash = keccak256(encoded);
   const sig = reddsaSign(R, bsk, Bpk, hash);
 

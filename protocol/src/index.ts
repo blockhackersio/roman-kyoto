@@ -236,17 +236,17 @@ export async function bridge(
 
     const masp = IMasp__factory.connect(fromPoolAddress, signer);
   
-    return await masp.bridge(
-       spends,
-       outputs,
-       bridges,
-       // XXX: fix this....  
-  //     `${tree.root}`,
-  //     [toStr(sig.R.x), toStr(sig.R.y)],
-  //     toStr(sig.s),
-  //     hash,
-  //     [toStr(mintComm.Vc.x), toStr(mintComm.Vc.y)]
-  //   );
+  //   return await masp.bridge(
+  //      spends,
+  //      outputs,
+  //      bridges,
+  //      // XXX: fix this....  
+  // //     `${tree.root}`,
+  // //     [toStr(sig.R.x), toStr(sig.R.y)],
+  // //     toStr(sig.s),
+  // //     hash,
+  // //     [toStr(mintComm.Vc.x), toStr(mintComm.Vc.y)]
+  // //   );
 }
 
 export type NoteStore = {

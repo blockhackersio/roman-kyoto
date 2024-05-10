@@ -16,6 +16,14 @@ struct OutputProof {
     bytes encryptedOutput;
 }
 
+struct Bridge {
+    bytes proof;
+    uint256 chainId;
+    address destination;
+    bytes encryptedOutput;
+    uint256[2] valueCommitment;
+}
+
 interface IMasp {
     event NewCommitment(
         uint256 indexed commitment,
@@ -53,6 +61,17 @@ interface IMasp {
         uint256[2] calldata _bpk,
         uint256 _assetId,
         uint256 _withdrawAmount,
+        uint256 _root,
+        uint256[2] calldata _R,
+        uint256 _s,
+        bytes calldata _hash
+    ) external;
+
+    function bridge(
+        SpendProof[] calldata _spendProof,
+        OutputProof[] calldata _outputProofs,
+        Bridge[] calldata _bridges,
+        uint256[2] calldata _bpk,
         uint256 _root,
         uint256[2] calldata _R,
         uint256 _s,

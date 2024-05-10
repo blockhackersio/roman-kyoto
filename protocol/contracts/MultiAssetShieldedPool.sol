@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {SpendVerifier} from "./verifiers/SpendVerifier.sol";
 import {OutputVerifier} from "./verifiers/OutputVerifier.sol";
-import {IMasp, SpendProof, OutputProof} from "./interfaces/IMasp.sol";
+import {IMasp, SpendProof, OutputProof, Bridge} from "./interfaces/IMasp.sol";
 import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
 
 import "./EdOnBN254.sol";
@@ -93,7 +93,7 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         SpendProof[] calldata _spendProof,
         OutputProof[] calldata _outputProofs,
         bytes calldata _hash
-    ) pure internal {
+    ) internal pure {
         uint256[] memory nullifiers = new uint256[](_spendProof.length);
         uint256[] memory commitments = new uint256[](_outputProofs.length);
         uint256[] memory valueCommitments = new uint256[](
@@ -121,26 +121,12 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         );
     }
 
-    function _transactCheck(
+    function _balanceCheck(
         SpendProof[] memory _spendProof,
         OutputProof[] memory _outputProofs,
-        uint[2] memory _bpk,
         EdOnBN254.Affine memory _valueBal,
-        uint256 _root
-    ) internal {
-        require(isKnownRoot(bytes32(_root)), "Invalid merkle root");
-        require(
-            _outputProofs.length % 2 == 0,
-            "outputs must be in multiples of 2"
-        );
-
-        for (uint i = 0; i < _spendProof.length; i++) {
-            require(
-                !isSpent(_spendProof[i].nullifier),
-                "Input is already spent"
-            );
-        }
-
+        uint[2] memory _bpk
+    ) internal view {
         EdOnBN254.Affine memory total = EdOnBN254.zero();
 
         for (uint i = 0; i < _spendProof.length; i++) {
@@ -165,11 +151,31 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
             );
         }
 
+        total = total.add(_valueBal.neg());
+
         require(
-            total.add(_valueBal.neg()).x == _bpk[0] &&
-                total.add(_valueBal.neg()).y == _bpk[1],
-            "Sum of values is incorrect"
+            total.x == _bpk[0] && total.y == _bpk[1],
+            "Balance Check Failed"
         );
+    }
+
+    function _proofCheck(
+        SpendProof[] memory _spendProof,
+        OutputProof[] memory _outputProofs,
+        uint256 _root
+    ) internal {
+        require(isKnownRoot(bytes32(_root)), "Invalid merkle root");
+        require(
+            _outputProofs.length % 2 == 0,
+            "outputs must be in multiples of 2"
+        );
+
+        for (uint i = 0; i < _spendProof.length; i++) {
+            require(
+                !isSpent(_spendProof[i].nullifier),
+                "Input is already spent"
+            );
+        }
 
         for (uint i = 0; i < _spendProof.length; i++) {
             SpendProof memory spendProof = _spendProof[i];
@@ -222,16 +228,18 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     ) internal {
         _checkHash(_spendProof, _outputProofs, _hash);
 
-        // this is the same as G * poseidon(asset) * value of asset being deposited
+        // Calculate the deposit value
         EdOnBN254.Affine memory _valueBal = EdOnBN254
             .primeSubgroupGenerator()
             .mul(_assetId)
             .mul(_depositAmount)
             .neg();
 
+        _balanceCheck(_spendProof, _outputProofs, _valueBal, _bpk);
+
         _sigVerify(_s, _R, _bpk, _hash);
 
-        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
+        _proofCheck(_spendProof, _outputProofs, _root);
     }
 
     function _withdraw(
@@ -247,15 +255,39 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     ) internal {
         _checkHash(_spendProof, _outputProofs, _hash);
 
-        // this is the same as G * poseidon(asset) * value of asset being deposited
+        // Calculate the deposit value
         EdOnBN254.Affine memory _valueBal = EdOnBN254
             .primeSubgroupGenerator()
             .mul(_assetId)
             .mul(_withdrawAmount);
 
+        _balanceCheck(_spendProof, _outputProofs, _valueBal, _bpk);
+
         _sigVerify(_s, _R, _bpk, _hash);
 
-        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
+        _proofCheck(_spendProof, _outputProofs, _root);
+    }
+
+    function _bridge(
+        SpendProof[] calldata _spendProof,
+        OutputProof[] calldata _outputProofs,
+        Bridge[] calldata _bridges,
+        uint256[2] calldata _bpk,
+        uint256 _root,
+        uint256[2] calldata _R,
+        uint256 _s,
+        bytes calldata _hash
+    ) internal {
+        _checkHash(_spendProof, _outputProofs, _hash);
+
+        // external balance is 0
+        EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
+
+        _balanceCheck(_spendProof, _outputProofs, _valueBal, _bpk);
+
+        _sigVerify(_s, _R, _bpk, _hash);
+
+        _proofCheck(_spendProof, _outputProofs, _root);
     }
 
     function _transact(
@@ -269,11 +301,14 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     ) internal {
         _checkHash(_spendProof, _outputProofs, _hash);
 
+        // external balance is 0
         EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
+
+        _balanceCheck(_spendProof, _outputProofs, _valueBal, _bpk);
 
         _sigVerify(_s, _R, _bpk, _hash);
 
-        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
+        _proofCheck(_spendProof, _outputProofs, _root);
     }
 
     function isSpent(uint256 _nullifierHash) public view returns (bool) {
