@@ -4,6 +4,7 @@ import { Note, toXY } from "./note";
 import { dataDecrypt, dataEncrypt } from "./zklib";
 import { z } from "zod";
 
+// TODO: This should have basic addition and subtraction function which adds randomness as well as value
 export class ValueCommitment {
   private r: bigint;
 
@@ -61,6 +62,10 @@ export class ValueCommitment {
     return new ValueCommitment(note.asset, note.amount);
   }
 
+  static create(asset: string, amount: bigint) {
+    return new ValueCommitment(Asset.fromTicker(asset), BigInt(amount));
+  }
+
   static fromJsonValueCommitment(data: JsonValueCommitment) {
     return new ValueCommitment(
       Asset.fromTicker(data.asset),
@@ -68,7 +73,6 @@ export class ValueCommitment {
     );
   }
 }
-
 
 const JsonCommitmentSchema = z.object({
   amount: z.string(),
