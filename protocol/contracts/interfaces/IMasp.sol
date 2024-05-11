@@ -47,8 +47,8 @@ interface IMasp {
     function transact(
         Spend[] calldata _spends,
         Output[] calldata _outputs,
-        BridgeOut[] calldata _bridgeOuts,
         BridgeIn[] calldata _bridgeIns,
+        BridgeOut[] calldata _bridgeOuts,
         uint256 _extAssetHash,
         int256 _extAmount,
         uint256[2] calldata _bpk,

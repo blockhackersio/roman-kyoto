@@ -1,5 +1,5 @@
 import { AbiCoder, keccak256 } from "ethers";
-import { Bridge, Output, Spend } from ".";
+import { BridgeOut, BridgeIn, Output, Spend } from ".";
 import { Note, toXY } from "./note";
 import MerkleTree from "fixed-merkle-tree";
 import { toStr } from "./utils";
@@ -9,9 +9,8 @@ import { reddsaSign, reddsaVerify } from "./reddsa";
 import { Keyset } from "./keypair";
 import { ValueCommitment } from "./vc";
 
-
 // TODO: add bridges to hash
-function encodeTxInputs(spends: Spend[], outputs: Output[],bridges:Bridge[]) {
+function encodeTxInputs(spends: Spend[], outputs: Output[], bridgeIns: BridgeIn[], bridgeOuts:BridgeOut[]) {
   const nullifiers = [];
   const valueCommitments = [];
   const commitments = [];
@@ -187,7 +186,8 @@ async function processOutput(sender: Keyset, receiver: Keyset, n: Note) {
 export async function prepareTx(
   spendList: Note[],
   outputList: Note[],
-  bridgeList: { note: Note; chainId: string; destination: string }[],
+  bridgeInList: ValueCommitment[],
+  bridgeOutList: { note: Note; chainId: string; destination: string }[],
   tree: MerkleTree,
   sender: Keyset,
   receiver: Keyset
@@ -195,7 +195,8 @@ export async function prepareTx(
   let totalRandomness = 0n;
   const outputs: Output[] = [];
   const spends: Spend[] = [];
-  const bridges: Bridge[] = [];
+  const bridgeIns: BridgeIn[] = [];
+  const bridgeOuts: BridgeOut[] = [];
 
   for (let n of spendList) {
     const result = await processSpend(sender, tree, n);
@@ -209,14 +210,15 @@ export async function prepareTx(
     outputs.push(result.output);
   }
 
-  for (let { note, chainId, destination } of bridgeList) {
+  for (let { note, chainId, destination } of bridgeOutList) {
     const result = await processOutput(sender, receiver, note);
 
     const { proof } = result.output;
     const vc = ValueCommitment.fromNote(note);
     const encryptedOutput = vc.encrypt(sender.encryptionKey);
+    totalRandomness = modN(totalRandomness + result.r);
 
-    bridges.push({
+    bridgeOuts.push({
       valueCommitment: await vc.toXY(),
       encryptedOutput,
       proof,
@@ -225,11 +227,17 @@ export async function prepareTx(
     });
   }
 
+  for (let vc of bridgeInList) {
+    const r = vc.getRandomness();
+    totalRandomness = modN(totalRandomness - r);
+    bridgeIns.push({ valueCommitment: await vc.toXY() });
+  }
+
   // Create sig
   const bsk = totalRandomness;
   const Bpk = R.multiply(bsk);
 
-  const encoded = encodeTxInputs(spends, outputs, bridges);
+  const encoded = encodeTxInputs(spends, outputs, bridgeIns, bridgeOuts);
   const hash = keccak256(encoded);
   const sig = reddsaSign(R, bsk, Bpk, hash);
 
@@ -238,5 +246,5 @@ export async function prepareTx(
 
   if (!valid) throw new Error("Signature is not valid!");
 
-  return { sig, Bpk, spends, outputs, bridges, hash };
+  return { sig, Bpk, spends, outputs, bridgeIns, bridgeOuts, hash };
 }

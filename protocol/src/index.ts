@@ -22,11 +22,15 @@ export type Spend = {
   valueCommitment: [string, string];
 };
 
-export type Bridge = {
+export type BridgeOut = {
   proof: string; // must know that value commitment is valid
   chainId: string;
   destination: string;
   encryptedOutput: string;
+  valueCommitment: [string, string];
+};
+
+export type BridgeIn = {
   valueCommitment: [string, string];
 };
 
@@ -42,11 +46,11 @@ export async function transfer(
 ): Promise<ContractTransactionResponse> {
   logAction(
     "Transferring " +
-    amount +
-    " " +
-    asset +
-    " to " +
-    shrtn(toFixedHex(receiver.publicKey))
+      amount +
+      " " +
+      asset +
+      " to " +
+      shrtn(toFixedHex(receiver.publicKey))
   );
 
   if (signer.provider === null) throw new Error("Signer must have a provider");
@@ -68,6 +72,7 @@ export async function transfer(
   const { sig, Bpk, spends, outputs, hash } = await prepareTx(
     spendList,
     outputList,
+    [],
     [],
     tree,
     sender,
@@ -114,6 +119,7 @@ export async function deposit(
   const { sig, Bpk, spends, outputs, hash } = await prepareTx(
     spendList,
     outputList,
+    [],
     [],
     tree,
     receiver,
@@ -168,6 +174,7 @@ export async function withdraw(
     spendList,
     outputList,
     [],
+    [],
     tree,
     sender,
     receiver
@@ -187,67 +194,67 @@ export async function withdraw(
     hash
   );
 }
-
-export async function bridge(
-  signer: Signer,
-  fromPoolAddress: string,
-  toPoolAddress: string,
-  amount: bigint,
-  sender: Keyset,
-  receiver: Keyset,
-  asset: string, // "USDC" | "WBTC" etc.
-  tree: MerkleTree,
-  chainId: string,
-  notes: NoteStore
-): Promise<ContractTransactionResponse> {
-  logAction("Bridging " + amount + " " + asset + " to " + toPoolAddress);
-  if (signer.provider === null) throw new Error("Signer must have a provider");
-
-  const spendList = await notes.getNotesUpTo(amount, asset);
-  const totalSpent = spendList.reduce((t, note) => {
-    return t + note.amount;
-  }, 0n);
-
-  const change = totalSpent - amount;
-  const outputList: Note[] = [];
-
-  // create change note
-  outputList.push(
-    Note.create(change > 0n ? change : 0n, sender.publicKey, asset)
-  );
-
-  // create a zero note so that we have a multiple of 2 notes
-  outputList.push(Note.create(0n, sender.publicKey, asset));
-
-  const bridgeNote = {
-    chainId,
-    destination: toPoolAddress,
-    note: Note.create(amount, sender.publicKey, asset),
-  };
-
-  const { sig, Bpk, spends, outputs, bridges, hash } = await prepareTx(
-    spendList,
-    outputList,
-    [bridgeNote],
-    tree,
-    sender,
-    receiver
-  );
-
-    const masp = IMasp__factory.connect(fromPoolAddress, signer);
-  
-  //   return await masp.bridge(
-  //      spends,
-  //      outputs,
-  //      bridges,
-  //      // XXX: fix this....  
-  // //     `${tree.root}`,
-  // //     [toStr(sig.R.x), toStr(sig.R.y)],
-  // //     toStr(sig.s),
-  // //     hash,
-  // //     [toStr(mintComm.Vc.x), toStr(mintComm.Vc.y)]
-  // //   );
-}
+//
+// export async function bridge(
+//   signer: Signer,
+//   fromPoolAddress: string,
+//   toPoolAddress: string,
+//   amount: bigint,
+//   sender: Keyset,
+//   receiver: Keyset,
+//   asset: string, // "USDC" | "WBTC" etc.
+//   tree: MerkleTree,
+//   chainId: string,
+//   notes: NoteStore
+// ): Promise<ContractTransactionResponse> {
+//   logAction("Bridging " + amount + " " + asset + " to " + toPoolAddress);
+//   if (signer.provider === null) throw new Error("Signer must have a provider");
+//
+//   const spendList = await notes.getNotesUpTo(amount, asset);
+//   const totalSpent = spendList.reduce((t, note) => {
+//     return t + note.amount;
+//   }, 0n);
+//
+//   const change = totalSpent - amount;
+//   const outputList: Note[] = [];
+//
+//   // create change note
+//   outputList.push(
+//     Note.create(change > 0n ? change : 0n, sender.publicKey, asset)
+//   );
+//
+//   // create a zero note so that we have a multiple of 2 notes
+//   outputList.push(Note.create(0n, sender.publicKey, asset));
+//
+//   const bridgeNote = {
+//     chainId,
+//     destination: toPoolAddress,
+//     note: Note.create(amount, sender.publicKey, asset),
+//   };
+//
+//   const { sig, Bpk, spends, outputs, bridges, hash } = await prepareTx(
+//     spendList,
+//     outputList,
+//     [bridgeNote],
+//     tree,
+//     sender,
+//     receiver
+//   );
+//
+//   const masp = IMasp__factory.connect(fromPoolAddress, signer);
+//
+//   //   return await masp.bridge(
+//   //      spends,
+//   //      outputs,
+//   //      bridges,
+//   //      // XXX: fix this....
+//   // //     `${tree.root}`,
+//   // //     [toStr(sig.R.x), toStr(sig.R.y)],
+//   // //     toStr(sig.s),
+//   // //     hash,
+//   // //     [toStr(mintComm.Vc.x), toStr(mintComm.Vc.y)]
+//   // //   );
+// }
 
 export type NoteStore = {
   // getUnspentNotes(): Record<string, Note[]>;

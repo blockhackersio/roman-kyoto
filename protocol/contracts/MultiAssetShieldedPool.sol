@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {SpendVerifier} from "./verifiers/SpendVerifier.sol";
 import {OutputVerifier} from "./verifiers/OutputVerifier.sol";
-import {IMasp, SpendProof, OutputProof, Bridge} from "./interfaces/IMasp.sol";
+import {IMasp, Spend, Output, BridgeIn, BridgeOut} from "./interfaces/IMasp.sol";
 import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
 
 import "./EdOnBN254.sol";
@@ -70,9 +70,9 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
 
     function _sigVerify(
         uint256 _s,
-        uint256[2] calldata _R,
-        uint256[2] calldata _A,
-        bytes calldata _message
+        uint256[2] memory _R,
+        uint256[2] memory _A,
+        bytes memory _message
     ) internal view {
         EdOnBN254.Affine memory _BASE = EdOnBN254.Affine(
             6822643173076850086669063981200675861034234425876310494228829770726075732893,
@@ -90,27 +90,27 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     }
 
     function _checkHash(
-        SpendProof[] calldata _spendProof,
-        OutputProof[] calldata _outputProofs,
-        bytes calldata _hash
+        Spend[] memory _spends,
+        Output[] memory _outputs,
+        bytes memory _hash
     ) internal pure {
-        uint256[] memory nullifiers = new uint256[](_spendProof.length);
-        uint256[] memory commitments = new uint256[](_outputProofs.length);
+        uint256[] memory nullifiers = new uint256[](_spends.length);
+        uint256[] memory commitments = new uint256[](_outputs.length);
         uint256[] memory valueCommitments = new uint256[](
-            _spendProof.length * 2 + _outputProofs.length * 2
+            _spends.length * 2 + _outputs.length * 2
         );
 
         uint256 vcIndex = 0;
-        for (uint256 i = 0; i < _spendProof.length; i++) {
-            nullifiers[i] = _spendProof[i].nullifier;
-            valueCommitments[vcIndex++] = _spendProof[i].valueCommitment[0];
-            valueCommitments[vcIndex++] = _spendProof[i].valueCommitment[1];
+        for (uint256 i = 0; i < _spends.length; i++) {
+            nullifiers[i] = _spends[i].nullifier;
+            valueCommitments[vcIndex++] = _spends[i].valueCommitment[0];
+            valueCommitments[vcIndex++] = _spends[i].valueCommitment[1];
         }
 
-        for (uint256 i = 0; i < _outputProofs.length; i++) {
-            commitments[i] = _outputProofs[i].commitment;
-            valueCommitments[vcIndex++] = _outputProofs[i].valueCommitment[0];
-            valueCommitments[vcIndex++] = _outputProofs[i].valueCommitment[1];
+        for (uint256 i = 0; i < _outputs.length; i++) {
+            commitments[i] = _outputs[i].commitment;
+            valueCommitments[vcIndex++] = _outputs[i].valueCommitment[0];
+            valueCommitments[vcIndex++] = _outputs[i].valueCommitment[1];
         }
 
         require(
@@ -121,194 +121,160 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         );
     }
 
+    function toUint256ModN(
+        int256 value,
+        uint256 n
+    ) internal pure returns (uint256) {
+        if (value < 0) {
+            require(uint256(-value) <= n, "Value must not be greater than n");
+            return (n - uint256(-value)) % n;
+        } else {
+            require(uint256(value) <= n, "Value must not be greater than n");
+            return uint256(value) % n;
+        }
+    }
+
     function _balanceCheck(
-        SpendProof[] memory _spendProof,
-        OutputProof[] memory _outputProofs,
-        EdOnBN254.Affine memory _valueBal,
-        uint[2] memory _bpk
+        Spend[] memory _ins,
+        Output[] memory _outs,
+        BridgeIn[] memory _bridgeIns,
+        BridgeOut[] memory _bridgeOuts,
+        EdOnBN254.Affine memory _extValueBase,
+        EdOnBN254.Affine memory _bindingPubkey,
+        int256 _extAmount
     ) internal view {
-        EdOnBN254.Affine memory total = EdOnBN254.zero();
+        // Sum up ins and outs
 
-        for (uint i = 0; i < _spendProof.length; i++) {
-            SpendProof memory spendProof = _spendProof[i];
-            total = total.add(
-                EdOnBN254.Affine(
-                    spendProof.valueCommitment[0],
-                    spendProof.valueCommitment[1]
-                )
+        EdOnBN254.Affine memory _insTotal = EdOnBN254.zero();
+        EdOnBN254.Affine memory _outsTotal = EdOnBN254.zero();
+        EdOnBN254.Affine memory _bridgeInsTotal = EdOnBN254.zero();
+        EdOnBN254.Affine memory _bridgeOutsTotal = EdOnBN254.zero();
+
+        for (uint i = 0; i < _ins.length; i++) {
+            uint256[2] memory vc = _ins[i].valueCommitment;
+            _insTotal = _insTotal.add(EdOnBN254.Affine(vc[0], vc[1]));
+        }
+
+        for (uint i = 0; i < _outs.length; i++) {
+            uint256[2] memory vc = _outs[i].valueCommitment;
+            _outsTotal = _outsTotal.add(EdOnBN254.Affine(vc[0], vc[1]));
+        }
+
+        for (uint i = 0; i < _bridgeIns.length; i++) {
+            uint256[2] memory vc = _bridgeIns[i].valueCommitment;
+            _bridgeInsTotal = _bridgeInsTotal.add(
+                EdOnBN254.Affine(vc[0], vc[1])
             );
         }
 
-        for (uint j = 0; j < _outputProofs.length; j++) {
-            OutputProof memory outputProof = _outputProofs[j];
-            total = total.add(
-                EdOnBN254
-                    .Affine(
-                        outputProof.valueCommitment[0],
-                        outputProof.valueCommitment[1]
-                    )
-                    .neg()
+        for (uint i = 0; i < _bridgeOuts.length; i++) {
+            uint256[2] memory vc = _bridgeOuts[i].valueCommitment;
+            _bridgeOutsTotal = _bridgeOutsTotal.add(
+                EdOnBN254.Affine(vc[0], vc[1])
             );
         }
 
-        total = total.add(_valueBal.neg());
+        EdOnBN254.Affine memory _ext = _extAmount == 0
+            ? EdOnBN254.zero()
+            : _extValueBase.mul(toUint256ModN(_extAmount, EdOnBN254.N));
+
+        EdOnBN254.Affine memory total = _insTotal
+            .add(_outsTotal.neg())
+            .add(_bridgeOutsTotal)
+            .add(_bridgeInsTotal.neg())
+            .add(_ext);
 
         require(
-            total.x == _bpk[0] && total.y == _bpk[1],
+            total.x == _bindingPubkey.x && total.y == _bindingPubkey.y,
             "Balance Check Failed"
         );
     }
 
     function _proofCheck(
-        SpendProof[] memory _spendProof,
-        OutputProof[] memory _outputProofs,
+        Spend[] memory _spends,
+        Output[] memory _outputs,
         uint256 _root
     ) internal {
         require(isKnownRoot(bytes32(_root)), "Invalid merkle root");
-        require(
-            _outputProofs.length % 2 == 0,
-            "outputs must be in multiples of 2"
-        );
+        require(_outputs.length % 2 == 0, "outputs must be in multiples of 2");
 
-        for (uint i = 0; i < _spendProof.length; i++) {
-            require(
-                !isSpent(_spendProof[i].nullifier),
-                "Input is already spent"
-            );
+        for (uint i = 0; i < _spends.length; i++) {
+            require(!isSpent(_spends[i].nullifier), "Input is already spent");
         }
 
-        for (uint i = 0; i < _spendProof.length; i++) {
-            SpendProof memory spendProof = _spendProof[i];
-            spendVerify(spendProof.proof, [uint256(spendProof.nullifier)]);
+        for (uint i = 0; i < _spends.length; i++) {
+            spendVerify(_spends[i].proof, [uint256(_spends[i].nullifier)]);
         }
 
-        for (uint j = 0; j < _outputProofs.length; j++) {
-            OutputProof memory outputProof = _outputProofs[j];
-            outputVerify(outputProof.proof, [uint256(outputProof.commitment)]);
+        for (uint j = 0; j < _outputs.length; j++) {
+            outputVerify(_outputs[j].proof, [uint256(_outputs[j].commitment)]);
         }
 
-        for (uint i = 0; i < _spendProof.length; i++) {
-            nullifierHashes[_spendProof[i].nullifier] = true;
+        for (uint i = 0; i < _spends.length; i++) {
+            nullifierHashes[_spends[i].nullifier] = true;
         }
 
-        for (uint i = 0; i < _outputProofs.length; i += 2) {
+        for (uint i = 0; i < _outputs.length; i += 2) {
             _insert(
-                bytes32(_outputProofs[i].commitment),
-                bytes32(_outputProofs[i + 1].commitment)
+                bytes32(_outputs[i].commitment),
+                bytes32(_outputs[i + 1].commitment)
             );
         }
 
         emit IMasp.NewCommitment(
-            _outputProofs[0].commitment,
+            _outputs[0].commitment,
             nextIndex - 2,
-            _outputProofs[0].encryptedOutput
+            _outputs[0].encryptedOutput
         );
 
         emit IMasp.NewCommitment(
-            _outputProofs[1].commitment,
+            _outputs[1].commitment,
             nextIndex - 1,
-            _outputProofs[1].encryptedOutput
+            _outputs[1].encryptedOutput
         );
 
-        for (uint256 i = 0; i < _spendProof.length; i++) {
-            emit IMasp.NewNullifier(_spendProof[i].nullifier);
+        for (uint256 i = 0; i < _spends.length; i++) {
+            emit IMasp.NewNullifier(_spends[i].nullifier);
         }
-    }
-
-    function _deposit(
-        SpendProof[] calldata _spendProof,
-        OutputProof[] calldata _outputProofs,
-        uint[2] calldata _bpk,
-        uint256 _assetId,
-        uint256 _depositAmount,
-        uint256 _root,
-        uint256[2] calldata _R,
-        uint256 _s,
-        bytes calldata _hash
-    ) internal {
-        _checkHash(_spendProof, _outputProofs, _hash);
-
-        // Calculate the deposit value
-        EdOnBN254.Affine memory _valueBal = EdOnBN254
-            .primeSubgroupGenerator()
-            .mul(_assetId)
-            .mul(_depositAmount)
-            .neg();
-
-        _balanceCheck(_spendProof, _outputProofs, _valueBal, _bpk);
-
-        _sigVerify(_s, _R, _bpk, _hash);
-
-        _proofCheck(_spendProof, _outputProofs, _root);
-    }
-
-    function _withdraw(
-        SpendProof[] calldata _spendProof,
-        OutputProof[] calldata _outputProofs,
-        uint256[2] calldata _bpk,
-        uint256 _assetId,
-        uint256 _withdrawAmount,
-        uint256 _root,
-        uint256[2] calldata _R,
-        uint256 _s,
-        bytes calldata _hash
-    ) internal {
-        _checkHash(_spendProof, _outputProofs, _hash);
-
-        // Calculate the deposit value
-        EdOnBN254.Affine memory _valueBal = EdOnBN254
-            .primeSubgroupGenerator()
-            .mul(_assetId)
-            .mul(_withdrawAmount);
-
-        _balanceCheck(_spendProof, _outputProofs, _valueBal, _bpk);
-
-        _sigVerify(_s, _R, _bpk, _hash);
-
-        _proofCheck(_spendProof, _outputProofs, _root);
-    }
-
-    function _bridge(
-        SpendProof[] calldata _spendProof,
-        OutputProof[] calldata _outputProofs,
-        Bridge[] calldata _bridges,
-        uint256[2] calldata _bpk,
-        uint256 _root,
-        uint256[2] calldata _R,
-        uint256 _s,
-        bytes calldata _hash
-    ) internal {
-        _checkHash(_spendProof, _outputProofs, _hash);
-
-        // external balance is 0
-        EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
-
-        _balanceCheck(_spendProof, _outputProofs, _valueBal, _bpk);
-
-        _sigVerify(_s, _R, _bpk, _hash);
-
-        _proofCheck(_spendProof, _outputProofs, _root);
     }
 
     function _transact(
-        SpendProof[] calldata _spendProof,
-        OutputProof[] calldata _outputProofs,
-        uint[2] calldata _bpk,
+        Spend[] memory _spends,
+        Output[] memory _outputs,
+        BridgeIn[] memory _bridgeIns,
+        BridgeOut[] memory _bridgeOuts,
+        uint256 _extAssetHash,
+        int256 _extAmount,
+        uint256[2] memory _bpk,
         uint256 _root,
-        uint256[2] calldata _R,
+        uint256[2] memory _R,
         uint256 _s,
-        bytes calldata _hash
+        bytes memory _hash
     ) internal {
-        _checkHash(_spendProof, _outputProofs, _hash);
+        _checkHash(_spends, _outputs, _hash);
 
-        // external balance is 0
-        EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
+        EdOnBN254.Affine memory _bindingPubkey = EdOnBN254.Affine(
+            _bpk[0],
+            _bpk[1]
+        );
 
-        _balanceCheck(_spendProof, _outputProofs, _valueBal, _bpk);
+        EdOnBN254.Affine memory _extValueBase = EdOnBN254
+            .primeSubgroupGenerator()
+            .mul(_extAssetHash);
+
+        _balanceCheck(
+            _spends,
+            _outputs,
+            _bridgeIns,
+            _bridgeOuts,
+            _extValueBase,
+            _bindingPubkey,
+            _extAmount
+        );
 
         _sigVerify(_s, _R, _bpk, _hash);
 
-        _proofCheck(_spendProof, _outputProofs, _root);
+        _proofCheck(_spends, _outputs, _root);
     }
 
     function isSpent(uint256 _nullifierHash) public view returns (bool) {

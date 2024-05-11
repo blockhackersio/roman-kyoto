@@ -72,7 +72,7 @@ async function ensureValueBalance(
       : extValueBase.multiply(modN(extAmount));
 
   const totalR = sumRIns - sumROuts + sumRBridgeOut - sumRBridgeIn;
-
+  
   expect(
     sumIns
       .subtract(sumOuts)

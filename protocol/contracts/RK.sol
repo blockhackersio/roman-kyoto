@@ -43,11 +43,11 @@ contract RK is MultiAssetShieldedPool {
     }
 
     function deposit(
-        SpendProof[] calldata _spendProof,
-        OutputProof[] calldata _outputProofs,
+        Spend[] calldata _spends,
+        Output[] calldata _outputs,
         uint256[2] calldata _bpk,
         uint256 _assetId,
-        uint256 _depositAmount,
+        int256 _depositAmount,
         uint256 _root,
         uint256[2] calldata _R,
         uint256 _s,
@@ -56,21 +56,26 @@ contract RK is MultiAssetShieldedPool {
         // transfer the users asset to this address
         SupportedAsset memory _asset = assetToAddress[_assetId];
         require(_asset.assetAddress != address(0), "Asset not supported");
+        require(_depositAmount > 0);
 
         // transfer the asset to this contract
         IERC20(_asset.assetAddress).transferFrom(
             msg.sender,
             address(this),
-            _depositAmount
+            uint256(_depositAmount)
         );
 
-        // call our deposit function (the proofs are verified in this function)
-        _deposit(
-            _spendProof,
-            _outputProofs,
-            _bpk,
+        BridgeIn[] memory _bridgeIns = new BridgeIn[](0);
+        BridgeOut[] memory _bridgeOuts = new BridgeOut[](0);
+
+        _transact(
+            _spends,
+            _outputs,
+            _bridgeIns,
+            _bridgeOuts,
             _assetId,
             _depositAmount,
+            _bpk,
             _root,
             _R,
             _s,
@@ -79,11 +84,11 @@ contract RK is MultiAssetShieldedPool {
     }
 
     function withdraw(
-        SpendProof[] calldata _spendProof,
-        OutputProof[] calldata _outputProofs,
+        Spend[] calldata _spends,
+        Output[] calldata _outputs,
         uint[2] calldata _bpk,
         uint256 _assetId,
-        uint256 _withdrawAmount,
+        int256 _withdrawAmount,
         uint256 _root,
         uint256[2] calldata _R,
         uint256 _s,
@@ -91,13 +96,19 @@ contract RK is MultiAssetShieldedPool {
     ) external {
         SupportedAsset memory _asset = assetToAddress[_assetId];
         require(_asset.assetAddress != address(0), "Asset not supported");
+        require(_withdrawAmount > 0);
 
-        _withdraw(
-            _spendProof,
-            _outputProofs,
-            _bpk,
+        BridgeIn[] memory _bridgeIns = new BridgeIn[](0);
+        BridgeOut[] memory _bridgeOuts = new BridgeOut[](0);
+
+        _transact(
+            _spends,
+            _outputs,
+            _bridgeIns,
+            _bridgeOuts,
             _assetId,
             _withdrawAmount,
+            _bpk,
             _root,
             _R,
             _s,
@@ -105,18 +116,37 @@ contract RK is MultiAssetShieldedPool {
         );
 
         // transfer the asset to this contract
-        IERC20(_asset.assetAddress).transfer(msg.sender, _withdrawAmount);
+        IERC20(_asset.assetAddress).transfer(
+            msg.sender,
+            uint256(_withdrawAmount)
+        );
     }
 
     function transact(
-        SpendProof[] calldata _spendProof,
-        OutputProof[] calldata _outputProofs,
-        uint[2] calldata _bpk,
+        Spend[] calldata _spends,
+        Output[] calldata _outputs,
+        BridgeIn[] calldata _bridgeIns,
+        BridgeOut[] calldata _bridgeOuts,
+        uint256 _extAssetHash,
+        int256 _extAmount,
+        uint256[2] calldata _bpk,
         uint256 _root,
         uint256[2] calldata _R,
         uint256 _s,
         bytes calldata _hash
     ) external {
-        _transact(_spendProof, _outputProofs, _bpk, _root, _R, _s, _hash);
+        _transact(
+            _spends,
+            _outputs,
+            _bridgeIns,
+            _bridgeOuts,
+            _extAssetHash,
+            _extAmount,
+            _bpk,
+            _root,
+            _R,
+            _s,
+            _hash
+        );
     }
 }
