@@ -255,6 +255,8 @@ it.only("should bridge funds between pools", async () => {
 
   await srcWallet.updateFromReceipt(receipt);
   await srcWallet.logBalances();
+  expect(await srcWallet.getBalance("USDC")).to.equal(100n);
+  expect(await srcWallet.getBalance("WBTC")).to.equal(0n);
 
   tree = await buildMerkleTree(SourcePool);
 
@@ -263,7 +265,7 @@ it.only("should bridge funds between pools", async () => {
     srcAddr,
     destAddr,
     `${net.chainId}`,
-    50n,
+    60n,
     spender,
     spender,
     "USDC",
@@ -274,6 +276,10 @@ it.only("should bridge funds between pools", async () => {
   receipt = await tx.wait();
   await srcWallet.updateFromReceipt(receipt);
   await srcWallet.logBalances();
+
+  expect(await srcWallet.getBalance("USDC")).to.equal(40n);
+  expect(await srcWallet.getBalance("WBTC")).to.equal(0n);
+
   await destWallet.logBalances();
 
   expect(await destWallet.getBalance("USDC")).to.equal(0n);
@@ -289,6 +295,8 @@ it.only("should bridge funds between pools", async () => {
   await destWallet.updateFromReceipt(receipt);
   await destWallet.logBalances();
 
+  expect(await destWallet.getBalance("USDC")).to.equal(60n);
+  expect(await destWallet.getBalance("WBTC")).to.equal(0n);
 
 
 });

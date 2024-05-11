@@ -71,7 +71,7 @@ const config: HardhatUserConfig = {
   },
 
   gasReporter: {
-    enabled: process.env.REPORT_GAS ? true : false,
+    enabled: process.env.DONT_REPORT_GAS ? false : true,
     currency: "ETH",
     L1: "ethereum",
     gasPrice: 21,
