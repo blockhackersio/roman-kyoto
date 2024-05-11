@@ -13,11 +13,18 @@ import "hardhat/console.sol";
 contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     using EdOnBN254 for *;
 
+    enum ValueCommitmentState {
+        INIT,
+        RECEIVED,
+        CLAIMED
+    }
+
     SpendVerifier public spendVerifier;
     OutputVerifier public outputVerifier;
     BridgeoutVerifier public bridgeoutVerifier;
 
     mapping(uint256 => bool) public nullifierHashes;
+    mapping(bytes32 => ValueCommitmentState) public receivedCommitments;
 
     constructor(
         address _spendVerifier,
@@ -64,6 +71,28 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
             outputVerifier.verifyProof(a, b, c, _pubSignals),
             "invalid proof"
         );
+    }
+
+    function _getBytecodeHash(address _address) public view returns (bytes32) {
+        bytes32 codeHash;
+        assembly {
+            codeHash := extcodehash(_address)
+        }
+        return codeHash;
+    }
+
+    function _receiveCommitments(bytes32 _commitment) internal {
+        require(
+            receivedCommitments[_commitment] == ValueCommitmentState.INIT,
+            "received commitments must be in the IDLE state"
+        );
+        require(
+            _getBytecodeHash(address(this)) == _getBytecodeHash(msg.sender),
+            "bad sender"
+        );
+
+        receivedCommitments[_commitment] = ValueCommitmentState.RECEIVED;
+        emit IMasp.NewCommitmentReceived(_commitment);
     }
 
     function bridgeoutVerify(
@@ -170,9 +199,20 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         }
 
         for (uint i = 0; i < _bridgeIns.length; i++) {
-            uint256[2] memory vc = _bridgeIns[i].valueCommitment;
+            bytes32 _received = keccak256(
+                abi.encode(_bridgeIns[i].valueCommitment)
+            );
+            require(
+                receivedCommitments[_received] == ValueCommitmentState.RECEIVED,
+                "value commitment has not been received!"
+            );
             _bridgeInsTotal = _bridgeInsTotal.add(
-                EdOnBN254.Affine(vc[0], vc[1]).neg()
+                EdOnBN254
+                    .Affine(
+                        _bridgeIns[i].valueCommitment[0],
+                        _bridgeIns[i].valueCommitment[1]
+                    )
+                    .neg()
             );
         }
 
@@ -214,6 +254,7 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     function _proofCheck(
         Spend[] memory _spends,
         Output[] memory _outputs,
+        BridgeIn[] memory _bridgeIns,
         BridgeOut[] memory _bridgeOuts,
         uint256 _root
     ) internal {
@@ -232,15 +273,6 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
             outputVerify(_outputs[j].proof, [uint256(_outputs[j].commitment)]);
         }
 
-        // TODO: verify value commitment proof for bridge tx
-        //       currently this was not working need to investigate why...
-        // for (uint j = 0; j < _bridgeOuts.length; j++) {
-        //     bridgeoutVerify(
-        //         _bridgeOuts[j].proof,
-        //         _bridgeOuts[j].valueCommitment
-        //     );
-        // }
-
         for (uint i = 0; i < _spends.length; i++) {
             nullifierHashes[_spends[i].nullifier] = true;
         }
@@ -249,6 +281,29 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
             _insert(
                 bytes32(_outputs[i].commitment),
                 bytes32(_outputs[i + 1].commitment)
+            );
+        }
+
+        for (uint i = 0; i < _bridgeIns.length; i++) {
+            receivedCommitments[
+                keccak256(abi.encode(_bridgeIns[i].valueCommitment))
+            ] = ValueCommitmentState.CLAIMED;
+        }
+
+        for (uint i = 0; i < _bridgeOuts.length; i++) {
+            // TODO: verify value commitment proof for bridge tx
+            //       currently this was not working need to investigate why...
+            // bridgeoutVerify(
+            //     _bridgeOuts[j].proof,
+            //     _bridgeOuts[j].valueCommitment
+            // );
+            require(
+                _getBytecodeHash(_bridgeOuts[i].destination) ==
+                    _getBytecodeHash(address(this)),
+                "destination contract is invalid"
+            );
+            IMasp(_bridgeOuts[i].destination).receiveCommitments(
+                keccak256(abi.encode(_bridgeOuts[i].valueCommitment))
             );
         }
 
@@ -314,7 +369,7 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
 
         _sigVerify(_s, _R, _bpk, _hash);
 
-        _proofCheck(_spends, _outputs, _bridgeOuts, _root);
+        _proofCheck(_spends, _outputs, _bridgeIns, _bridgeOuts, _root);
     }
 
     function isSpent(uint256 _nullifierHash) public view returns (bool) {

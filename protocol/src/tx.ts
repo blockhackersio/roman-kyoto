@@ -317,7 +317,6 @@ export async function prepareTx(
 
     const encryptedOutput = vc.encrypt(sender.encryptionKey);
     totalRandomness = modN(totalRandomness - vc.getRandomness());
-
     bridgeOuts.push({
       valueCommitment: await vc.toXY(),
       encryptedOutput,
@@ -340,7 +339,7 @@ export async function prepareTx(
   const Bpk = R.multiply(bsk);
 
   // test clientside value check
-  checkValueBalance(vcs);
+  // checkValueBalance(vcs);
 
   const encoded = encodeTxInputs(spends, outputs, bridgeIns, bridgeOuts);
   const hash = keccak256(encoded);

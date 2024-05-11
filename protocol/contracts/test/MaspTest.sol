@@ -38,4 +38,8 @@ contract MaspTest is IMasp, MultiAssetShieldedPool {
             _hash
         );
     }
+
+    function receiveCommitments(bytes32 _commitment) external {
+        _receiveCommitments(_commitment);
+    }
 }

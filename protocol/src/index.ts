@@ -281,14 +281,14 @@ export async function bridge(
   );
 }
 
-export async function receive(
+export async function claim(
   signer: Signer,
   poolAddress: string,
   receiver: Keyset,
   vc: ValueCommitment,
   tree: MerkleTree
 ): Promise<ContractTransactionResponse> {
-  logAction("Receiving " + vc.amount + " " + vc.asset.getSymbol());
+  logAction("Claiming " + vc.amount + " " + vc.asset.getSymbol());
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
   // If we are only depositing there are no spend notes
@@ -299,7 +299,7 @@ export async function receive(
     Note.create(0n, receiver.publicKey, vc.asset.getSymbol()),
   ];
 
-  const { sig, Bpk, spends, outputs, hash } = await prepareTx(
+  const { sig, Bpk, spends, outputs, bridgeIns, hash } = await prepareTx(
     spendList,
     outputList,
     [vc],
@@ -314,7 +314,7 @@ export async function receive(
   return await masp.transact(
     spends,
     outputs,
-    [],
+    bridgeIns,
     [],
     await Asset.fromTicker("___NIL_ASSET").getIdHash(),
     toStr(0n),

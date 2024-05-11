@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {MultiAssetShieldedPool} from "../MultiAssetShieldedPool.sol";
-
 struct Spend {
     bytes proof;
     uint256 nullifier;
@@ -44,6 +42,8 @@ interface IMasp {
 
     event NewNullifier(uint256 indexed nullifier);
 
+    event NewCommitmentReceived(bytes32 indexed commitment);
+
     function transact(
         Spend[] calldata _spends,
         Output[] calldata _outputs,
@@ -57,4 +57,6 @@ interface IMasp {
         uint256 _s,
         bytes calldata _hash
     ) external;
+
+    function receiveCommitments(bytes32 _commitment) external;
 }

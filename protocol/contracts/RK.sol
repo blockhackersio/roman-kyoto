@@ -92,4 +92,8 @@ contract RK is IMasp, MultiAssetShieldedPool {
             );
         }
     }
+    
+    function receiveCommitments(bytes32 _commitment) external {
+        _receiveCommitments(_commitment);
+    }
 }

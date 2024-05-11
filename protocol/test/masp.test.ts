@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
-import { bridge, deposit, transfer, withdraw } from "../src/index";
+import { bridge, claim, deposit, transfer, withdraw } from "../src/index";
 import { ensurePoseidon } from "../src/poseidon";
 import { Wallet } from "ethers";
 import { deployDoubleMasp, deployMasp } from "./utils";
@@ -236,17 +236,26 @@ it.only("should bridge funds between pools", async () => {
   let tree = await buildMerkleTree(SourcePool);
   const spender = await getRandomKeys();
 
-  const wallet = MaspWallet.fromPrivateKey(spender.privateKey.toString(16));
+  const srcWallet = MaspWallet.fromPrivateKey(
+    spender.privateKey.toString(16),
+    "SOURCE"
+  );
+  const destWallet = MaspWallet.fromPrivateKey(
+    spender.privateKey.toString(16),
+    "DESTINATION"
+  );
 
-  await wallet.logBalances();
+  await srcWallet.logBalances();
 
-  expect(await wallet.getBalance("USDC")).to.equal(0n);
-  expect(await wallet.getBalance("WBTC")).to.equal(0n);
+  expect(await srcWallet.getBalance("USDC")).to.equal(0n);
+  expect(await srcWallet.getBalance("WBTC")).to.equal(0n);
+
   let tx = await deposit(signer, srcAddr, 100n, spender, "USDC", tree);
-
   let receipt = await tx.wait();
-  await wallet.updateFromReceipt(receipt);
-  await wallet.logBalances();
+
+  await srcWallet.updateFromReceipt(receipt);
+  await srcWallet.logBalances();
+
   tree = await buildMerkleTree(SourcePool);
 
   tx = await bridge(
@@ -259,10 +268,27 @@ it.only("should bridge funds between pools", async () => {
     spender,
     "USDC",
     tree,
-    wallet
+    srcWallet
   );
 
   receipt = await tx.wait();
-  await wallet.updateFromReceipt(receipt);
-  await wallet.logBalances();
+  await srcWallet.updateFromReceipt(receipt);
+  await srcWallet.logBalances();
+  await destWallet.logBalances();
+
+  expect(await destWallet.getBalance("USDC")).to.equal(0n);
+  expect(await destWallet.getBalance("WBTC")).to.equal(0n);
+
+  tree = await buildMerkleTree(DestPool);
+  
+  const [{ vc }] = srcWallet.getBridgeOuts();
+
+  tx = await claim(signer, destAddr, spender, vc, tree);
+
+  receipt = await tx.wait();
+  await destWallet.updateFromReceipt(receipt);
+  await destWallet.logBalances();
+
+
+
 });

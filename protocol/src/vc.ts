@@ -6,11 +6,11 @@ import { z } from "zod";
 
 // TODO: This should have basic addition and subtraction function which adds randomness as well as value
 export class ValueCommitment {
-  private r: bigint;
-
-  constructor(public asset: Asset, public amount: bigint) {
-    this.r = getRandomBigInt(253);
-  }
+  constructor(
+    public asset: Asset,
+    public amount: bigint,
+    private r: bigint = getRandomBigInt(253)
+  ) {}
 
   encrypt(publicKey: string) {
     const jsonStr = this.serialize();
@@ -69,7 +69,8 @@ export class ValueCommitment {
   static fromJsonValueCommitment(data: JsonValueCommitment) {
     return new ValueCommitment(
       Asset.fromTicker(data.asset),
-      BigInt(data.amount)
+      BigInt(data.amount),
+      BigInt(data.r)
     );
   }
 }
