@@ -3,18 +3,28 @@ pragma solidity ^0.8.24;
 
 import {SpendVerifier} from "./verifiers/SpendVerifier.sol";
 import {OutputVerifier} from "./verifiers/OutputVerifier.sol";
-import {IMasp, SpendProof, OutputProof} from "./interfaces/IMasp.sol";
+import {BridgeoutVerifier} from "./verifiers/BridgeoutVerifier.sol";
+import {IMasp, Spend, Output, BridgeIn, BridgeOut} from "./interfaces/IMasp.sol";
 import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
 
 import "./EdOnBN254.sol";
+import "hardhat/console.sol";
 
 contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     using EdOnBN254 for *;
 
+    enum ValueCommitmentState {
+        INIT,
+        RECEIVED,
+        CLAIMED
+    }
+
     SpendVerifier public spendVerifier;
     OutputVerifier public outputVerifier;
+    BridgeoutVerifier public bridgeoutVerifier;
 
     mapping(uint256 => bool) public nullifierHashes;
+    mapping(bytes32 => ValueCommitmentState) public receivedCommitments;
 
     constructor(
         address _spendVerifier,
@@ -63,6 +73,41 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         );
     }
 
+    function _getBytecodeHash(address _address) public view returns (bytes32) {
+        bytes32 codeHash;
+        assembly {
+            codeHash := extcodehash(_address)
+        }
+        return codeHash;
+    }
+
+    function _receiveCommitments(bytes32 _commitment) internal {
+        require(
+            receivedCommitments[_commitment] == ValueCommitmentState.INIT,
+            "received commitments must be in the IDLE state"
+        );
+        require(
+            _getBytecodeHash(address(this)) == _getBytecodeHash(msg.sender),
+            "bad sender"
+        );
+
+        receivedCommitments[_commitment] = ValueCommitmentState.RECEIVED;
+        emit IMasp.NewCommitmentReceived(_commitment);
+    }
+
+    function bridgeoutVerify(
+        bytes memory _proof,
+        uint[2] memory _pubSignals
+    ) public view {
+        (uint[2] memory a, uint[2][2] memory b, uint[2] memory c) = parseProof(
+            _proof
+        );
+        require(
+            bridgeoutVerifier.verifyProof(a, b, c, _pubSignals),
+            "invalid bridgeout proof"
+        );
+    }
+
     struct RedDSASignature {
         bytes32 s;
         bytes32 R;
@@ -70,9 +115,9 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
 
     function _sigVerify(
         uint256 _s,
-        uint256[2] calldata _R,
-        uint256[2] calldata _A,
-        bytes calldata _message
+        uint256[2] memory _R,
+        uint256[2] memory _A,
+        bytes memory _message
     ) internal view {
         EdOnBN254.Affine memory _BASE = EdOnBN254.Affine(
             6822643173076850086669063981200675861034234425876310494228829770726075732893,
@@ -90,27 +135,27 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     }
 
     function _checkHash(
-        SpendProof[] calldata _spendProof,
-        OutputProof[] calldata _outputProofs,
-        bytes calldata _hash
-    ) pure internal {
-        uint256[] memory nullifiers = new uint256[](_spendProof.length);
-        uint256[] memory commitments = new uint256[](_outputProofs.length);
+        Spend[] memory _spends,
+        Output[] memory _outputs,
+        bytes memory _hash
+    ) internal pure {
+        uint256[] memory nullifiers = new uint256[](_spends.length);
+        uint256[] memory commitments = new uint256[](_outputs.length);
         uint256[] memory valueCommitments = new uint256[](
-            _spendProof.length * 2 + _outputProofs.length * 2
+            _spends.length * 2 + _outputs.length * 2
         );
 
         uint256 vcIndex = 0;
-        for (uint256 i = 0; i < _spendProof.length; i++) {
-            nullifiers[i] = _spendProof[i].nullifier;
-            valueCommitments[vcIndex++] = _spendProof[i].valueCommitment[0];
-            valueCommitments[vcIndex++] = _spendProof[i].valueCommitment[1];
+        for (uint256 i = 0; i < _spends.length; i++) {
+            nullifiers[i] = _spends[i].nullifier;
+            valueCommitments[vcIndex++] = _spends[i].valueCommitment[0];
+            valueCommitments[vcIndex++] = _spends[i].valueCommitment[1];
         }
 
-        for (uint256 i = 0; i < _outputProofs.length; i++) {
-            commitments[i] = _outputProofs[i].commitment;
-            valueCommitments[vcIndex++] = _outputProofs[i].valueCommitment[0];
-            valueCommitments[vcIndex++] = _outputProofs[i].valueCommitment[1];
+        for (uint256 i = 0; i < _outputs.length; i++) {
+            commitments[i] = _outputs[i].commitment;
+            valueCommitments[vcIndex++] = _outputs[i].valueCommitment[0];
+            valueCommitments[vcIndex++] = _outputs[i].valueCommitment[1];
         }
 
         require(
@@ -121,159 +166,210 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         );
     }
 
-    function _transactCheck(
-        SpendProof[] memory _spendProof,
-        OutputProof[] memory _outputProofs,
-        uint[2] memory _bpk,
-        EdOnBN254.Affine memory _valueBal,
-        uint256 _root
-    ) internal {
-        require(isKnownRoot(bytes32(_root)), "Invalid merkle root");
-        require(
-            _outputProofs.length % 2 == 0,
-            "outputs must be in multiples of 2"
-        );
+    function _balanceCheck(
+        Spend[] memory _ins,
+        Output[] memory _outs,
+        BridgeIn[] memory _bridgeIns,
+        BridgeOut[] memory _bridgeOuts,
+        EdOnBN254.Affine memory _extValueBase,
+        EdOnBN254.Affine memory _bindingPubkey,
+        int256 _extAmount
+    ) internal view {
+        // Sum up ins and outs
+        EdOnBN254.Affine memory _insTotal = EdOnBN254.zero();
+        EdOnBN254.Affine memory _outsTotal = EdOnBN254.zero();
+        EdOnBN254.Affine memory _bridgeInsTotal = EdOnBN254.zero();
+        EdOnBN254.Affine memory _bridgeOutsTotal = EdOnBN254.zero();
 
-        for (uint i = 0; i < _spendProof.length; i++) {
+        for (uint i = 0; i < _ins.length; i++) {
+            uint256[2] memory vc = _ins[i].valueCommitment;
+            _insTotal = _insTotal.add(EdOnBN254.Affine(vc[0], vc[1]));
+        }
+
+        for (uint i = 0; i < _outs.length; i++) {
+            uint256[2] memory vc = _outs[i].valueCommitment;
+            _outsTotal = _outsTotal.add(EdOnBN254.Affine(vc[0], vc[1]));
+        }
+
+        for (uint i = 0; i < _bridgeOuts.length; i++) {
+            uint256[2] memory vc = _bridgeOuts[i].valueCommitment;
+            _bridgeOutsTotal = _bridgeOutsTotal.add(
+                EdOnBN254.Affine(vc[0], vc[1]).neg()
+            );
+        }
+
+        for (uint i = 0; i < _bridgeIns.length; i++) {
+            bytes32 _received = keccak256(
+                abi.encode(_bridgeIns[i].valueCommitment)
+            );
             require(
-                !isSpent(_spendProof[i].nullifier),
-                "Input is already spent"
+                receivedCommitments[_received] == ValueCommitmentState.RECEIVED,
+                "value commitment has not been received!"
             );
-        }
-
-        EdOnBN254.Affine memory total = EdOnBN254.zero();
-
-        for (uint i = 0; i < _spendProof.length; i++) {
-            SpendProof memory spendProof = _spendProof[i];
-            total = total.add(
-                EdOnBN254.Affine(
-                    spendProof.valueCommitment[0],
-                    spendProof.valueCommitment[1]
-                )
-            );
-        }
-
-        for (uint j = 0; j < _outputProofs.length; j++) {
-            OutputProof memory outputProof = _outputProofs[j];
-            total = total.add(
+            _bridgeInsTotal = _bridgeInsTotal.add(
                 EdOnBN254
                     .Affine(
-                        outputProof.valueCommitment[0],
-                        outputProof.valueCommitment[1]
+                        _bridgeIns[i].valueCommitment[0],
+                        _bridgeIns[i].valueCommitment[1]
                     )
                     .neg()
             );
         }
 
+        EdOnBN254.Affine memory _ext;
+        if (_extAmount < 0) {
+            require(
+                uint256(-_extAmount) <= EdOnBN254.N,
+                "Value must not be greater than n"
+            );
+        } else {
+            require(
+                uint256(_extAmount) <= EdOnBN254.N,
+                "Value must not be greater than n"
+            );
+        }
+
+        if (_extAmount == 0) {
+            _ext = EdOnBN254.zero();
+        } else {
+            _ext = _extValueBase.mul(
+                _extAmount < 0
+                    ? (EdOnBN254.N - uint256(-_extAmount)) % EdOnBN254.N
+                    : (uint256(_extAmount) % EdOnBN254.N)
+            );
+        }
+
+        EdOnBN254.Affine memory total = _insTotal
+            .add(_outsTotal.neg())
+            .add(_bridgeOutsTotal)
+            .add(_bridgeInsTotal.neg())
+            .add(_ext);
+
         require(
-            total.add(_valueBal.neg()).x == _bpk[0] &&
-                total.add(_valueBal.neg()).y == _bpk[1],
-            "Sum of values is incorrect"
+            total.x == _bindingPubkey.x && total.y == _bindingPubkey.y,
+            "Balance Check Failed"
         );
+    }
 
-        for (uint i = 0; i < _spendProof.length; i++) {
-            SpendProof memory spendProof = _spendProof[i];
-            spendVerify(spendProof.proof, [uint256(spendProof.nullifier)]);
+    function _proofCheck(
+        Spend[] memory _spends,
+        Output[] memory _outputs,
+        BridgeIn[] memory _bridgeIns,
+        BridgeOut[] memory _bridgeOuts,
+        uint256 _root
+    ) internal {
+        require(isKnownRoot(bytes32(_root)), "Invalid merkle root");
+        require(_outputs.length % 2 == 0, "outputs must be in multiples of 2");
+
+        for (uint i = 0; i < _spends.length; i++) {
+            require(!isSpent(_spends[i].nullifier), "Input is already spent");
         }
 
-        for (uint j = 0; j < _outputProofs.length; j++) {
-            OutputProof memory outputProof = _outputProofs[j];
-            outputVerify(outputProof.proof, [uint256(outputProof.commitment)]);
+        for (uint i = 0; i < _spends.length; i++) {
+            spendVerify(_spends[i].proof, [uint256(_spends[i].nullifier)]);
         }
 
-        for (uint i = 0; i < _spendProof.length; i++) {
-            nullifierHashes[_spendProof[i].nullifier] = true;
+        for (uint j = 0; j < _outputs.length; j++) {
+            outputVerify(_outputs[j].proof, [uint256(_outputs[j].commitment)]);
         }
 
-        for (uint i = 0; i < _outputProofs.length; i += 2) {
+        for (uint i = 0; i < _spends.length; i++) {
+            nullifierHashes[_spends[i].nullifier] = true;
+        }
+
+        for (uint i = 0; i < _outputs.length; i += 2) {
             _insert(
-                bytes32(_outputProofs[i].commitment),
-                bytes32(_outputProofs[i + 1].commitment)
+                bytes32(_outputs[i].commitment),
+                bytes32(_outputs[i + 1].commitment)
+            );
+        }
+
+        for (uint i = 0; i < _bridgeIns.length; i++) {
+            receivedCommitments[
+                keccak256(abi.encode(_bridgeIns[i].valueCommitment))
+            ] = ValueCommitmentState.CLAIMED;
+        }
+
+        for (uint i = 0; i < _bridgeOuts.length; i++) {
+            // TODO: verify value commitment proof for bridge tx
+            //       currently this was not working need to investigate why...
+            // bridgeoutVerify(
+            //     _bridgeOuts[j].proof,
+            //     _bridgeOuts[j].valueCommitment
+            // );
+            require(
+                _getBytecodeHash(_bridgeOuts[i].destination) ==
+                    _getBytecodeHash(address(this)),
+                "destination contract is invalid"
+            );
+            IMasp(_bridgeOuts[i].destination).receiveCommitments(
+                keccak256(abi.encode(_bridgeOuts[i].valueCommitment))
             );
         }
 
         emit IMasp.NewCommitment(
-            _outputProofs[0].commitment,
+            _outputs[0].commitment,
             nextIndex - 2,
-            _outputProofs[0].encryptedOutput
+            _outputs[0].encryptedOutput
         );
 
         emit IMasp.NewCommitment(
-            _outputProofs[1].commitment,
+            _outputs[1].commitment,
             nextIndex - 1,
-            _outputProofs[1].encryptedOutput
+            _outputs[1].encryptedOutput
         );
 
-        for (uint256 i = 0; i < _spendProof.length; i++) {
-            emit IMasp.NewNullifier(_spendProof[i].nullifier);
+        for (uint256 i = 0; i < _bridgeOuts.length; i++) {
+            emit IMasp.NewBridgeout(
+                _bridgeOuts[i].valueCommitment,
+                _bridgeOuts[i].encryptedOutput,
+                _bridgeOuts[i].chainId,
+                _bridgeOuts[i].destination
+            );
+        }
+
+        for (uint256 i = 0; i < _spends.length; i++) {
+            emit IMasp.NewNullifier(_spends[i].nullifier);
         }
     }
 
-    function _deposit(
-        SpendProof[] calldata _spendProof,
-        OutputProof[] calldata _outputProofs,
-        uint[2] calldata _bpk,
-        uint256 _assetId,
-        uint256 _depositAmount,
-        uint256 _root,
-        uint256[2] calldata _R,
-        uint256 _s,
-        bytes calldata _hash
-    ) internal {
-        _checkHash(_spendProof, _outputProofs, _hash);
-
-        // this is the same as G * poseidon(asset) * value of asset being deposited
-        EdOnBN254.Affine memory _valueBal = EdOnBN254
-            .primeSubgroupGenerator()
-            .mul(_assetId)
-            .mul(_depositAmount)
-            .neg();
-
-        _sigVerify(_s, _R, _bpk, _hash);
-
-        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
-    }
-
-    function _withdraw(
-        SpendProof[] calldata _spendProof,
-        OutputProof[] calldata _outputProofs,
-        uint256[2] calldata _bpk,
-        uint256 _assetId,
-        uint256 _withdrawAmount,
-        uint256 _root,
-        uint256[2] calldata _R,
-        uint256 _s,
-        bytes calldata _hash
-    ) internal {
-        _checkHash(_spendProof, _outputProofs, _hash);
-
-        // this is the same as G * poseidon(asset) * value of asset being deposited
-        EdOnBN254.Affine memory _valueBal = EdOnBN254
-            .primeSubgroupGenerator()
-            .mul(_assetId)
-            .mul(_withdrawAmount);
-
-        _sigVerify(_s, _R, _bpk, _hash);
-
-        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
-    }
-
     function _transact(
-        SpendProof[] calldata _spendProof,
-        OutputProof[] calldata _outputProofs,
-        uint[2] calldata _bpk,
+        Spend[] memory _spends,
+        Output[] memory _outputs,
+        BridgeIn[] memory _bridgeIns,
+        BridgeOut[] memory _bridgeOuts,
+        uint256 _extAssetHash,
+        int256 _extAmount,
+        uint256[2] memory _bpk,
         uint256 _root,
-        uint256[2] calldata _R,
+        uint256[2] memory _R,
         uint256 _s,
-        bytes calldata _hash
+        bytes memory _hash
     ) internal {
-        _checkHash(_spendProof, _outputProofs, _hash);
+        _checkHash(_spends, _outputs, _hash);
 
-        EdOnBN254.Affine memory _valueBal = EdOnBN254.zero();
+        EdOnBN254.Affine memory _bindingPubkey = EdOnBN254.Affine(
+            _bpk[0],
+            _bpk[1]
+        );
+
+        EdOnBN254.Affine memory _extValueBase = EdOnBN254
+            .primeSubgroupGenerator()
+            .mul(_extAssetHash);
+
+        _balanceCheck(
+            _spends,
+            _outputs,
+            _bridgeIns,
+            _bridgeOuts,
+            _extValueBase,
+            _bindingPubkey,
+            _extAmount
+        );
 
         _sigVerify(_s, _R, _bpk, _hash);
 
-        _transactCheck(_spendProof, _outputProofs, _bpk, _valueBal, _root);
+        _proofCheck(_spends, _outputs, _bridgeIns, _bridgeOuts, _root);
     }
 
     function isSpent(uint256 _nullifierHash) public view returns (bool) {

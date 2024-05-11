@@ -1,16 +1,14 @@
+
 pragma circom 2.0.0;
 
 include "../../node_modules/circomlib/circuits/poseidon.circom";
 include "./valcommit.circom";
 include "./babygpbk.circom";
 
-template Output() {
+template BridgeOut() {
 
   signal input amount;
-  signal input blinding;
   signal input assetId;
-  signal input assetIdHash;
-  signal input publicKey;
 
   // Value commit
   signal input Vx;
@@ -18,25 +16,14 @@ template Output() {
   signal input Rx;
   signal input Ry;
   signal input r;
-  signal input Cx;
-  signal input Cy;
-
-  // Note commitment
-  signal output commitment;
-
-  component commitmentHasher = Poseidon(4);
-  commitmentHasher.inputs[0] <== amount;
-  commitmentHasher.inputs[1] <== publicKey;
-  commitmentHasher.inputs[2] <== blinding;
-  commitmentHasher.inputs[3] <== assetIdHash;
-  commitment <== commitmentHasher.out;
+  signal output Cx;
+  signal output Cy;
 
   component assetHasher = Poseidon(1);
   assetHasher.inputs[0] <== assetId;
-  assetHasher.out === assetIdHash;
 
   component assetVb = BabyGPbk();
-  assetVb.in <== assetIdHash;
+  assetVb.in <== assetHasher.out;
   Vx === assetVb.Ax;
   Vy === assetVb.Ay;
   
@@ -48,8 +35,8 @@ template Output() {
   valcommit.v <== amount;
   valcommit.r <== r;
   
-  valcommit.out[0] === Cx;
-  valcommit.out[1] === Cy;
+  Cx <== valcommit.out[0];
+  Cy <== valcommit.out[1];
 }
 
 

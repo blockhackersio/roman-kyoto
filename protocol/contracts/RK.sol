@@ -6,7 +6,7 @@ import "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./MultiAssetShieldedPool.sol";
 
-contract RK is MultiAssetShieldedPool {
+contract RK is IMasp, MultiAssetShieldedPool {
     address owner;
 
     constructor(
@@ -42,81 +42,58 @@ contract RK is MultiAssetShieldedPool {
         );
     }
 
-    function deposit(
-        SpendProof[] calldata _spendProof,
-        OutputProof[] calldata _outputProofs,
-        uint256[2] calldata _bpk,
-        uint256 _assetId,
-        uint256 _depositAmount,
-        uint256 _root,
-        uint256[2] calldata _R,
-        uint256 _s,
-        bytes calldata _hash
-    ) external {
-        // transfer the users asset to this address
-        SupportedAsset memory _asset = assetToAddress[_assetId];
-        require(_asset.assetAddress != address(0), "Asset not supported");
-
-        // transfer the asset to this contract
-        IERC20(_asset.assetAddress).transferFrom(
-            msg.sender,
-            address(this),
-            _depositAmount
-        );
-
-        // call our deposit function (the proofs are verified in this function)
-        _deposit(
-            _spendProof,
-            _outputProofs,
-            _bpk,
-            _assetId,
-            _depositAmount,
-            _root,
-            _R,
-            _s,
-            _hash
-        );
-    }
-
-    function withdraw(
-        SpendProof[] calldata _spendProof,
-        OutputProof[] calldata _outputProofs,
-        uint[2] calldata _bpk,
-        uint256 _assetId,
-        uint256 _withdrawAmount,
-        uint256 _root,
-        uint256[2] calldata _R,
-        uint256 _s,
-        bytes calldata _hash
-    ) external {
-        SupportedAsset memory _asset = assetToAddress[_assetId];
-        require(_asset.assetAddress != address(0), "Asset not supported");
-
-        _withdraw(
-            _spendProof,
-            _outputProofs,
-            _bpk,
-            _assetId,
-            _withdrawAmount,
-            _root,
-            _R,
-            _s,
-            _hash
-        );
-
-        // transfer the asset to this contract
-        IERC20(_asset.assetAddress).transfer(msg.sender, _withdrawAmount);
-    }
-
     function transact(
-        SpendProof[] calldata _spendProof,
-        OutputProof[] calldata _outputProofs,
-        uint[2] calldata _bpk,
+        Spend[] calldata _spends,
+        Output[] calldata _outputs,
+        BridgeIn[] calldata _bridgeIns,
+        BridgeOut[] calldata _bridgeOuts,
+        uint256 _extAssetHash,
+        int256 _extAmount,
+        uint256[2] calldata _bpk,
         uint256 _root,
         uint256[2] calldata _R,
         uint256 _s,
         bytes calldata _hash
     ) external {
-        _transact(_spendProof, _outputProofs, _bpk, _root, _R, _s, _hash);
+        if (_extAmount > 0) {
+            SupportedAsset memory _asset = assetToAddress[_extAssetHash];
+            require(_asset.assetAddress != address(0), "Asset not supported");
+
+            // transfer the asset to this contract
+            IERC20(_asset.assetAddress).transferFrom(
+                msg.sender,
+                address(this),
+                uint256(_extAmount)
+            );
+        }
+
+        _transact(
+            _spends,
+            _outputs,
+            _bridgeIns,
+            _bridgeOuts,
+            _extAssetHash,
+            _extAmount,
+            _bpk,
+            _root,
+            _R,
+            _s,
+            _hash
+        );
+
+        if (_extAmount < 0) {
+            SupportedAsset memory _asset = assetToAddress[_extAssetHash];
+            require(_asset.assetAddress != address(0), "Asset not supported");
+
+            // transfer the asset to this contract
+            IERC20(_asset.assetAddress).transfer(
+                msg.sender,
+                uint256(-_extAmount)
+            );
+        }
+    }
+    
+    function receiveCommitments(bytes32 _commitment) external {
+        _receiveCommitments(_commitment);
     }
 }

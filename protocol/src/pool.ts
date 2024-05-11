@@ -1,6 +1,5 @@
 import { Signer } from "ethers";
-import { IMasp__factory, MultiAssetShieldedPool__factory } from "../typechain-types";
-import { OutputProof, SpendProof } from ".";
+import { MultiAssetShieldedPool__factory } from "../typechain-types";
 
 // These are more for testing
 export async function outputVerify(

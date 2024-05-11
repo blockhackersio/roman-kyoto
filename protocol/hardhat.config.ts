@@ -42,6 +42,7 @@ const config: HardhatUserConfig = {
         enabled: true,
         runs: 10000,
       },
+      viaIR: true,
     },
   },
 
@@ -70,6 +71,7 @@ const config: HardhatUserConfig = {
   },
 
   gasReporter: {
+    enabled: process.env.DONT_REPORT_GAS ? false : true,
     currency: "ETH",
     L1: "ethereum",
     gasPrice: 21,

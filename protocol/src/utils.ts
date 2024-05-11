@@ -2,8 +2,15 @@ import MerkleTree from "fixed-merkle-tree";
 import { poseidonHash2 } from "./poseidon";
 import { IMasp } from "../typechain-types";
 
-export function toStr(b: bigint): string {
-  return "0x" + b.toString(16);
+export function toStr(b: bigint | string): string {
+  if (typeof b === "string") {
+    return b;
+  }
+  if (b >= 0n) {
+    return "0x" + b.toString(16);
+  } else {
+    return b.toString();
+  }
 }
 
 export async function buildMerkleTree(contract: IMasp) {

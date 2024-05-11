@@ -8,7 +8,7 @@ import { MaspWallet } from "../src/wallet";
 import { getKeys } from "../src/keypair";
 import { buildMerkleTree } from "../src/utils";
 
-describe("CCIP functionality testing", async () => {
+describe("Roman Kyoto functionality testing", async () => {
   it("integrate", async () => {
     const { RK, Deployer, testUSDC, testWBTC, rkAddress } = await loadFixture(
       deployRK

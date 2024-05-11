@@ -1,8 +1,10 @@
 import { ContractTransactionReceipt, Interface, LogDescription } from "ethers";
 import { IMasp__factory } from "../typechain-types";
 import { Note } from "./note";
+import { ValueCommitment } from "./vc";
 
 type MetaNote = { note: Note; nullifier: string; index: bigint };
+type MetaBridge = { vc: ValueCommitment; chainId: bigint; destination: string };
 
 function getNoteCommitmentEvents(receipt: ContractTransactionReceipt | null) {
   if (!receipt) throw new Error("receipt was null!");
@@ -24,13 +26,19 @@ export class MaspWallet {
   constructor(
     private privateKey: string,
     private notes: MetaNote[],
-    private nullifiers: string[]
-  ) { }
+    private bridgeOuts: MetaBridge[],
+    private nullifiers: string[],
+    private name: string = "unknown"
+  ) {}
 
   getUnspentNotes() {
     return this.notes.filter((note) => {
       return !this.nullifiers.includes(note.nullifier);
     });
+  }
+
+  getBridgeOuts() {
+    return this.bridgeOuts;
   }
 
   async getNotesUpTo(amount: bigint, asset: string) {
@@ -53,8 +61,8 @@ export class MaspWallet {
 
     for (let ev of events) {
       if (ev.name === "NewCommitment") {
-        const cypher = ev.args[2] as string;
         const index = ev.args[1] as bigint;
+        const cypher = ev.args[2] as string;
         try {
           const note = Note.decrypt(this.privateKey, cypher);
           const nullifier = await note.nullifier("0x" + this.privateKey, index);
@@ -63,7 +71,17 @@ export class MaspWallet {
             nullifier,
             note,
           });
-        } catch (err) { }
+        } catch (err) {}
+      }
+      if (ev.name === "NewBridgeout") {
+        const encrypted = ev.args[1];
+        const chainId = ev.args[2];
+        const destination = ev.args[3];
+        this.bridgeOuts.push({
+          vc: ValueCommitment.decrypt(this.privateKey, encrypted),
+          chainId,
+          destination,
+        });
       }
       if (ev.name === "NewNullifier") {
         this.nullifiers.push(ev.args[0].toString());
@@ -85,15 +103,27 @@ export class MaspWallet {
     const balances = await Promise.all(
       assets.map((asset) => this.getBalance(asset))
     );
+    console.log(`\n Balances(${this.name})`);
     console.table(
       balances.map((bal, i) => ({
         Asset: assets[i],
         Balance: bal,
       }))
     );
+    this.bridgeOuts.length > 0 &&
+      (() => {
+        console.log("Transfers to other chains");
+        console.table(
+          this.bridgeOuts.map(({ vc, ...b }) => ({
+            ...b,
+            amount: vc.amount,
+            asset: vc.asset.getSymbol(),
+          }))
+        );
+      })();
   }
 
-  static fromPrivateKey(privateKey: string) {
-    return new MaspWallet(privateKey, [], []);
+  static fromPrivateKey(privateKey: string, name?: string) {
+    return new MaspWallet(privateKey, [], [], [], name);
   }
 }

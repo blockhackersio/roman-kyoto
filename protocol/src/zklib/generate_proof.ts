@@ -8,7 +8,6 @@ export async function generateGroth16Proof(
 ) {
   const wasmLocation = getWasmFileLocation(circuitName);
   const zkeyLocation = getZkeyFileLocation(circuitName);
-
   const start = Date.now();
   const { proof } = await groth16.fullProve(inputs, wasmLocation, zkeyLocation);
   const time = Date.now() - start;
