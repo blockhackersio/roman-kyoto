@@ -121,19 +121,6 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         );
     }
 
-    function toUint256ModN(
-        int256 value,
-        uint256 n
-    ) internal pure returns (uint256) {
-        if (value < 0) {
-            require(uint256(-value) <= n, "Value must not be greater than n");
-            return (n - uint256(-value)) % n;
-        } else {
-            require(uint256(value) <= n, "Value must not be greater than n");
-            return uint256(value) % n;
-        }
-    }
-
     function _balanceCheck(
         Spend[] memory _ins,
         Output[] memory _outs,
@@ -144,7 +131,6 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         int256 _extAmount
     ) internal view {
         // Sum up ins and outs
-
         EdOnBN254.Affine memory _insTotal = EdOnBN254.zero();
         EdOnBN254.Affine memory _outsTotal = EdOnBN254.zero();
         EdOnBN254.Affine memory _bridgeInsTotal = EdOnBN254.zero();
@@ -174,9 +160,28 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
             );
         }
 
-        EdOnBN254.Affine memory _ext = _extAmount == 0
-            ? EdOnBN254.zero()
-            : _extValueBase.mul(toUint256ModN(_extAmount, EdOnBN254.N));
+        EdOnBN254.Affine memory _ext;
+        if (_extAmount < 0) {
+            require(
+                uint256(-_extAmount) <= EdOnBN254.N,
+                "Value must not be greater than n"
+            );
+        } else {
+            require(
+                uint256(_extAmount) <= EdOnBN254.N,
+                "Value must not be greater than n"
+            );
+        }
+
+        if (_extAmount == 0) {
+            _ext = EdOnBN254.zero();
+        } else {
+            _ext = _extValueBase.mul(
+                _extAmount < 0
+                    ? (EdOnBN254.N - uint256(-_extAmount)) % EdOnBN254.N
+                    : (uint256(_extAmount) % EdOnBN254.N)
+            );
+        }
 
         EdOnBN254.Affine memory total = _insTotal
             .add(_outsTotal.neg())

@@ -83,6 +83,10 @@ export async function transfer(
   return await masp.transact(
     spends,
     outputs,
+    [],
+    [],
+    await Asset.fromTicker(asset).getIdHash(),
+    0n,
     [toStr(Bpk.x), toStr(Bpk.y)],
     `${tree.root}`,
     [toStr(sig.R.x), toStr(sig.R.y)],
@@ -128,12 +132,14 @@ export async function deposit(
 
   const masp = IMasp__factory.connect(poolAddress, signer);
 
-  return await masp.deposit(
+  return await masp.transact(
     spends,
     outputs,
-    [toStr(Bpk.x), toStr(Bpk.y)],
+    [],
+    [],
     await Asset.fromTicker(asset).getIdHash(),
     toStr(amount),
+    [toStr(Bpk.x), toStr(Bpk.y)],
     `${tree.root}`,
     [toStr(sig.R.x), toStr(sig.R.y)],
     toStr(sig.s),
@@ -182,12 +188,14 @@ export async function withdraw(
 
   const masp = IMasp__factory.connect(poolAddress, signer);
 
-  return await masp.withdraw(
+  return await masp.transact(
     spends,
     outputs,
-    [toStr(Bpk.x), toStr(Bpk.y)],
+    [],
+    [],
     await Asset.fromTicker(asset).getIdHash(),
-    toStr(amount),
+    toStr(-amount),
+    [toStr(Bpk.x), toStr(Bpk.y)],
     `${tree.root}`,
     [toStr(sig.R.x), toStr(sig.R.y)],
     toStr(sig.s),
