@@ -8,7 +8,7 @@ import { z } from "zod";
 export class ValueCommitment {
   private r: bigint;
 
-  constructor(private asset: Asset, private amount: bigint) {
+  constructor(public asset: Asset, public amount: bigint) {
     this.r = getRandomBigInt(253);
   }
 
