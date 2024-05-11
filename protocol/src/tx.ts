@@ -4,13 +4,19 @@ import { Note, toXY } from "./note";
 import MerkleTree from "fixed-merkle-tree";
 import { toStr } from "./utils";
 import { generateGroth16Proof, toFixedHex } from "./zklib";
-import { R, modN } from "./curve";
+import { B, R, modN, modP } from "./curve";
 import { reddsaSign, reddsaVerify } from "./reddsa";
 import { Keyset } from "./keypair";
 import { ValueCommitment } from "./vc";
+import { ExtPointType } from "@noble/curves/abstract/edwards";
 
 // TODO: add bridges to hash
-function encodeTxInputs(spends: Spend[], outputs: Output[], bridgeIns: BridgeIn[], bridgeOuts:BridgeOut[]) {
+function encodeTxInputs(
+  spends: Spend[],
+  outputs: Output[],
+  bridgeIns: BridgeIn[],
+  bridgeOuts: BridgeOut[]
+) {
   const nullifiers = [];
   const valueCommitments = [];
   const commitments = [];
@@ -117,6 +123,29 @@ export async function spendProve(
   );
 }
 
+export async function bridgeoutProve(
+  amount: string,
+  assetId: string,
+  Vx: string,
+  Vy: string,
+  Rx: string,
+  Ry: string,
+  r: string
+) {
+  return await generateGroth16Proof(
+    {
+      amount,
+      assetId,
+      Vx,
+      Vy,
+      Rx,
+      Ry,
+      r,
+    },
+    "bridgeout"
+  );
+}
+
 async function processSpend(spender: Keyset, tree: MerkleTree, n: Note) {
   const nc = await n.commitment();
   const vc = ValueCommitment.fromNote(n);
@@ -146,6 +175,7 @@ async function processSpend(spender: Keyset, tree: MerkleTree, n: Note) {
       valueCommitment: await vc.toXY(),
       nullifier: nullifier,
     },
+    vc,
   };
 }
 
@@ -180,7 +210,56 @@ async function processOutput(sender: Keyset, receiver: Keyset, n: Note) {
       commitment: nc,
       encryptedOutput,
     },
+    vc,
   };
+}
+
+type ValueInput = {
+  ins: ValueCommitment[];
+  outs: ValueCommitment[];
+  bridgeOuts: ValueCommitment[];
+  bridgeIns: ValueCommitment[];
+  extValueBase: ExtPointType;
+  extAmount: bigint;
+};
+
+async function checkValueBalance({
+  ins,
+  outs,
+  bridgeOuts,
+  bridgeIns,
+}: ValueInput) {
+  let sumRIns = 0n;
+  let sumROuts = 0n;
+  let sumRBridgeOut = 0n;
+  let sumRBridgeIn = 0n;
+
+  let sumIns = B.ExtendedPoint.ZERO;
+  let sumOuts = B.ExtendedPoint.ZERO;
+  let sumBridgeOut = B.ExtendedPoint.ZERO;
+  let sumBridgeIn = B.ExtendedPoint.ZERO;
+
+  for (let vc of ins) {
+    sumRIns += vc.getRandomness();
+    sumIns = sumIns.add(await vc.toPoint());
+  }
+
+  for (let vc of outs) {
+    sumROuts += vc.getRandomness();
+    sumOuts = sumOuts.add(await vc.toPoint());
+  }
+
+  for (let vc of bridgeOuts) {
+    sumRBridgeOut += vc.getRandomness();
+    sumBridgeOut = sumBridgeOut.add((await vc.toPoint()).negate());
+  }
+
+  for (let vc of bridgeIns) {
+    sumRBridgeIn += vc.getRandomness();
+    sumBridgeIn = sumBridgeIn.add((await vc.toPoint()).negate());
+  }
+  // yti... was using this to debug but the problem appeared to be solved.
+  // maskes sense to validate value balance on the client before sending though...
 }
 
 export async function prepareTx(
@@ -198,25 +277,46 @@ export async function prepareTx(
   const bridgeIns: BridgeIn[] = [];
   const bridgeOuts: BridgeOut[] = [];
 
+  const vcs = {
+    ins: [] as ValueCommitment[],
+    outs: [] as ValueCommitment[],
+    bridgeOuts: [] as ValueCommitment[],
+    bridgeIns: [] as ValueCommitment[],
+    extValueBase: B.ExtendedPoint.ZERO,
+    extAmount: 0n,
+  };
+
   for (let n of spendList) {
     const result = await processSpend(sender, tree, n);
     totalRandomness = modN(totalRandomness + result.r);
     spends.push(result.spend);
+    vcs.ins.push(result.vc);
   }
 
   for (let n of outputList) {
     const result = await processOutput(sender, receiver, n);
     totalRandomness = modN(totalRandomness - result.r);
     outputs.push(result.output);
+    vcs.outs.push(result.vc);
   }
 
   for (let { note, chainId, destination } of bridgeOutList) {
-    const result = await processOutput(sender, receiver, note);
-
-    const { proof } = result.output;
     const vc = ValueCommitment.fromNote(note);
+    const valueBase = await vc.asset.getValueBase();
+
+    // const result = await processOutput(sender, receiver, note);
+    const proof = await bridgeoutProve(
+      toStr(vc.amount),
+      toStr(vc.asset.getId()),
+      toStr(valueBase.x),
+      toStr(valueBase.y),
+      toStr(R.x),
+      toStr(R.y),
+      toStr(vc.getRandomness())
+    );
+
     const encryptedOutput = vc.encrypt(sender.encryptionKey);
-    totalRandomness = modN(totalRandomness + result.r);
+    totalRandomness = modN(totalRandomness - vc.getRandomness());
 
     bridgeOuts.push({
       valueCommitment: await vc.toXY(),
@@ -225,17 +325,22 @@ export async function prepareTx(
       chainId,
       destination,
     });
+    vcs.bridgeOuts.push(vc);
   }
 
   for (let vc of bridgeInList) {
     const r = vc.getRandomness();
-    totalRandomness = modN(totalRandomness - r);
+    totalRandomness = modN(totalRandomness + r);
     bridgeIns.push({ valueCommitment: await vc.toXY() });
+    vcs.bridgeIns.push(vc);
   }
 
   // Create sig
   const bsk = totalRandomness;
   const Bpk = R.multiply(bsk);
+
+  // test clientside value check
+  checkValueBalance(vcs);
 
   const encoded = encodeTxInputs(spends, outputs, bridgeIns, bridgeOuts);
   const hash = keccak256(encoded);

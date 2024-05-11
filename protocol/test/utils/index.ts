@@ -108,3 +108,64 @@ export async function deployMasp() {
 
   return { MASP };
 }
+
+export async function deployDoubleMasp() {
+  await hre.deployments.fixture("testbed");
+  const [Deployer] = await ethers.getSigners();
+
+  const OutputVerifierSource = await hre.deployments.get(
+    "OutputVerifierSource"
+  );
+
+  const SpendVerifierSource = await hre.deployments.get("SpendVerifierSource");
+
+  // deploy our EdOnBN254 library
+  await hre.deployments.deploy("EdOnBN254", {
+    contract: "EdOnBN254",
+    from: Deployer.address,
+  });
+  const EdOnBN254 = (await hre.deployments.get("EdOnBN254")).address;
+
+  const Hasher = await hre.deployments.get("Hasher");
+
+  // next we deploy our MultiAssetShieldedPool contract for unit tests
+  await hre.deployments.deploy("SourcePool", {
+    contract: "MaspTest",
+    from: Deployer.address,
+    args: [
+      SpendVerifierSource.address,
+      OutputVerifierSource.address,
+      Hasher.address,
+    ],
+    libraries: {
+      EdOnBN254: EdOnBN254,
+    },
+  });
+
+  const SourcePool = IMasp__factory.connect(
+    (await hre.deployments.get("SourcePool")).address,
+    Deployer
+  );
+
+  // next we deploy our MultiAssetShieldedPool contract for unit tests
+  await hre.deployments.deploy("DestPool", {
+    contract: "MaspTest",
+    from: Deployer.address,
+    args: [
+      SpendVerifierSource.address,
+      OutputVerifierSource.address,
+      Hasher.address,
+    ],
+    libraries: {
+      EdOnBN254: EdOnBN254,
+    },
+  });
+
+  const DestPool = IMasp__factory.connect(
+    (await hre.deployments.get("DestPool")).address,
+    Deployer
+  );
+
+
+  return { SourcePool, DestPool };
+}

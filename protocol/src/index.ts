@@ -225,7 +225,7 @@ export async function bridge(
       " to " +
       chainId +
       ":" +
-      destinationPool
+      shrtn(destinationPool)
   );
 
   if (signer.provider === null) throw new Error("Signer must have a provider");
@@ -246,17 +246,19 @@ export async function bridge(
   // create a zero note so that we have a multiple of 2 notes
   outputList.push(Note.create(0n, sender.publicKey, asset));
 
-  const { sig, Bpk, spends, outputs, hash } = await prepareTx(
+  const bridgeOutList = [
+    {
+      note: Note.create(amount, receiver.publicKey, asset),
+      chainId,
+      destination: destinationPool,
+    },
+  ];
+
+  const { sig, Bpk, spends, outputs, bridgeOuts, hash } = await prepareTx(
     spendList,
     outputList,
     [],
-    [
-      {
-        note: Note.create(amount, receiver.publicKey, asset),
-        chainId,
-        destination: destinationPool,
-      },
-    ],
+    bridgeOutList,
     tree,
     sender,
     sender
@@ -268,9 +270,9 @@ export async function bridge(
     spends,
     outputs,
     [],
-    [],
+    bridgeOuts,
     await Asset.fromTicker(asset).getIdHash(),
-    toStr(-amount),
+    toStr(0n),
     [toStr(Bpk.x), toStr(Bpk.y)],
     `${tree.root}`,
     [toStr(sig.R.x), toStr(sig.R.y)],

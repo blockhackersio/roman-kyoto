@@ -9,7 +9,7 @@ export function toStr(b: bigint | string): string {
   if (b >= 0n) {
     return "0x" + b.toString(16);
   } else {
-    return "-0x" + b.toString(16).replace(/^-/,'');
+    return b.toString();
   }
 }
 

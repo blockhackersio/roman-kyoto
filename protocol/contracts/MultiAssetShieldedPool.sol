@@ -3,16 +3,19 @@ pragma solidity ^0.8.24;
 
 import {SpendVerifier} from "./verifiers/SpendVerifier.sol";
 import {OutputVerifier} from "./verifiers/OutputVerifier.sol";
+import {BridgeoutVerifier} from "./verifiers/BridgeoutVerifier.sol";
 import {IMasp, Spend, Output, BridgeIn, BridgeOut} from "./interfaces/IMasp.sol";
 import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
 
 import "./EdOnBN254.sol";
+import "hardhat/console.sol";
 
 contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     using EdOnBN254 for *;
 
     SpendVerifier public spendVerifier;
     OutputVerifier public outputVerifier;
+    BridgeoutVerifier public bridgeoutVerifier;
 
     mapping(uint256 => bool) public nullifierHashes;
 
@@ -60,6 +63,19 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         require(
             outputVerifier.verifyProof(a, b, c, _pubSignals),
             "invalid proof"
+        );
+    }
+
+    function bridgeoutVerify(
+        bytes memory _proof,
+        uint[2] memory _pubSignals
+    ) public view {
+        (uint[2] memory a, uint[2][2] memory b, uint[2] memory c) = parseProof(
+            _proof
+        );
+        require(
+            bridgeoutVerifier.verifyProof(a, b, c, _pubSignals),
+            "invalid bridgeout proof"
         );
     }
 
@@ -146,17 +162,17 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
             _outsTotal = _outsTotal.add(EdOnBN254.Affine(vc[0], vc[1]));
         }
 
-        for (uint i = 0; i < _bridgeIns.length; i++) {
-            uint256[2] memory vc = _bridgeIns[i].valueCommitment;
-            _bridgeInsTotal = _bridgeInsTotal.add(
-                EdOnBN254.Affine(vc[0], vc[1])
-            );
-        }
-
         for (uint i = 0; i < _bridgeOuts.length; i++) {
             uint256[2] memory vc = _bridgeOuts[i].valueCommitment;
             _bridgeOutsTotal = _bridgeOutsTotal.add(
-                EdOnBN254.Affine(vc[0], vc[1])
+                EdOnBN254.Affine(vc[0], vc[1]).neg()
+            );
+        }
+
+        for (uint i = 0; i < _bridgeIns.length; i++) {
+            uint256[2] memory vc = _bridgeIns[i].valueCommitment;
+            _bridgeInsTotal = _bridgeInsTotal.add(
+                EdOnBN254.Affine(vc[0], vc[1]).neg()
             );
         }
 
@@ -198,6 +214,7 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     function _proofCheck(
         Spend[] memory _spends,
         Output[] memory _outputs,
+        BridgeOut[] memory _bridgeOuts,
         uint256 _root
     ) internal {
         require(isKnownRoot(bytes32(_root)), "Invalid merkle root");
@@ -214,6 +231,15 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         for (uint j = 0; j < _outputs.length; j++) {
             outputVerify(_outputs[j].proof, [uint256(_outputs[j].commitment)]);
         }
+
+        // TODO: verify value commitment proof for bridge tx
+        //       currently this was not working need to investigate why...
+        // for (uint j = 0; j < _bridgeOuts.length; j++) {
+        //     bridgeoutVerify(
+        //         _bridgeOuts[j].proof,
+        //         _bridgeOuts[j].valueCommitment
+        //     );
+        // }
 
         for (uint i = 0; i < _spends.length; i++) {
             nullifierHashes[_spends[i].nullifier] = true;
@@ -237,6 +263,15 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
             nextIndex - 1,
             _outputs[1].encryptedOutput
         );
+
+        for (uint256 i = 0; i < _bridgeOuts.length; i++) {
+            emit IMasp.NewBridgeout(
+                _bridgeOuts[i].valueCommitment,
+                _bridgeOuts[i].encryptedOutput,
+                _bridgeOuts[i].chainId,
+                _bridgeOuts[i].destination
+            );
+        }
 
         for (uint256 i = 0; i < _spends.length; i++) {
             emit IMasp.NewNullifier(_spends[i].nullifier);
@@ -279,7 +314,7 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
 
         _sigVerify(_s, _R, _bpk, _hash);
 
-        _proofCheck(_spends, _outputs, _root);
+        _proofCheck(_spends, _outputs, _bridgeOuts, _root);
     }
 
     function isSpent(uint256 _nullifierHash) public view returns (bool) {

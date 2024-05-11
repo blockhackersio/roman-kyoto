@@ -3,9 +3,8 @@ import { Asset } from "./asset";
 import { getRandomBigInt } from "./curve";
 import { ensurePoseidon, poseidonHash } from "./poseidon";
 import { toStr } from "./utils";
-import { dataDecrypt, dataEncrypt } from "./zklib";
+import { dataDecrypt, dataEncrypt, toFixedHex } from "./zklib";
 import { z } from "zod";
-import { ValueCommitment } from "./vc";
 
 export async function signature(
   privateKey: string,
@@ -82,7 +81,7 @@ export class Note {
 }
 
 export function toXY(point: ExtPointType): [string, string] {
-  return [toStr(point.x), toStr(point.y)];
+  return [toFixedHex(point.x), toFixedHex(point.y)];
 }
 
 const JsonNoteSchema = z.object({

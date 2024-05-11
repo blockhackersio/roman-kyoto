@@ -1,10 +1,10 @@
 import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
-import { deposit, transfer, withdraw } from "../src/index";
+import { bridge, deposit, transfer, withdraw } from "../src/index";
 import { ensurePoseidon } from "../src/poseidon";
 import { Wallet } from "ethers";
-import { deployMasp } from "./utils";
+import { deployDoubleMasp, deployMasp } from "./utils";
 import { expect } from "chai";
 import { MaspWallet } from "../src/wallet";
 import { getKeys } from "../src/keypair";
@@ -14,7 +14,7 @@ import { ValueCommitment } from "../src/vc";
 import { ExtPointType } from "@noble/curves/abstract/edwards";
 import { B, R, modN } from "../src/curve";
 
-export async function getMultiAssetShieldedPoolContract() { }
+export async function getMultiAssetShieldedPoolContract() {}
 
 async function getRandomKeys() {
   return await getKeys(BigInt(Wallet.createRandom().privateKey));
@@ -58,12 +58,12 @@ async function ensureValueBalance(
 
   for (let vc of bridgeOut) {
     sumRBridgeOut += vc.getRandomness();
-    sumBridgeOut = sumBridgeOut.add(await vc.toPoint());
+    sumBridgeOut = sumBridgeOut.add((await vc.toPoint()).negate());
   }
 
   for (let vc of bridgeIn) {
     sumRBridgeIn += vc.getRandomness();
-    sumBridgeIn = sumBridgeIn.add(await vc.toPoint());
+    sumBridgeIn = sumBridgeIn.add((await vc.toPoint()).negate());
   }
 
   const ext =
@@ -71,8 +71,8 @@ async function ensureValueBalance(
       ? B.ExtendedPoint.ZERO
       : extValueBase.multiply(modN(extAmount));
 
-  const totalR = sumRIns - sumROuts + sumRBridgeOut - sumRBridgeIn;
-  
+  const totalR = sumRIns - sumROuts - sumRBridgeOut + sumRBridgeIn;
+
   expect(
     sumIns
       .subtract(sumOuts)
@@ -133,15 +133,16 @@ it("should value balance when bridging out 10", async () => {
   ];
   const outs = [ValueCommitment.create("USDC", 10n)];
   const bridgeIn: ValueCommitment[] = [];
-  const bridgeOut = [ValueCommitment.create("USDC", -10n)]; // NOTE: bridging commitment represents the withdrawal and is negative the value
+  const bridgeOut = [ValueCommitment.create("USDC", 10n)]; // NOTE: bridging commitment represents the withdrawal and is negative the value
 
   await ensureValueBalance(ins, outs, bridgeOut, bridgeIn, valueBase, 0n);
 });
+
 it("should value balance when bridging in 10", async () => {
   const valueBase = await Asset.fromTicker("USDC").getValueBase();
   const ins = [ValueCommitment.create("USDC", 10n)];
   const outs = [ValueCommitment.create("USDC", 20n)];
-  const bridgeIn = [ValueCommitment.create("USDC", -10n)]; // NOTE: bridging commitment represents the withdrawal and is negative the value
+  const bridgeIn = [ValueCommitment.create("USDC", 10n)]; // NOTE: bridging commitment represents the withdrawal and is negative the value
 
   const bridgeOut: ValueCommitment[] = [];
 
@@ -223,4 +224,45 @@ it("integrate single pool", async () => {
 
   expect(await wallet.getBalance("USDC")).to.equal(40n);
   expect(await wallet.getBalance("WBTC")).to.equal(2n);
+});
+
+it.only("should bridge funds between pools", async () => {
+  const { SourcePool, DestPool } = await loadFixture(deployDoubleMasp);
+  const srcAddr = await SourcePool.getAddress();
+  const destAddr = await DestPool.getAddress();
+  const signer = await ethers.provider.getSigner();
+  const net = await ethers.provider.getNetwork();
+
+  let tree = await buildMerkleTree(SourcePool);
+  const spender = await getRandomKeys();
+
+  const wallet = MaspWallet.fromPrivateKey(spender.privateKey.toString(16));
+
+  await wallet.logBalances();
+
+  expect(await wallet.getBalance("USDC")).to.equal(0n);
+  expect(await wallet.getBalance("WBTC")).to.equal(0n);
+  let tx = await deposit(signer, srcAddr, 100n, spender, "USDC", tree);
+
+  let receipt = await tx.wait();
+  await wallet.updateFromReceipt(receipt);
+  await wallet.logBalances();
+  tree = await buildMerkleTree(SourcePool);
+
+  tx = await bridge(
+    signer,
+    srcAddr,
+    destAddr,
+    `${net.chainId}`,
+    50n,
+    spender,
+    spender,
+    "USDC",
+    tree,
+    wallet
+  );
+
+  receipt = await tx.wait();
+  await wallet.updateFromReceipt(receipt);
+  await wallet.logBalances();
 });
