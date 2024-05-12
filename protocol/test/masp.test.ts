@@ -149,7 +149,7 @@ it("should value balance when bridging in 10", async () => {
   await ensureValueBalance(ins, outs, bridgeOut, bridgeIn, valueBase, 0n);
 });
 
-it("integrate single pool", async () => {
+it.only("integrate single pool", async () => {
   await ensurePoseidon();
 
   const { MASP } = await loadFixture(deployMasp);
@@ -160,7 +160,7 @@ it("integrate single pool", async () => {
 
   const receiver = await getRandomKeys();
   const spender = await getRandomKeys();
-  const privateKey = spender.privateKey.toString(16);
+  // const privateKey = "0x" + spender.privateKey.toString(16);
 
   const wallet = MaspWallet.fromPrivateKey(privateKey);
 

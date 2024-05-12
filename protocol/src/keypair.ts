@@ -7,7 +7,6 @@ export type Keyset = {
   privateKey: bigint;
 };
 
-
 // TODO: generate key from metamask entropy + passed user password
 // TODO: then hash out different private keys for encryption and hash sigs
 // Use this to get the public keys from a users private key
@@ -19,11 +18,12 @@ export async function getKeys(privateKey: bigint) {
 
   const publicKey = poseidonHash([privateKey]);
 
-  return {
+  const keys = {
     encryptionKey,
     publicKey,
     privateKey: BigInt(privateKey),
   };
+
+  console.log({ keys });
+  return keys;
 }
-
-
