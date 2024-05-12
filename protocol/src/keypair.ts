@@ -25,6 +25,5 @@ export async function getKeys(privateKey: bigint) {
     privateKey: BigInt(privateKey),
   };
 
-  console.log({ keys });
   return keys;
 }

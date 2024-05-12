@@ -1,6 +1,10 @@
-
 import { deployments } from "hardhat";
-import { RK, RK__factory, USDC__factory, WBTC__factory } from "../typechain-types";
+import {
+  RK,
+  RK__factory,
+  USDC__factory,
+  WBTC__factory,
+} from "../typechain-types";
 import { Wallet, formatUnits } from "ethers";
 import { MaspWallet } from "../src";
 
@@ -18,7 +22,11 @@ export async function getWBTC(wallet: Wallet) {
   return WBTC;
 }
 
-export async function logShieldedBalances(wallet: Wallet, name: string, RK:RK) {
+export async function logShieldedBalances(
+  wallet: Wallet,
+  name: string,
+  RK: RK
+) {
   const sw = await MaspWallet.fromWallet(name, wallet);
 
   await sw.updateFromContract(await RK.getAddress(), wallet);
@@ -42,9 +50,13 @@ export async function logUnshieldedBalances(wallet: Wallet, name: string) {
   });
 }
 
-export async function logBalances(wallet: Wallet, name: string, RK:RK) {
-  await logShieldedBalances(wallet, name, RK);
-  await logUnshieldedBalances(wallet, name);
+export async function logBalances(wallet: Wallet, name: string|string[], RK: RK | RK[]) {
+  const names = Array.isArray(name) ? name : [name];
+  const rks = Array.isArray(RK) ? RK : [RK];
+  for (let i=0; i<rks.length; i++) {
+    await logShieldedBalances(wallet, names[i], rks[i]);
+  }
+  await logUnshieldedBalances(wallet, names[0]);
 }
 
 export async function getRK(wallet: Wallet) {
@@ -58,4 +70,3 @@ export async function getRK2(wallet: Wallet) {
   const RK = RK__factory.connect(dRK.address, wallet);
   return RK;
 }
-
