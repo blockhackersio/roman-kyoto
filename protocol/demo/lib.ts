@@ -30,7 +30,7 @@ export async function logShieldedBalances(
   const sw = await MaspWallet.fromWallet(name, wallet);
 
   await sw.updateFromContract(await RK.getAddress(), wallet);
-
+  const bridged = sw.getBridgeOuts().map(({ vc }) => vc.serialize64());
   const usdcBal = await sw.getBalance("USDC");
   const wbtcBal = await sw.getBalance("WBTC");
   console.log("Shielded  (" + name + ")");
@@ -38,6 +38,7 @@ export async function logShieldedBalances(
   console.table({
     USDC: formatUnits(usdcBal, 6),
     WBTC: formatUnits(wbtcBal, 18),
+    bridged
   });
 }
 export async function logUnshieldedBalances(wallet: Wallet, name: string) {
@@ -50,10 +51,14 @@ export async function logUnshieldedBalances(wallet: Wallet, name: string) {
   });
 }
 
-export async function logBalances(wallet: Wallet, name: string|string[], RK: RK | RK[]) {
+export async function logBalances(
+  wallet: Wallet,
+  name: string | string[],
+  RK: RK | RK[]
+) {
   const names = Array.isArray(name) ? name : [name];
   const rks = Array.isArray(RK) ? RK : [RK];
-  for (let i=0; i<rks.length; i++) {
+  for (let i = 0; i < rks.length; i++) {
     await logShieldedBalances(wallet, names[i], rks[i]);
   }
   await logUnshieldedBalances(wallet, names[0]);

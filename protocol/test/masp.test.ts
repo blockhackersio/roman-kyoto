@@ -149,6 +149,14 @@ it("should value balance when bridging in 10", async () => {
   await ensureValueBalance(ins, outs, bridgeOut, bridgeIn, valueBase, 0n);
 });
 
+it("should value balance when bridging in 10", async () => {
+  const vc = ValueCommitment.create("USDC", 10n);
+  console.log(vc);
+  const serialized = vc.serialize64();
+  ValueCommitment.deserialize64(serialized);
+  console.log(vc);
+});
+
 it("integrate single pool", async () => {
   await ensurePoseidon();
 
