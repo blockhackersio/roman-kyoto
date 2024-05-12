@@ -149,7 +149,7 @@ it("should value balance when bridging in 10", async () => {
   await ensureValueBalance(ins, outs, bridgeOut, bridgeIn, valueBase, 0n);
 });
 
-it.only("integrate single pool", async () => {
+it("integrate single pool", async () => {
   await ensurePoseidon();
 
   const { MASP } = await loadFixture(deployMasp);
@@ -225,7 +225,7 @@ it.only("integrate single pool", async () => {
   expect(await wallet.getBalance("WBTC")).to.equal(2n);
 });
 
-it.only("should bridge funds between pools", async () => {
+it("should bridge funds between pools", async () => {
   const { SourcePool, DestPool } = await loadFixture(deployDoubleMasp);
   const srcAddr = await SourcePool.getAddress();
   const destAddr = await DestPool.getAddress();

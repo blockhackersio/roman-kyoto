@@ -1,8 +1,8 @@
 import { ethers } from "hardhat";
 import dotenv from "dotenv";
 
-import { getRK, getUSDC } from "./lib";
-import { MaspWallet, deposit } from "../src";
+import { getRK, getRK2 } from "./lib";
+import { MaspWallet, bridge } from "../src";
 
 dotenv.config();
 
@@ -15,22 +15,22 @@ async function main() {
   const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
   const maspWallet = await MaspWallet.fromWallet("source", wallet);
   const RK = await getRK(wallet);
+  const RK2 = await getRK2(wallet);
   const mywallet = await maspWallet.getKeys();
   const tree = await maspWallet.getTree(RK);
-  const USDC = await getUSDC(wallet);
+  const net = await ethers.provider.getNetwork();
 
-  let tx = await USDC.approve(
-    await RK.getAddress(),
-    100000000000000000000000000000n
-  );
-  await tx.wait();
-  tx = await deposit(
+  let tx = await bridge(
     wallet,
     await RK.getAddress(),
+    await RK2.getAddress(),
+    `${net.chainId}`,
     amount,
     mywallet,
+    mywallet,
     "USDC",
-    tree
+    tree,
+    maspWallet
   );
   await tx.wait();
 }

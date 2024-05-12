@@ -89,7 +89,6 @@ export class MaspWallet {
       if (ev.name === "NewCommitment") {
         const index = ev.args[1] as bigint;
         const cypher = ev.args[2] as string;
-        console.log({ cypher, privateKey: this.privateKey });
         try {
           const note = Note.decrypt(this.privateKey, cypher);
           const nullifier = await note.nullifier("0x" + this.privateKey, index);
