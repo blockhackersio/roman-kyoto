@@ -1,0 +1,337 @@
+{
+  "address": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "E_A",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "E_D",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "N",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "Q",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "x",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "y",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct EdOnBN254.Affine",
+          "name": "a1",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "x",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "y",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct EdOnBN254.Affine",
+          "name": "a2",
+          "type": "tuple"
+        }
+      ],
+      "name": "add",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "x",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "y",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct EdOnBN254.Affine",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "x",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "y",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct EdOnBN254.Affine",
+          "name": "a",
+          "type": "tuple"
+        }
+      ],
+      "name": "double",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "x",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "y",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct EdOnBN254.Affine",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "x",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "y",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct EdOnBN254.Affine",
+          "name": "a",
+          "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "s",
+          "type": "uint256"
+        }
+      ],
+      "name": "mul",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "x",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "y",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct EdOnBN254.Affine",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "x",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "y",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct EdOnBN254.Affine",
+          "name": "a",
+          "type": "tuple"
+        }
+      ],
+      "name": "neg",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "x",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "y",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct EdOnBN254.Affine",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "primeSubgroupGenerator",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "x",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "y",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct EdOnBN254.Affine",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "zero",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "x",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "y",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct EdOnBN254.Affine",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x73bd635d61b19245e369cdec11d891ee5da0e98db4b1d8d2b8fc345165cd131c",
+  "receipt": {
+    "to": null,
+    "from": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "contractAddress": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+    "transactionIndex": 0,
+    "gasUsed": "415930",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0xa09727024e7d81bc7a407967f92cf833ca5ed5685509f98ccce6989fc7dde62c",
+    "transactionHash": "0x73bd635d61b19245e369cdec11d891ee5da0e98db4b1d8d2b8fc345165cd131c",
+    "logs": [],
+    "blockNumber": 10,
+    "cumulativeGasUsed": "415930",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "2eb79e803e118032a4e9f321905120ed",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.24+commit.e11b9ed9\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"E_A\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"E_D\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"N\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"Q\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"x\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"y\",\"type\":\"uint256\"}],\"internalType\":\"struct EdOnBN254.Affine\",\"name\":\"a1\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"x\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"y\",\"type\":\"uint256\"}],\"internalType\":\"struct EdOnBN254.Affine\",\"name\":\"a2\",\"type\":\"tuple\"}],\"name\":\"add\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"x\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"y\",\"type\":\"uint256\"}],\"internalType\":\"struct EdOnBN254.Affine\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"x\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"y\",\"type\":\"uint256\"}],\"internalType\":\"struct EdOnBN254.Affine\",\"name\":\"a\",\"type\":\"tuple\"}],\"name\":\"double\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"x\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"y\",\"type\":\"uint256\"}],\"internalType\":\"struct EdOnBN254.Affine\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"x\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"y\",\"type\":\"uint256\"}],\"internalType\":\"struct EdOnBN254.Affine\",\"name\":\"a\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"s\",\"type\":\"uint256\"}],\"name\":\"mul\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"x\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"y\",\"type\":\"uint256\"}],\"internalType\":\"struct EdOnBN254.Affine\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"x\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"y\",\"type\":\"uint256\"}],\"internalType\":\"struct EdOnBN254.Affine\",\"name\":\"a\",\"type\":\"tuple\"}],\"name\":\"neg\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"x\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"y\",\"type\":\"uint256\"}],\"internalType\":\"struct EdOnBN254.Affine\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"primeSubgroupGenerator\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"x\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"y\",\"type\":\"uint256\"}],\"internalType\":\"struct EdOnBN254.Affine\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"zero\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"x\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"y\",\"type\":\"uint256\"}],\"internalType\":\"struct EdOnBN254.Affine\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/EdOnBN254.sol\":\"EdOnBN254\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":10000},\"remappings\":[],\"viaIR\":true},\"sources\":{\"contracts/EdOnBN254.sol\":{\"content\":\"// SPDX-License-Identifier: UNLICENSED\\npragma solidity ^0.8.13;\\n\\n// Courtesy https://github.com/Tetration-Lab/solidity-ed-on-bn254/blob/main/src/EdOnBN254V.sol\\n\\n// A Twisted Edwards curve on scalar field of BN254. Also known as [Baby-Jubjub](https://github.com/barryWhiteHat/baby_jubjub).\\n// Modified from:\\n// https://github.com/yondonfu/sol-baby-jubjub/blob/master/contracts/CurveBabyJubJub.sol\\n// https://github.com/arkworks-rs/curves/tree/master/ed_on_bn254\\n//\\n// Curve information:\\n// * Base field: q = 21888242871839275222246405745257275088548364400416034343698204186575808495617\\n// * Scalar field: r = 2736030358979909402780800718157159386076813972158567259200215660948447373041\\n// * Valuation(q - 1, 2) = 28\\n// * Valuation(r - 1, 2) = 4\\n// * Curve equation: ax^2 + y^2 =1 + dx^2y^2, where\\n//    * a = 168700\\n//    * d = 168696\\nlibrary EdOnBN254 {\\n    uint256 public constant Q =\\n        21888242871839275222246405745257275088548364400416034343698204186575808495617;\\n    uint256 public constant E_A = 168700;\\n    uint256 public constant E_D = 168696;\\n    uint256 public constant N =\\n        21888242871839275222246405745257275088614511777268538073601725287587578984328;\\n    struct Affine {\\n        uint256 x;\\n        uint256 y;\\n    }\\n\\n    function primeSubgroupGenerator() public pure returns (Affine memory) {\\n        return\\n            Affine(\\n                995203441582195749578291179787384436505546430278305826713579947235728471134,\\n                5472060717959818805561601436314318772137091100104008585924551046643952123905\\n            );\\n    }\\n\\n    function zero() public pure returns (Affine memory) {\\n        return Affine(0, 1);\\n    }\\n\\n    function add(\\n        Affine memory a1,\\n        Affine memory a2\\n    ) public view returns (Affine memory) {\\n        if (a1.x == 0 && a1.y == 0) {\\n            return a2;\\n        }\\n\\n        if (a2.x == 0 && a2.y == 0) {\\n            return a1;\\n        }\\n\\n        uint256 x1x2 = mulmod(a1.x, a2.x, Q);\\n        uint256 y1y2 = mulmod(a1.y, a2.y, Q);\\n        uint256 dx1x2y1y2 = mulmod(E_D, mulmod(x1x2, y1y2, Q), Q);\\n        uint256 x3Num = addmod(mulmod(a1.x, a2.y, Q), mulmod(a1.y, a2.x, Q), Q);\\n        uint256 y3Num = submod(y1y2, mulmod(E_A, x1x2, Q), Q);\\n\\n        return\\n            Affine(\\n                mulmod(x3Num, inverse(addmod(1, dx1x2y1y2, Q)), Q),\\n                mulmod(y3Num, inverse(submod(1, dx1x2y1y2, Q)), Q)\\n            );\\n    }\\n\\n    function double(Affine memory a) public view returns (Affine memory) {\\n        return add(a, a);\\n    }\\n\\n    function mul(\\n        Affine memory a,\\n        uint256 s\\n    ) public view returns (Affine memory) {\\n        uint256 remaining = s;\\n        Affine memory p = Affine(a.x, a.y);\\n        Affine memory ret = Affine(0, 0);\\n\\n        while (remaining != 0) {\\n            if ((remaining & 1) != 0) {\\n                ret = add(ret, p);\\n            }\\n\\n            p = double(p);\\n\\n            remaining = remaining / 2;\\n        }\\n\\n        return ret;\\n    }\\n\\n    function neg(Affine memory a) public pure returns (Affine memory) {\\n        if (a.x == 0 && a.y == 0) return a;\\n        return Affine(submod(0, a.x, Q), a.y);\\n    }\\n\\n    function submod(\\n        uint256 _a,\\n        uint256 _b,\\n        uint256 _mod\\n    ) internal pure returns (uint256) {\\n        return addmod(_a, _mod - _b, _mod);\\n    }\\n\\n    function inverse(uint256 _a) internal view returns (uint256) {\\n        return expmod(_a, Q - 2, Q);\\n    }\\n\\n    function expmod(\\n        uint256 _b,\\n        uint256 _e,\\n        uint256 _m\\n    ) internal view returns (uint256 o) {\\n        assembly {\\n            let memPtr := mload(0x40)\\n            mstore(memPtr, 0x20)\\n            mstore(add(memPtr, 0x20), 0x20)\\n            mstore(add(memPtr, 0x40), 0x20)\\n            mstore(add(memPtr, 0x60), _b)\\n            mstore(add(memPtr, 0x80), _e)\\n            mstore(add(memPtr, 0xa0), _m)\\n\\n            let success := staticcall(gas(), 0x05, memPtr, 0xc0, memPtr, 0x20)\\n            switch success\\n            case 0 {\\n                revert(0x0, 0x0)\\n            }\\n            default {\\n                o := mload(memPtr)\\n            }\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0xe4a0360b7912cc1daf97fb9cdc483be88956e8bfc605d0a209dcdd362032a744\",\"license\":\"UNLICENSED\"}},\"version\":1}",
+  "bytecode": "0x6080806040523461001a576106929081610020823930815050f35b600080fdfe6080604052600436101561001257600080fd5b60003560e01c80630ff61194146100b75780632afb4927146100b2578063505c16c9146100ad5780635d90c2d5146100a85780635e20a7f1146100a35780639f422d991461009e578063bc1b392d14610099578063c9e525df14610094578063df8750ac1461008f5763e493ef8c1461008a57600080fd5b6103e1565b6103c8565b610392565b61033f565b6102de565b6102be565b610230565b610217565b61017a565b6040600319360112610102576100fe6100e16100d236610156565b6100da610417565b50806104d2565b604051918291829190916020806040830194805184520151910152565b0390f35b600080fd5b604051906040820182811067ffffffffffffffff82111761012757604052565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b60031960409101126101025761016a610107565b9060043582526024356020830152565b60606003193601126101025761018f36610156565b610197610417565b5060443590602081519101516101ab610107565b918252602082015290806101bd610107565b6000815260006020820152915b6101e257604080518351815260208085015190820152f35b600192838216610201575b6101f9906100da610417565b921c806101ca565b9161020f836101f9926104d2565b9290506101ed565b6000600319360112610102576020604051620292f88152f35b60006003193601126101025760006020610248610107565b82815201526100fe610258610107565b7f023343e3445b673d38bcba38f25645adb494b1255b1162bb40f41a59f4d4b45e81527f0c19139cb84c680a6e14116da06056174a0cfa121e6e5c2450f87d64fc0000016020820152604051918291829190916020806040830194805184520151910152565b6040600319360112610102576100fe6100e16102d936610156565b61042d565b6080600319360112610102576102f336610156565b60407fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbc360112610102576100e16100fe9161032c610107565b90604435825260643560208301526104d2565b60008060031936011261038f57806100fe91602061035b610107565b8281520152610368610107565b90815260016020820152604051918291829190916020806040830194805184520151910152565b80fd5b60006003193601126101025760206040517f30644e72e131a029b85045b68181585d59f76dc1c90770533b94bee1c90937888152f35b6000600319360112610102576020604051620292fc8152f35b60006003193601126101025760206040517f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f00000018152f35b61041f610107565b906000825260006020830152565b60006020610439610107565b828152015280518015806104c6575b6104c2577f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f000000190810391818311610493576020015190610485610107565b926000088252602082015290565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b5090565b50602082015115610448565b906104db610417565b5081518015806105a9575b6105a357815190811580610597575b610591577f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001809381838180878197099860200151936020015181808b81808080878c09809409620292f8099d620292fc0961054f906105b5565b900898818c600108610560906105e3565b96099209080993610570906105b5565b60010861057c906105e3565b9009610586610107565b918252602082015290565b50505090565b506020830151156104f5565b50905090565b506020830151156104e6565b907f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f000000191820391821161049357565b60405190602082526020808301526020604083015260608201527f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593efffffff60808201527f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f000000160a082015260208160c08160055afa1561010257519056fea2646970667358221220177405da5a46478f2c93c3f35176bdada193b5ce3316febb659c38561ba8537064736f6c63430008180033",
+  "deployedBytecode": "0x6080604052600436101561001257600080fd5b60003560e01c80630ff61194146100b75780632afb4927146100b2578063505c16c9146100ad5780635d90c2d5146100a85780635e20a7f1146100a35780639f422d991461009e578063bc1b392d14610099578063c9e525df14610094578063df8750ac1461008f5763e493ef8c1461008a57600080fd5b6103e1565b6103c8565b610392565b61033f565b6102de565b6102be565b610230565b610217565b61017a565b6040600319360112610102576100fe6100e16100d236610156565b6100da610417565b50806104d2565b604051918291829190916020806040830194805184520151910152565b0390f35b600080fd5b604051906040820182811067ffffffffffffffff82111761012757604052565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b60031960409101126101025761016a610107565b9060043582526024356020830152565b60606003193601126101025761018f36610156565b610197610417565b5060443590602081519101516101ab610107565b918252602082015290806101bd610107565b6000815260006020820152915b6101e257604080518351815260208085015190820152f35b600192838216610201575b6101f9906100da610417565b921c806101ca565b9161020f836101f9926104d2565b9290506101ed565b6000600319360112610102576020604051620292f88152f35b60006003193601126101025760006020610248610107565b82815201526100fe610258610107565b7f023343e3445b673d38bcba38f25645adb494b1255b1162bb40f41a59f4d4b45e81527f0c19139cb84c680a6e14116da06056174a0cfa121e6e5c2450f87d64fc0000016020820152604051918291829190916020806040830194805184520151910152565b6040600319360112610102576100fe6100e16102d936610156565b61042d565b6080600319360112610102576102f336610156565b60407fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffbc360112610102576100e16100fe9161032c610107565b90604435825260643560208301526104d2565b60008060031936011261038f57806100fe91602061035b610107565b8281520152610368610107565b90815260016020820152604051918291829190916020806040830194805184520151910152565b80fd5b60006003193601126101025760206040517f30644e72e131a029b85045b68181585d59f76dc1c90770533b94bee1c90937888152f35b6000600319360112610102576020604051620292fc8152f35b60006003193601126101025760206040517f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f00000018152f35b61041f610107565b906000825260006020830152565b60006020610439610107565b828152015280518015806104c6575b6104c2577f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f000000190810391818311610493576020015190610485610107565b926000088252602082015290565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b5090565b50602082015115610448565b906104db610417565b5081518015806105a9575b6105a357815190811580610597575b610591577f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001809381838180878197099860200151936020015181808b81808080878c09809409620292f8099d620292fc0961054f906105b5565b900898818c600108610560906105e3565b96099209080993610570906105b5565b60010861057c906105e3565b9009610586610107565b918252602082015290565b50505090565b506020830151156104f5565b50905090565b506020830151156104e6565b907f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f000000191820391821161049357565b60405190602082526020808301526020604083015260608201527f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593efffffff60808201527f30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f000000160a082015260208160c08160055afa1561010257519056fea2646970667358221220177405da5a46478f2c93c3f35176bdada193b5ce3316febb659c38561ba8537064736f6c63430008180033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": null
+  }
+}

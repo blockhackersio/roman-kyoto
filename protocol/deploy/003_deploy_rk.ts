@@ -72,6 +72,17 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     autoMine: true,
     waitConfirmations: 1,
   });
+  await deploy("RK2", {
+    contract: "RK",
+    from: Deployer.address,
+    args: [SpendVerifierSource, OutputVerifierSource, Hasher],
+    libraries: {
+      EdOnBN254: EdOnBN254,
+    },
+    log: true,
+    autoMine: true,
+    waitConfirmations: 1,
+  });
 };
 
 export default func;

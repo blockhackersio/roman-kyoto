@@ -4,17 +4,29 @@ import { Note, toXY } from "./note";
 import { dataDecrypt, dataEncrypt } from "./zklib";
 import { z } from "zod";
 
+function base64Encode(str: string): string {
+  return Buffer.from(str, "utf-8").toString("base64");
+}
+
+function base64Decode(encodedStr: string): string {
+  return Buffer.from(encodedStr, "base64").toString("utf-8");
+}
+
 // TODO: This should have basic addition and subtraction function which adds randomness as well as value
 export class ValueCommitment {
   constructor(
     public asset: Asset,
     public amount: bigint,
     private r: bigint = getRandomBigInt(253)
-  ) {}
+  ) { }
 
   encrypt(publicKey: string) {
     const jsonStr = this.serialize();
     return dataEncrypt(publicKey, Buffer.from(jsonStr, "utf8"));
+  }
+
+  serialize64() {
+    return base64Encode(this.serialize());
   }
 
   serialize() {
@@ -50,6 +62,10 @@ export class ValueCommitment {
   static deserialize(data: string) {
     const parsed: JsonValueCommitment = JSON.parse(data);
     return ValueCommitment.fromJsonValueCommitment(parsed);
+  }
+  
+  static deserialize64(data:string) {
+    return this.deserialize(base64Decode(data));
   }
 
   static decrypt(privkey: string, data: string) {

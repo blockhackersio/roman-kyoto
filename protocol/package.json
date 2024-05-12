@@ -9,7 +9,7 @@
     "deploy:localhost": "./scripts/deploy.sh localhost",
     "node": "hardhat node",
     "postinstall": "./scripts/install.sh",
-    "dev": "concurrently -r \"pnpm node\" \"sleep 2 && pnpm deploy:localhost\""
+    "dev": "pnpm node"
   },
   "exports": {
     ".": {

@@ -14,7 +14,7 @@ import { ValueCommitment } from "../src/vc";
 import { ExtPointType } from "@noble/curves/abstract/edwards";
 import { B, R, modN } from "../src/curve";
 
-export async function getMultiAssetShieldedPoolContract() {}
+export async function getMultiAssetShieldedPoolContract() { }
 
 async function getRandomKeys() {
   return await getKeys(BigInt(Wallet.createRandom().privateKey));
@@ -149,6 +149,14 @@ it("should value balance when bridging in 10", async () => {
   await ensureValueBalance(ins, outs, bridgeOut, bridgeIn, valueBase, 0n);
 });
 
+it("should value balance when bridging in 10", async () => {
+  const vc = ValueCommitment.create("USDC", 10n);
+  console.log(vc);
+  const serialized = vc.serialize64();
+  ValueCommitment.deserialize64(serialized);
+  console.log(vc);
+});
+
 it("integrate single pool", async () => {
   await ensurePoseidon();
 
@@ -161,7 +169,6 @@ it("integrate single pool", async () => {
   const receiver = await getRandomKeys();
   const spender = await getRandomKeys();
   const privateKey = spender.privateKey.toString(16);
-
   const wallet = MaspWallet.fromPrivateKey(privateKey);
 
   await wallet.logBalances();
@@ -226,7 +233,7 @@ it("integrate single pool", async () => {
   expect(await wallet.getBalance("WBTC")).to.equal(2n);
 });
 
-it.only("should bridge funds between pools", async () => {
+it("should bridge funds between pools", async () => {
   const { SourcePool, DestPool } = await loadFixture(deployDoubleMasp);
   const srcAddr = await SourcePool.getAddress();
   const destAddr = await DestPool.getAddress();
@@ -286,7 +293,7 @@ it.only("should bridge funds between pools", async () => {
   expect(await destWallet.getBalance("WBTC")).to.equal(0n);
 
   tree = await buildMerkleTree(DestPool);
-  
+
   const [{ vc }] = srcWallet.getBridgeOuts();
 
   tx = await claim(signer, destAddr, spender, vc, tree);
@@ -297,6 +304,4 @@ it.only("should bridge funds between pools", async () => {
 
   expect(await destWallet.getBalance("USDC")).to.equal(60n);
   expect(await destWallet.getBalance("WBTC")).to.equal(0n);
-
-
 });

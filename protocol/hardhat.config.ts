@@ -47,6 +47,9 @@ const config: HardhatUserConfig = {
   },
 
   networks: {
+    hardhat: {
+      blockGasLimit: 6000000000, // Network block gasLimit
+    },
     baseSepolia: {
       chainId: 84532,
       url: "https://public.stackup.sh/api/v1/node/base-sepolia",

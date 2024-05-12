@@ -1,5 +1,5 @@
 import { AbiCoder, keccak256 } from "ethers";
-import { BridgeOut, BridgeIn, Output, Spend } from ".";
+import { BridgeOut, BridgeIn, Output, Spend } from "./types";
 import { Note, toXY } from "./note";
 import MerkleTree from "fixed-merkle-tree";
 import { toStr } from "./utils";
@@ -271,6 +271,7 @@ export async function prepareTx(
   sender: Keyset,
   receiver: Keyset
 ) {
+
   let totalRandomness = 0n;
   const outputs: Output[] = [];
   const spends: Spend[] = [];
