@@ -272,7 +272,6 @@ export async function prepareTx(
   receiver: Keyset
 ) {
 
-  console.log({spendList, outputList, bridgeInList, bridgeOutList})
   let totalRandomness = 0n;
   const outputs: Output[] = [];
   const spends: Spend[] = [];
