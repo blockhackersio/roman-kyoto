@@ -12,15 +12,16 @@ export type Keyset = {
 // Use this to get the public keys from a users private key
 export async function getKeys(privateKey: bigint) {
   await ensurePoseidon();
-  const encryptionKey = getEncryptionPublicKey(
-    privateKey.toString(16).padStart(64, "0")
-  );
+  const privateEncryptionKey = privateKey.toString(16).padStart(64, "0");
+
+  const encryptionKey = getEncryptionPublicKey(privateEncryptionKey);
 
   const publicKey = poseidonHash([privateKey]);
 
   const keys = {
     encryptionKey,
     publicKey,
+    privateEncryptionKey,
     privateKey: BigInt(privateKey),
   };
 

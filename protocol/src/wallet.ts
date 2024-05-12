@@ -63,7 +63,7 @@ export class MaspWallet {
     return this.bridgeOuts;
   }
   async getKeys() {
-    return await getKeys(BigInt(this.privateKey));
+    return await getKeys(BigInt('0x'+this.privateKey));
   }
 
   async getTree(contract: RK) {
@@ -179,7 +179,7 @@ export class MaspWallet {
   static async fromWallet(name: string, wallet: Wallet) {
     const keys = await getKeys(BigInt(wallet.privateKey));
     return MaspWallet.fromPrivateKey(
-      "0x" + BigInt(keys.privateKey).toString(16),
+      keys.privateKey.toString(16),
       name
     );
   }

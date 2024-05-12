@@ -161,7 +161,6 @@ it.only("integrate single pool", async () => {
   const receiver = await getRandomKeys();
   const spender = await getRandomKeys();
   const privateKey = spender.privateKey.toString(16);
-
   const wallet = MaspWallet.fromPrivateKey(privateKey);
 
   await wallet.logBalances();
