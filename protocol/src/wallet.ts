@@ -1,7 +1,8 @@
-import { ContractTransactionReceipt, Interface, LogDescription } from "ethers";
+import { ContractTransactionReceipt, Interface, LogDescription, Wallet } from "ethers";
 import { IMasp__factory } from "../typechain-types";
 import { Note } from "./note";
 import { ValueCommitment } from "./vc";
+import { getKeys } from "./keypair";
 
 type MetaNote = { note: Note; nullifier: string; index: bigint };
 type MetaBridge = { vc: ValueCommitment; chainId: bigint; destination: string };
@@ -121,6 +122,11 @@ export class MaspWallet {
           }))
         );
       })();
+  }
+
+  static async fromWallet(name:string, wallet:Wallet) {
+    const keys = await getKeys(BigInt(wallet.privateKey));
+    return MaspWallet.fromPrivateKey(`${keys.privateKey}`, name)
   }
 
   static fromPrivateKey(privateKey: string, name?: string) {
