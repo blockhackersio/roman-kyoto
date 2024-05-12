@@ -15,7 +15,7 @@ import { ExtPointType } from "@noble/curves/abstract/edwards";
 import { B, R, modN } from "../src/curve";
 
 export async function getMultiAssetShieldedPoolContract() { }
-
+const sleep = (n: number) => new Promise((r) => setTimeout(r, n));
 async function getRandomKeys() {
   return await getKeys(BigInt(Wallet.createRandom().privateKey));
 }
@@ -151,13 +151,11 @@ it("should value balance when bridging in 10", async () => {
 
 it("should value balance when bridging in 10", async () => {
   const vc = ValueCommitment.create("USDC", 10n);
-  console.log(vc);
   const serialized = vc.serialize64();
   ValueCommitment.deserialize64(serialized);
-  console.log(vc);
 });
 
-it("integrate single pool", async () => {
+it.only("integrate single pool", async () => {
   await ensurePoseidon();
 
   const { MASP } = await loadFixture(deployMasp);
@@ -175,6 +173,8 @@ it("integrate single pool", async () => {
 
   expect(await wallet.getBalance("USDC")).to.equal(0n);
   expect(await wallet.getBalance("WBTC")).to.equal(0n);
+
+  await sleep(4000);
   let tx = await deposit(signer, maspAddress, 100n, spender, "USDC", tree);
 
   let receipt = await tx.wait();
@@ -184,7 +184,7 @@ it("integrate single pool", async () => {
 
   expect(await wallet.getBalance("USDC")).to.equal(100n);
   expect(await wallet.getBalance("WBTC")).to.equal(0n);
-
+  await sleep(4000);
   tx = await deposit(signer, maspAddress, 2n, spender, "WBTC", tree);
   receipt = await tx.wait();
   await wallet.updateFromReceipt(receipt);
@@ -194,6 +194,7 @@ it("integrate single pool", async () => {
   expect(await wallet.getBalance("WBTC")).to.equal(2n);
 
   tree = await buildMerkleTree(MASP);
+  await sleep(4000);
   tx = await transfer(
     signer,
     maspAddress,
@@ -214,6 +215,7 @@ it("integrate single pool", async () => {
 
   tree = await buildMerkleTree(MASP);
 
+  await sleep(4000);
   tx = await withdraw(
     signer,
     maspAddress,
@@ -257,6 +259,7 @@ it("should bridge funds between pools", async () => {
   expect(await srcWallet.getBalance("USDC")).to.equal(0n);
   expect(await srcWallet.getBalance("WBTC")).to.equal(0n);
 
+  await sleep(4000);
   let tx = await deposit(signer, srcAddr, 100n, spender, "USDC", tree);
   let receipt = await tx.wait();
 
@@ -267,6 +270,7 @@ it("should bridge funds between pools", async () => {
 
   tree = await buildMerkleTree(SourcePool);
 
+  await sleep(4000);
   tx = await bridge(
     signer,
     srcAddr,

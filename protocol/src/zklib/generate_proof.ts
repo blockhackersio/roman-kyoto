@@ -12,7 +12,7 @@ export async function generateGroth16Proof(
   const { proof } = await groth16.fullProve(inputs, wasmLocation, zkeyLocation);
   const time = Date.now() - start;
 
-  console.log(`Proving "${circuitName}" took ` + time + "ms");
+  // console.log(`Proving "${circuitName}" took ` + time + "ms");
 
   return serializeG16Proof(proof);
 }
