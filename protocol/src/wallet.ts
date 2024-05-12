@@ -51,8 +51,7 @@ export class MaspWallet {
     private bridgeOuts: MetaBridge[],
     private nullifiers: string[],
     private name: string = "unknown"
-  ) {
-  }
+  ) { }
 
   getUnspentNotes() {
     return this.notes.filter((note) => {
@@ -90,7 +89,7 @@ export class MaspWallet {
       if (ev.name === "NewCommitment") {
         const index = ev.args[1] as bigint;
         const cypher = ev.args[2] as string;
-        console.log({cypher, privateKey: this.privateKey})
+        console.log({ cypher, privateKey: this.privateKey });
         try {
           const note = Note.decrypt(this.privateKey, cypher);
           const nullifier = await note.nullifier("0x" + this.privateKey, index);
@@ -121,7 +120,7 @@ export class MaspWallet {
 
   async updateFromReceipt(receipt: ContractTransactionReceipt | null) {
     const events = getNoteCommitmentEvents(receipt);
-    this.updateFromEvents(events);
+    await this.updateFromEvents(events);
   }
 
   async updateFromContract(address: string, wallet: Wallet) {
@@ -179,7 +178,10 @@ export class MaspWallet {
 
   static async fromWallet(name: string, wallet: Wallet) {
     const keys = await getKeys(BigInt(wallet.privateKey));
-    return MaspWallet.fromPrivateKey("0x"+BigInt(keys.privateKey).toString(16), name);
+    return MaspWallet.fromPrivateKey(
+      "0x" + BigInt(keys.privateKey).toString(16),
+      name
+    );
   }
 
   static fromPrivateKey(privateKey: string, name?: string) {

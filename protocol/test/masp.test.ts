@@ -14,7 +14,7 @@ import { ValueCommitment } from "../src/vc";
 import { ExtPointType } from "@noble/curves/abstract/edwards";
 import { B, R, modN } from "../src/curve";
 
-export async function getMultiAssetShieldedPoolContract() {}
+export async function getMultiAssetShieldedPoolContract() { }
 
 async function getRandomKeys() {
   return await getKeys(BigInt(Wallet.createRandom().privateKey));
@@ -160,7 +160,7 @@ it.only("integrate single pool", async () => {
 
   const receiver = await getRandomKeys();
   const spender = await getRandomKeys();
-  // const privateKey = "0x" + spender.privateKey.toString(16);
+  const privateKey = spender.privateKey.toString(16);
 
   const wallet = MaspWallet.fromPrivateKey(privateKey);
 
@@ -286,7 +286,7 @@ it.only("should bridge funds between pools", async () => {
   expect(await destWallet.getBalance("WBTC")).to.equal(0n);
 
   tree = await buildMerkleTree(DestPool);
-  
+
   const [{ vc }] = srcWallet.getBridgeOuts();
 
   tx = await claim(signer, destAddr, spender, vc, tree);
@@ -297,6 +297,4 @@ it.only("should bridge funds between pools", async () => {
 
   expect(await destWallet.getBalance("USDC")).to.equal(60n);
   expect(await destWallet.getBalance("WBTC")).to.equal(0n);
-
-
 });
