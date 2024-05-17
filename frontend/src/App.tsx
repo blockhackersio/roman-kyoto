@@ -1,13 +1,10 @@
 import { FormEvent, useState } from "react";
 import "./App.css";
-import { CircomExample, getAddress } from "@blockhackers/protocol";
-import { JsonRpcProvider } from "ethers";
+// import { getAddress } from "@blockhackers/protocol";
+// import { JsonRpcProvider } from "ethers";
 
-const provider = new JsonRpcProvider();
-const example = new CircomExample(
-  provider,
-  getAddress("chain-31337", "CircomExample")
-);
+// const provider = new JsonRpcProvider();
+
 
 function App() {
   const [status, setStatus] = useState<"init" | "error" | "success">("init");
@@ -20,17 +17,17 @@ function App() {
     setProof("");
     e.preventDefault();
 
-    const data = new FormData(e.currentTarget);
-    const a = Number(data.get("a"));
-    const b = Number(data.get("b"));
-    const c = Number(data.get("c"));
+    // const data = new FormData(e.currentTarget);
+    // const a = Number(data.get("a"));
+    // const b = Number(data.get("b"));
+    // const c = Number(data.get("c"));
     let time = new Date();
-    const proof = await example.multiplierProve(a, b);
+    // const proof = await example.multiplierProve(a, b);
     setProvingTime(Number(new Date()) - Number(time));
     setProof(proof);
     time = new Date();
     try {
-      await example.multiplierVerify(proof, c);
+      // await example.multiplierVerify(proof, c);
       setStatus("success");
     } catch (err) {
       setStatus("error");
