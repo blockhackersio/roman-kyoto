@@ -5,7 +5,7 @@ import {SpendVerifier} from "./verifiers/SpendVerifier.sol";
 import {OutputVerifier} from "./verifiers/OutputVerifier.sol";
 import {BridgeoutVerifier} from "./verifiers/BridgeoutVerifier.sol";
 import {TxVerifier} from "./verifiers/TxVerifier.sol";
-import {IMasp, Spend, Output, BridgeIn, BridgeOut} from "./interfaces/IMasp.sol";
+import {IMasp, TxData} from "./interfaces/IMasp.sol";
 import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
 
 import "./EdOnBN254.sol";
@@ -82,12 +82,8 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         (uint[2] memory a, uint[2][2] memory b, uint[2] memory c) = parseProof(
             _proof
         );
-        require(
-            txVerifier.verifyProof(a, b, c, _pubSignals),
-            "invalid proof"
-        );
+        require(txVerifier.verifyProof(a, b, c, _pubSignals), "invalid proof");
     }
-
 
     function _getBytecodeHash(address _address) public view returns (bytes32) {
         bytes32 codeHash;
@@ -151,32 +147,34 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     }
 
     function _checkHash(
-        Spend[] memory _spends,
-        Output[] memory _outputs,
+        uint256[] memory _spendNullifier,
+        uint256[] memory _outputCommitment,
+        uint256[][2] memory _outputValueCommitment,
+        uint256[][2] memory _spendValueCommitment,
         bytes memory _hash
     ) internal pure {
-        uint256[] memory nullifiers = new uint256[](_spends.length);
-        uint256[] memory commitments = new uint256[](_outputs.length);
-        uint256[] memory valueCommitments = new uint256[](
-            _spends.length * 2 + _outputs.length * 2
+        uint256[] memory _valueCommitments = new uint256[](
+            _spendValueCommitment.length * 2 + _outputValueCommitment.length * 2
         );
 
         uint256 vcIndex = 0;
-        for (uint256 i = 0; i < _spends.length; i++) {
-            nullifiers[i] = _spends[i].nullifier;
-            valueCommitments[vcIndex++] = _spends[i].valueCommitment[0];
-            valueCommitments[vcIndex++] = _spends[i].valueCommitment[1];
+        for (uint256 i = 0; i < _spendValueCommitment.length; i++) {
+            _valueCommitments[vcIndex++] = _spendValueCommitment[i][0];
+            _valueCommitments[vcIndex++] = _spendValueCommitment[i][1];
         }
 
-        for (uint256 i = 0; i < _outputs.length; i++) {
-            commitments[i] = _outputs[i].commitment;
-            valueCommitments[vcIndex++] = _outputs[i].valueCommitment[0];
-            valueCommitments[vcIndex++] = _outputs[i].valueCommitment[1];
+        for (uint256 i = 0; i < _outputValueCommitment.length; i++) {
+            _valueCommitments[vcIndex++] = _outputValueCommitment[0];
+            _valueCommitments[vcIndex++] = _outputValueCommitment[1];
         }
 
         require(
             keccak256(
-                abi.encodePacked(nullifiers, commitments, valueCommitments)
+                abi.encodePacked(
+                    _spendNullifiers,
+                    _outputCommitments,
+                    _valueCommitments
+                )
             ) == bytes32(_hash),
             "Hashes must match"
         );
@@ -349,29 +347,23 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         }
     }
 
-    function _transact(
-        Spend[] memory _spends,
-        Output[] memory _outputs,
-        BridgeIn[] memory _bridgeIns,
-        BridgeOut[] memory _bridgeOuts,
-        uint256 _extAssetHash,
-        int256 _extAmount,
-        uint256[2] memory _bpk,
-        uint256 _root,
-        uint256[2] memory _R,
-        uint256 _s,
-        bytes memory _hash
-    ) internal {
-        _checkHash(_spends, _outputs, _hash);
+    function _transact(TxData calldata _txData) internal {
+        _checkHash(
+            _txData.spendNullifier,
+            _txData.outputCommitment,
+            _txData.outputValueCommitment,
+            _txData.spendValueCommitment,
+            _hash
+        );
 
         EdOnBN254.Affine memory _bindingPubkey = EdOnBN254.Affine(
-            _bpk[0],
-            _bpk[1]
+            _txData.bpk[0],
+            _txData.bpk[1]
         );
 
         EdOnBN254.Affine memory _extValueBase = EdOnBN254
             .primeSubgroupGenerator()
-            .mul(_extAssetHash);
+            .mul(_txData.extAssetHash);
 
         _balanceCheck(
             _spends,

@@ -1,29 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-struct Spend {
+struct TxData {
     bytes proof;
-    uint256 nullifier;
-    uint256[2] valueCommitment;
-}
-
-struct Output {
-    bytes proof;
-    uint256 commitment;
-    uint256[2] valueCommitment;
-    bytes encryptedOutput;
-}
-
-struct BridgeOut {
-    bytes proof;
-    uint256 chainId;
-    address destination;
-    bytes encryptedOutput;
-    uint256[2] valueCommitment;
-}
-
-struct BridgeIn {
-    uint256[2] valueCommitment;
+    uint256[] spendNullifier;
+    uint256[][2] spendValueCommitment; // EC point
+    uint256[] outputCommitment;
+    uint256[][2] outputValueCommitment; // EC Point
+    bytes[] outputEncryptedOutput;
+    uint256[][2] bridgeInValueCommitment; // EC Point
+    uint256[] bridgeOutChainId;
+    address[] bridgeOutDestination;
+    bytes[] bridgeOutEncryptedOutput;
+    uint256[][2] bridgeOutValueCommitment; // EC Point
+    uint256 extAssetHash;
+    int256 extAmount;
+    uint256[2] bpk;
+    uint256 root;
+    uint256[2] R;
+    uint256 s;
+    bytes hash;
 }
 
 interface IMasp {
@@ -44,19 +40,7 @@ interface IMasp {
 
     event NewCommitmentReceived(bytes32 indexed commitment);
 
-    function transact(
-        Spend[] calldata _spends,
-        Output[] calldata _outputs,
-        BridgeIn[] calldata _bridgeIns,
-        BridgeOut[] calldata _bridgeOuts,
-        uint256 _extAssetHash,
-        int256 _extAmount,
-        uint256[2] calldata _bpk,
-        uint256 _root,
-        uint256[2] calldata _R,
-        uint256 _s,
-        bytes calldata _hash
-    ) external;
+    function transact(TxData calldata _txData) external;
 
     function receiveCommitments(bytes32 _commitment) external;
 }

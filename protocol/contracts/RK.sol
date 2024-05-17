@@ -5,6 +5,7 @@ import "@chainlink/contracts-ccip/src/v0.8/ccip/interfaces/IRouterClient.sol";
 import "@chainlink/contracts-ccip/src/v0.8/ccip/applications/CCIPReceiver.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./MultiAssetShieldedPool.sol";
+import {IMasp} from "./interfaces/IMasp.sol";
 
 contract RK is IMasp, MultiAssetShieldedPool {
     address owner;
@@ -42,22 +43,16 @@ contract RK is IMasp, MultiAssetShieldedPool {
         );
     }
 
-    function transact(
-        Spend[] calldata _spends,
-        Output[] calldata _outputs,
-        BridgeIn[] calldata _bridgeIns,
-        BridgeOut[] calldata _bridgeOuts,
-        uint256 _extAssetHash,
-        int256 _extAmount,
-        uint256[2] calldata _bpk,
-        uint256 _root,
-        uint256[2] calldata _R,
-        uint256 _s,
-        bytes calldata _hash
-    ) external {
+    function transact(TxData calldata _txData) external {
+        uint256 _extAmount = _txData._extAmount;
+        uint256 _extAssetHash = _txData._extAssetHash;
+        SupportedAsset memory _asset = assetToAddress[_extAssetHash];
+
         if (_extAmount > 0) {
-            SupportedAsset memory _asset = assetToAddress[_extAssetHash];
-            require(_asset.assetAddress != address(0), "Asset not supported");
+            require(
+                _asset.assetAddress != address(0),
+                "Asset not supported"
+            );
 
             // transfer the asset to this contract
             IERC20(_asset.assetAddress).transferFrom(
@@ -67,22 +62,9 @@ contract RK is IMasp, MultiAssetShieldedPool {
             );
         }
 
-        _transact(
-            _spends,
-            _outputs,
-            _bridgeIns,
-            _bridgeOuts,
-            _extAssetHash,
-            _extAmount,
-            _bpk,
-            _root,
-            _R,
-            _s,
-            _hash
-        );
+        _transact(_txData);
 
         if (_extAmount < 0) {
-            SupportedAsset memory _asset = assetToAddress[_extAssetHash];
             require(_asset.assetAddress != address(0), "Asset not supported");
 
             // transfer the asset to this contract
@@ -92,7 +74,7 @@ contract RK is IMasp, MultiAssetShieldedPool {
             );
         }
     }
-    
+
     function receiveCommitments(bytes32 _commitment) external {
         _receiveCommitments(_commitment);
     }
