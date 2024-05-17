@@ -11,10 +11,9 @@ contract RK is IMasp, MultiAssetShieldedPool {
     address owner;
 
     constructor(
-        address _spendVerifier,
-        address _outputVerifier,
+        address _txVerifier,
         address _merkleHasher
-    ) MultiAssetShieldedPool(_spendVerifier, _outputVerifier, _merkleHasher) {
+    ) MultiAssetShieldedPool(_txVerifier, _merkleHasher) {
         owner = msg.sender;
     }
 
@@ -44,8 +43,8 @@ contract RK is IMasp, MultiAssetShieldedPool {
     }
 
     function transact(TxData calldata _txData) external {
-        uint256 _extAmount = _txData._extAmount;
-        uint256 _extAssetHash = _txData._extAssetHash;
+        int256 _extAmount = _txData.extAmount;
+        uint256 _extAssetHash = _txData.extAssetHash;
         SupportedAsset memory _asset = assetToAddress[_extAssetHash];
 
         if (_extAmount > 0) {
