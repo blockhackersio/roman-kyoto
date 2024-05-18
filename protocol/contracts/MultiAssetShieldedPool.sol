@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {SpendVerifier} from "./verifiers/SpendVerifier.sol";
 import {OutputVerifier} from "./verifiers/OutputVerifier.sol";
 import {BridgeoutVerifier} from "./verifiers/BridgeoutVerifier.sol";
+import {TxVerifier} from "./verifiers/TxVerifier.sol";
 import {IMasp, Spend, Output, BridgeIn, BridgeOut} from "./interfaces/IMasp.sol";
 import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
 
@@ -22,6 +23,7 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     SpendVerifier public spendVerifier;
     OutputVerifier public outputVerifier;
     BridgeoutVerifier public bridgeoutVerifier;
+    TxVerifier public txVerifier;
 
     mapping(uint256 => bool) public nullifierHashes;
     mapping(bytes32 => ValueCommitmentState) public receivedCommitments;
@@ -72,6 +74,20 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
             "invalid proof"
         );
     }
+
+    function txVerify(
+        bytes memory _proof,
+        uint[4] memory _pubSignals
+    ) public view {
+        (uint[2] memory a, uint[2][2] memory b, uint[2] memory c) = parseProof(
+            _proof
+        );
+        require(
+            txVerifier.verifyProof(a, b, c, _pubSignals),
+            "invalid proof"
+        );
+    }
+
 
     function _getBytecodeHash(address _address) public view returns (bytes32) {
         bytes32 codeHash;
