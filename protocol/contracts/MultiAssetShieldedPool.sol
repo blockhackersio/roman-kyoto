@@ -144,8 +144,8 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     function _checkHash(
         uint256[] memory _spendNullifier,
         uint256[] memory _outputCommitment,
-        uint256[][2] memory _outputValueCommitment,
-        uint256[][2] memory _spendValueCommitment,
+        uint256[2][] memory _outputValueCommitment,
+        uint256[2][] memory _spendValueCommitment,
         bytes memory _hash
     ) internal pure {
         uint256[] memory _valueCommitments = new uint256[](
@@ -269,8 +269,7 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         address[] memory _bridgeOutDestination,
         bytes[] memory _bridgeOutEncryptedOutput,
         uint256[] memory _bridgeOutChainId,
-        bytes memory _proof,
-        uint256 _root
+        bytes memory _proof
     ) internal {
         uint256 _len = _spendNullifier.length;
         for (uint i = 0; i < _len; i++) {
@@ -387,8 +386,7 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
             _txData.bridgeOutDestination,
             _txData.bridgeOutEncryptedOutput,
             _txData.bridgeOutChainId,
-            _txData.proof,
-            _txData.root
+            _txData.proof
         );
     }
 

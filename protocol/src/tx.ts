@@ -262,6 +262,7 @@ async function checkValueBalance({
   // maskes sense to validate value balance on the client before sending though...
 }
 
+// XXX: flatten out to a single proof possibly remove all subfunctions and do it in a single fn  
 export async function prepareTx(
   spendList: Note[],
   outputList: Note[],
@@ -271,7 +272,6 @@ export async function prepareTx(
   sender: Keyset,
   receiver: Keyset
 ) {
-
   let totalRandomness = 0n;
   const outputs: Output[] = [];
   const spends: Spend[] = [];
@@ -288,14 +288,82 @@ export async function prepareTx(
   };
 
   for (let n of spendList) {
-    const result = await processSpend(sender, tree, n);
+    // const result = await processSpend(sender, tree, n);
+    const nc = await n.commitment();
+    const vc = ValueCommitment.fromNote(n);
+    const root = `${tree.root}`;
+    const index = tree.indexOf(nc);
+    const pathElements = tree.path(index).pathElements.map((e) => e.toString());
+    const nullifier = await n.nullifier(
+      toStr(sender.privateKey),
+      BigInt(index)
+    );
+    const Vs = await n.asset.getValueBase();
+    const proofSpend = await spendProve(
+      toStr(sender.privateKey),
+      toStr(n.amount),
+      toStr(n.blinding),
+      toStr(await n.asset.getIdHash()),
+      toStr(BigInt(index)),
+      nullifier,
+      root,
+      pathElements,
+      ...toXY(Vs),
+      ...toXY(R),
+      ...(await vc.toRXY()),
+      toFixedHex(nc)
+    );
+    const result = {
+      r: vc.getRandomness(),
+      spend: {
+        proof: proofSpend,
+        valueCommitment: await vc.toXY(),
+        nullifier: nullifier,
+      },
+      vc,
+    };
+
     totalRandomness = modN(totalRandomness + result.r);
     spends.push(result.spend);
     vcs.ins.push(result.vc);
   }
 
   for (let n of outputList) {
-    const result = await processOutput(sender, receiver, n);
+    // const result = await processOutput(sender, receiver, n);
+
+    const nc = await n.commitment();
+    const vc = ValueCommitment.fromNote(n);
+    const Vo = await n.asset.getValueBase();
+
+    const proofOutput = await outputProve(
+      toStr(n.amount),
+      toStr(n.blinding),
+      toStr(n.asset.getId()),
+      toStr(await n.asset.getIdHash()),
+      toStr(n.spender),
+      ...toXY(Vo),
+      ...toXY(R),
+      ...(await vc.toRXY())
+    );
+
+    const keyToEncryptTo =
+      sender.publicKey === n.spender
+        ? sender.encryptionKey
+        : receiver.encryptionKey;
+
+    const encryptedOutput = n.encrypt(keyToEncryptTo);
+
+    const result = {
+      r: vc.getRandomness(),
+      output: {
+        proof: proofOutput,
+        valueCommitment: await vc.toXY(),
+        commitment: nc,
+        encryptedOutput,
+      },
+      vc,
+    };
+
     totalRandomness = modN(totalRandomness - result.r);
     outputs.push(result.output);
     vcs.outs.push(result.vc);
@@ -305,7 +373,7 @@ export async function prepareTx(
     const vc = ValueCommitment.fromNote(note);
     const valueBase = await vc.asset.getValueBase();
 
-    // const result = await processOutput(sender, receiver, note);
+    const result = await processOutput(sender, receiver, note);
     const proof = await bridgeoutProve(
       toStr(vc.amount),
       toStr(vc.asset.getId()),

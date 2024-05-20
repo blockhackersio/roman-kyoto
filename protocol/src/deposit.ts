@@ -7,7 +7,7 @@ import { prepareTx } from "./tx";
 import { IMasp__factory } from "../typechain-types";
 import { Asset } from "./asset";
 import { toStr } from "./utils";
-
+import { TxDataStruct } from "../typechain-types/contracts/RK";
 
 export async function deposit(
   signer: Signer,
@@ -39,19 +39,32 @@ export async function deposit(
   );
 
   const masp = IMasp__factory.connect(poolAddress, signer);
+  const extAssetHash = await Asset.fromTicker(asset).getIdHash();
 
-  return await masp.transact(
-    spends,
-    outputs,
-    [],
-    [],
-    await Asset.fromTicker(asset).getIdHash(),
-    toStr(amount),
-    [toStr(Bpk.x), toStr(Bpk.y)],
-    `${tree.root}`,
-    [toStr(sig.R.x), toStr(sig.R.y)],
-    toStr(sig.s),
-    hash
-  );
+  const txData: TxDataStruct = {
+    proof: "",
+    spendNullifier: spends.map(({ nullifier }) => nullifier),
+    spendValueCommitment: spends.map(({ valueCommitment }) => valueCommitment),
+    outputCommitment: outputs.map(({ commitment }) => commitment),
+    outputValueCommitment: outputs.map(
+      ({ valueCommitment }) => valueCommitment
+    ),
+    outputEncryptedOutput: outputs.map(
+      ({ encryptedOutput }) => encryptedOutput
+    ),
+    bridgeInValueCommitment: [],
+    bridgeOutChainId: [],
+    bridgeOutDestination: [],
+    bridgeOutEncryptedOutput: [],
+    bridgeOutValueCommitment: [],
+    extAssetHash,
+    extAmount: amount,
+    bpk: [toStr(Bpk.x), toStr(Bpk.y)],
+    root: `${tree.root}`,
+    R: [toStr(sig.R.x), toStr(sig.R.y)],
+    s: toStr(sig.s),
+    hash,
+  };
+
+  return await masp.transact(txData);
 }
-

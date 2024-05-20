@@ -12,12 +12,7 @@ import { Asset } from "../../src/asset";
 export async function deployRK() {
   await hre.deployments.fixture("testbed");
   const [Deployer] = await ethers.getSigners();
-
-  const OutputVerifierSource = await hre.deployments.get(
-    "OutputVerifierSource"
-  );
-
-  const SpendVerifierSource = await hre.deployments.get("SpendVerifierSource");
+  const TxVerifierSource = await hre.deployments.get("TxVerifierSource");
 
   const usdcAddress = (await hre.deployments.get("USDC")).address;
   const testUSDC = new ethers.Contract(
@@ -46,11 +41,7 @@ export async function deployRK() {
   await hre.deployments.deploy("RKSource", {
     contract: "RK",
     from: Deployer.address,
-    args: [
-      SpendVerifierSource.address,
-      OutputVerifierSource.address,
-      Hasher.address,
-    ],
+    args: [TxVerifierSource.address, Hasher.address],
     libraries: {
       EdOnBN254: EdOnBN254,
     },
@@ -62,8 +53,16 @@ export async function deployRK() {
   );
 
   // tell our protocol these erc20s are supported
-  await RK.addSupportedAsset(await Asset.fromTicker("USDC").getIdHash(), usdcAddress, 6);
-  await RK.addSupportedAsset(await Asset.fromTicker("WBTC").getIdHash(), wbtcAddress, 18);
+  await RK.addSupportedAsset(
+    await Asset.fromTicker("USDC").getIdHash(),
+    usdcAddress,
+    6
+  );
+  await RK.addSupportedAsset(
+    await Asset.fromTicker("WBTC").getIdHash(),
+    wbtcAddress,
+    18
+  );
 
   return { RK, testWBTC, testUSDC, Deployer, rkAddress: await RK.getAddress() };
 }
@@ -72,11 +71,7 @@ export async function deployMasp() {
   await hre.deployments.fixture("testbed");
   const [Deployer] = await ethers.getSigners();
 
-  const OutputVerifierSource = await hre.deployments.get(
-    "OutputVerifierSource"
-  );
-
-  const SpendVerifierSource = await hre.deployments.get("SpendVerifierSource");
+  const TxVerifierSource = await hre.deployments.get("TxVerifierSource");
 
   // deploy our EdOnBN254 library
   await hre.deployments.deploy("EdOnBN254", {
@@ -91,11 +86,7 @@ export async function deployMasp() {
   await hre.deployments.deploy("MASP", {
     contract: "MaspTest",
     from: Deployer.address,
-    args: [
-      SpendVerifierSource.address,
-      OutputVerifierSource.address,
-      Hasher.address,
-    ],
+    args: [TxVerifierSource.address, Hasher.address],
     libraries: {
       EdOnBN254: EdOnBN254,
     },
@@ -113,11 +104,7 @@ export async function deployDoubleMasp() {
   await hre.deployments.fixture("testbed");
   const [Deployer] = await ethers.getSigners();
 
-  const OutputVerifierSource = await hre.deployments.get(
-    "OutputVerifierSource"
-  );
-
-  const SpendVerifierSource = await hre.deployments.get("SpendVerifierSource");
+  const TxVerifierSource = await hre.deployments.get("TxVerifierSource");
 
   // deploy our EdOnBN254 library
   await hre.deployments.deploy("EdOnBN254", {
@@ -132,11 +119,7 @@ export async function deployDoubleMasp() {
   await hre.deployments.deploy("SourcePool", {
     contract: "MaspTest",
     from: Deployer.address,
-    args: [
-      SpendVerifierSource.address,
-      OutputVerifierSource.address,
-      Hasher.address,
-    ],
+    args: [TxVerifierSource.address, Hasher.address],
     libraries: {
       EdOnBN254: EdOnBN254,
     },
@@ -151,11 +134,7 @@ export async function deployDoubleMasp() {
   await hre.deployments.deploy("DestPool", {
     contract: "MaspTest",
     from: Deployer.address,
-    args: [
-      SpendVerifierSource.address,
-      OutputVerifierSource.address,
-      Hasher.address,
-    ],
+    args: [TxVerifierSource.address, Hasher.address],
     libraries: {
       EdOnBN254: EdOnBN254,
     },
@@ -165,7 +144,6 @@ export async function deployDoubleMasp() {
     (await hre.deployments.get("DestPool")).address,
     Deployer
   );
-
 
   return { SourcePool, DestPool };
 }

@@ -4,15 +4,15 @@ pragma solidity ^0.8.0;
 struct TxData {
     bytes proof;
     uint256[] spendNullifier;
-    uint256[][2] spendValueCommitment; // EC point
+    uint256[2][] spendValueCommitment; // EC point
     uint256[] outputCommitment;
-    uint256[][2] outputValueCommitment; // EC Point
+    uint256[2][] outputValueCommitment; // EC Point
     bytes[] outputEncryptedOutput;
-    uint256[][2] bridgeInValueCommitment; // EC Point
+    uint256[2][] bridgeInValueCommitment; // EC Point
     uint256[] bridgeOutChainId;
     address[] bridgeOutDestination;
     bytes[] bridgeOutEncryptedOutput;
-    uint256[][2] bridgeOutValueCommitment; // EC Point
+    uint256[2][] bridgeOutValueCommitment; // EC Point
     uint256 extAssetHash;
     int256 extAmount;
     uint256[2] bpk;

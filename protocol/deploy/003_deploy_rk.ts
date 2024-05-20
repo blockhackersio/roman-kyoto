@@ -28,22 +28,28 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   });
 
   // first we deploy our multiplier, output and spend verifiers on our source chain
-  await deploy("OutputVerifierSource", {
-    contract: "OutputVerifier",
+  // await deploy("OutputVerifierSource", {
+  //   contract: "OutputVerifier",
+  //   from: Deployer.address,
+  //   log: true,
+  //   autoMine: true,
+  //   waitConfirmations: 1,
+  // });
+  //
+  // await deploy("SpendVerifierSource", {
+  //   contract: "SpendVerifier",
+  //   from: Deployer.address,
+  //   log: true,
+  //   autoMine: true,
+  //   waitConfirmations: 1,
+  // });
+  await deploy("TxVerifierSource", {
+    contract: "TxVerifier",
     from: Deployer.address,
     log: true,
     autoMine: true,
     waitConfirmations: 1,
   });
-
-  await deploy("SpendVerifierSource", {
-    contract: "SpendVerifier",
-    from: Deployer.address,
-    log: true,
-    autoMine: true,
-    waitConfirmations: 1,
-  });
-
   // deploy our EdOnBN254 library
   await hre.deployments.deploy("EdOnBN254", {
     contract: "EdOnBN254",
@@ -53,18 +59,20 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     waitConfirmations: 1,
   });
 
-  const SpendVerifierSource = (await hre.deployments.get("SpendVerifierSource"))
+  // const SpendVerifierSource = (await hre.deployments.get("SpendVerifierSource"))
+  //   .address;
+  // const OutputVerifierSource = (
+  //   await hre.deployments.get("OutputVerifierSource")
+  // ).address;
+  const TxVerifierSource = (await hre.deployments.get("TxVerifierSource"))
     .address;
-  const OutputVerifierSource = (
-    await hre.deployments.get("OutputVerifierSource")
-  ).address;
   const EdOnBN254 = (await hre.deployments.get("EdOnBN254")).address;
   const Hasher = (await hre.deployments.get("Hasher")).address;
 
   await deploy("RK", {
     contract: "RK",
     from: Deployer.address,
-    args: [SpendVerifierSource, OutputVerifierSource, Hasher],
+    args: [TxVerifierSource, Hasher],
     libraries: {
       EdOnBN254: EdOnBN254,
     },
@@ -75,7 +83,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   await deploy("RK2", {
     contract: "RK",
     from: Deployer.address,
-    args: [SpendVerifierSource, OutputVerifierSource, Hasher],
+    args: [TxVerifierSource, Hasher],
     libraries: {
       EdOnBN254: EdOnBN254,
     },

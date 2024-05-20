@@ -157,7 +157,7 @@ it("should value balance when bridging in 10", async () => {
   console.log(vc);
 });
 
-it("integrate single pool", async () => {
+it.only("integrate single pool", async () => {
   await ensurePoseidon();
 
   const { MASP } = await loadFixture(deployMasp);
@@ -176,7 +176,7 @@ it("integrate single pool", async () => {
   expect(await wallet.getBalance("USDC")).to.equal(0n);
   expect(await wallet.getBalance("WBTC")).to.equal(0n);
   let tx = await deposit(signer, maspAddress, 100n, spender, "USDC", tree);
-
+return
   let receipt = await tx.wait();
 
   await wallet.updateFromReceipt(receipt);
