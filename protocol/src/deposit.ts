@@ -28,43 +28,20 @@ export async function deposit(
     Note.create(0n, receiver.publicKey, asset),
   ];
 
-  const { sig, Bpk, spends, outputs, hash } = await prepareTx(
+  const { txData } = await prepareTx(
     spendList,
     outputList,
     [],
     [],
     tree,
     receiver,
-    receiver
+    receiver,
+    asset,
+    amount
   );
 
   const masp = IMasp__factory.connect(poolAddress, signer);
-  const extAssetHash = await Asset.fromTicker(asset).getIdHash();
 
-  const txData: TxDataStruct = {
-    proof: "",
-    spendNullifier: spends.map(({ nullifier }) => nullifier),
-    spendValueCommitment: spends.map(({ valueCommitment }) => valueCommitment),
-    outputCommitment: outputs.map(({ commitment }) => commitment),
-    outputValueCommitment: outputs.map(
-      ({ valueCommitment }) => valueCommitment
-    ),
-    outputEncryptedOutput: outputs.map(
-      ({ encryptedOutput }) => encryptedOutput
-    ),
-    bridgeInValueCommitment: [],
-    bridgeOutChainId: [],
-    bridgeOutDestination: [],
-    bridgeOutEncryptedOutput: [],
-    bridgeOutValueCommitment: [],
-    extAssetHash,
-    extAmount: amount,
-    bpk: [toStr(Bpk.x), toStr(Bpk.y)],
-    root: `${tree.root}`,
-    R: [toStr(sig.R.x), toStr(sig.R.y)],
-    s: toStr(sig.s),
-    hash,
-  };
 
   return await masp.transact(txData);
 }

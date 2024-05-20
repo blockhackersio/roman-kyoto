@@ -14,7 +14,7 @@ template Tx(ins, outs, merkleDepth) {
   signal input spendPathIndex[ins];
   signal input spendNullifier[ins];
   signal input spendPathElements[ins][merkleDepth];
-  signal input spendCommitment[ins];
+  signal input spendCommitment[ins]; 
   signal input spendV[ins][2];
   signal input spendR[ins][2];
   signal input spendr[ins];

@@ -9,6 +9,8 @@ import { reddsaSign, reddsaVerify } from "./reddsa";
 import { Keyset } from "./keypair";
 import { ValueCommitment } from "./vc";
 import { ExtPointType } from "@noble/curves/abstract/edwards";
+import { TxDataStruct } from "../typechain-types/contracts/interfaces/IMasp";
+import { Asset } from "./asset";
 
 // TODO: add bridges to hash
 function encodeTxInputs(
@@ -80,6 +82,35 @@ export async function outputProve(
     },
     "output"
   );
+}
+
+type TxData = {
+  root: string;
+  privateKey: string;
+  spendAmount: string[];
+  spendBlinding: string[];
+  spendAsset: string[];
+  spendPathIndex: string[];
+  spendNullifier: string[];
+  spendPathElements: string[][];
+  spendCommitment: string[];
+  spendV: [string, string][];
+  spendR: [string, string][];
+  spendr: string[];
+  spendC: [string, string][];
+  outAmount: string[];
+  outBlinding: string[];
+  outAssetId: string[];
+  outAssetIdHash: string[];
+  outPublicKey: string[];
+  outV: [string, string][];
+  outR: [string, string][];
+  outr: string[];
+  outC: [string, string][];
+};
+
+export async function txProve(txData: TxData) {
+  return await generateGroth16Proof(txData, "tx");
 }
 
 export async function spendProve(
@@ -262,7 +293,6 @@ async function checkValueBalance({
   // maskes sense to validate value balance on the client before sending though...
 }
 
-// XXX: flatten out to a single proof possibly remove all subfunctions and do it in a single fn  
 export async function prepareTx(
   spendList: Note[],
   outputList: Note[],
@@ -270,7 +300,9 @@ export async function prepareTx(
   bridgeOutList: { note: Note; chainId: string; destination: string }[],
   tree: MerkleTree,
   sender: Keyset,
-  receiver: Keyset
+  receiver: Keyset,
+  asset: string,
+  amount: bigint
 ) {
   let totalRandomness = 0n;
   const outputs: Output[] = [];
@@ -278,20 +310,42 @@ export async function prepareTx(
   const bridgeIns: BridgeIn[] = [];
   const bridgeOuts: BridgeOut[] = [];
 
-  const vcs = {
-    ins: [] as ValueCommitment[],
-    outs: [] as ValueCommitment[],
-    bridgeOuts: [] as ValueCommitment[],
-    bridgeIns: [] as ValueCommitment[],
-    extValueBase: B.ExtendedPoint.ZERO,
-    extAmount: 0n,
-  };
+  // const vcs = {
+  //   ins: [] as ValueCommitment[],
+  //   outs: [] as ValueCommitment[],
+  //   bridgeOuts: [] as ValueCommitment[],
+  //   bridgeIns: [] as ValueCommitment[],
+  //   extValueBase: B.ExtendedPoint.ZERO,
+  //   extAmount: 0n,
+  // };
+  const root = `${tree.root}`;
+  const spendAmount: string[] = [];
+  const spendBlinding: string[] = [];
+  const spendAsset: string[] = [];
+  const spendPathIndex: string[] = [];
+  const spendNullifier: string[] = [];
+  const spendPathElements: string[][] = [];
+  const spendCommitment: string[] = [];
+  const spendV: [string, string][] = [];
+  const spendR: [string, string][] = [];
+  const spendr: string[] = [];
+  const spendC: [string, string][] = [];
 
+  const outAmount: string[] = [];
+  const outBlinding: string[] = [];
+  const outAssetId: string[] = [];
+  const outAssetIdHash: string[] = [];
+  const outPublicKey: string[] = [];
+  const outV: [string, string][] = [];
+  const outR: [string, string][] = [];
+  const outr: string[] = [];
+  const outC: [string, string][] = [];
+  const outputEncryptedOutput: string[] = [];
+  const outputCommitment: string[] = [];
   for (let n of spendList) {
     // const result = await processSpend(sender, tree, n);
     const nc = await n.commitment();
     const vc = ValueCommitment.fromNote(n);
-    const root = `${tree.root}`;
     const index = tree.indexOf(nc);
     const pathElements = tree.path(index).pathElements.map((e) => e.toString());
     const nullifier = await n.nullifier(
@@ -299,33 +353,44 @@ export async function prepareTx(
       BigInt(index)
     );
     const Vs = await n.asset.getValueBase();
-    const proofSpend = await spendProve(
-      toStr(sender.privateKey),
-      toStr(n.amount),
-      toStr(n.blinding),
-      toStr(await n.asset.getIdHash()),
-      toStr(BigInt(index)),
-      nullifier,
-      root,
-      pathElements,
-      ...toXY(Vs),
-      ...toXY(R),
-      ...(await vc.toRXY()),
-      toFixedHex(nc)
-    );
-    const result = {
-      r: vc.getRandomness(),
-      spend: {
-        proof: proofSpend,
-        valueCommitment: await vc.toXY(),
-        nullifier: nullifier,
-      },
-      vc,
-    };
+    spendAmount.push(toStr(n.amount));
+    spendBlinding.push(toStr(n.blinding));
+    spendAsset.push(toStr(await n.asset.getIdHash()));
+    spendPathIndex.push(toStr(BigInt(index)));
+    spendNullifier.push(nullifier);
+    spendPathElements.push(pathElements);
+    spendCommitment.push(toFixedHex(nc));
+    spendV.push(toXY(Vs));
+    spendR.push(toXY(R));
+    const [r, Cx, Cy] = await vc.toRXY();
+    spendr.push(r);
+    spendC.push([Cx, Cy]);
 
-    totalRandomness = modN(totalRandomness + result.r);
-    spends.push(result.spend);
-    vcs.ins.push(result.vc);
+    // const proofSpend = await spendProve(
+    //   toStr(sender.privateKey),
+    //   toStr(n.amount),
+    //   toStr(n.blinding),
+    //   toStr(await n.asset.getIdHash()),
+    //   toStr(BigInt(index)),
+    //   nullifier,
+    //   root,
+    //   pathElements,
+    //   ...toXY(Vs),
+    //   ...toXY(R),
+    //   ...(await vc.toRXY()),
+    //   toFixedHex(nc)
+    // );
+    // const result = {
+    //   r: vc.getRandomness(),
+    //   spend: {
+    //     valueCommitment: await vc.toXY(),
+    //     nullifier: nullifier,
+    //   },
+    //   vc,
+    // };
+    //
+    totalRandomness = modN(totalRandomness + vc.getRandomness());
+    // vcs.ins.push(result.vc);
   }
 
   for (let n of outputList) {
@@ -335,16 +400,19 @@ export async function prepareTx(
     const vc = ValueCommitment.fromNote(n);
     const Vo = await n.asset.getValueBase();
 
-    const proofOutput = await outputProve(
-      toStr(n.amount),
-      toStr(n.blinding),
-      toStr(n.asset.getId()),
-      toStr(await n.asset.getIdHash()),
-      toStr(n.spender),
-      ...toXY(Vo),
-      ...toXY(R),
-      ...(await vc.toRXY())
-    );
+    // const proofOutput = await outputProve(
+    outAmount.push(toStr(n.amount));
+    outBlinding.push(toStr(n.blinding));
+    outAssetId.push(toStr(n.asset.getId()));
+    outAssetIdHash.push(toStr(await n.asset.getIdHash()));
+    outPublicKey.push(toStr(n.spender));
+    outV.push(toXY(Vo));
+    outR.push(toXY(R));
+    const [r, Cx, Cy] = await vc.toRXY();
+    outr.push(r);
+    outC.push([Cx, Cy]);
+    outputCommitment.push(toFixedHex(nc));
+    // );
 
     const keyToEncryptTo =
       sender.publicKey === n.spender
@@ -352,56 +420,55 @@ export async function prepareTx(
         : receiver.encryptionKey;
 
     const encryptedOutput = n.encrypt(keyToEncryptTo);
+    outputEncryptedOutput.push(encryptedOutput);
+    // const result = {
+    //   r: vc.getRandomness(),
+    //   output: {
+    //     valueCommitment: await vc.toXY(),
+    //     commitment: nc,
+    //     encryptedOutput,
+    //   },
+    //   vc,
+    // };
 
-    const result = {
-      r: vc.getRandomness(),
-      output: {
-        proof: proofOutput,
-        valueCommitment: await vc.toXY(),
-        commitment: nc,
-        encryptedOutput,
-      },
-      vc,
-    };
-
-    totalRandomness = modN(totalRandomness - result.r);
-    outputs.push(result.output);
-    vcs.outs.push(result.vc);
-  }
-
-  for (let { note, chainId, destination } of bridgeOutList) {
-    const vc = ValueCommitment.fromNote(note);
-    const valueBase = await vc.asset.getValueBase();
-
-    const result = await processOutput(sender, receiver, note);
-    const proof = await bridgeoutProve(
-      toStr(vc.amount),
-      toStr(vc.asset.getId()),
-      toStr(valueBase.x),
-      toStr(valueBase.y),
-      toStr(R.x),
-      toStr(R.y),
-      toStr(vc.getRandomness())
-    );
-
-    const encryptedOutput = vc.encrypt(sender.encryptionKey);
     totalRandomness = modN(totalRandomness - vc.getRandomness());
-    bridgeOuts.push({
-      valueCommitment: await vc.toXY(),
-      encryptedOutput,
-      proof,
-      chainId,
-      destination,
-    });
-    vcs.bridgeOuts.push(vc);
+    // outputs.push(result.output);
+    // vcs.outs.push(result.vc);
   }
 
-  for (let vc of bridgeInList) {
-    const r = vc.getRandomness();
-    totalRandomness = modN(totalRandomness + r);
-    bridgeIns.push({ valueCommitment: await vc.toXY() });
-    vcs.bridgeIns.push(vc);
-  }
+  // for (let { note, chainId, destination } of bridgeOutList) {
+  //   const vc = ValueCommitment.fromNote(note);
+  //   const valueBase = await vc.asset.getValueBase();
+  //
+  //   const result = await processOutput(sender, receiver, note);
+  //   const proof = await bridgeoutProve(
+  //     toStr(vc.amount),
+  //     toStr(vc.asset.getId()),
+  //     toStr(valueBase.x),
+  //     toStr(valueBase.y),
+  //     toStr(R.x),
+  //     toStr(R.y),
+  //     toStr(vc.getRandomness())
+  //   );
+  //
+  //   const encryptedOutput = vc.encrypt(sender.encryptionKey);
+  //   totalRandomness = modN(totalRandomness - vc.getRandomness());
+  //   bridgeOuts.push({
+  //     valueCommitment: await vc.toXY(),
+  //     encryptedOutput,
+  //     proof,
+  //     chainId,
+  //     destination,
+  //   });
+  //   // vcs.bridgeOuts.push(vc);
+  // }
+  //
+  // for (let vc of bridgeInList) {
+  //   const r = vc.getRandomness();
+  //   totalRandomness = modN(totalRandomness + r);
+  //   bridgeIns.push({ valueCommitment: await vc.toXY() });
+  //   // vcs.bridgeIns.push(vc);
+  // }
 
   // Create sig
   const bsk = totalRandomness;
@@ -419,5 +486,52 @@ export async function prepareTx(
 
   if (!valid) throw new Error("Signature is not valid!");
 
-  return { sig, Bpk, spends, outputs, bridgeIns, bridgeOuts, hash };
+  const proof = await txProve({
+    root,
+    privateKey: toStr(sender.privateKey),
+    spendAmount,
+    spendBlinding,
+    spendCommitment,
+    spendPathElements,
+    spendPathIndex,
+    spendC,
+    spendr,
+    spendR,
+    spendV,
+    spendAsset,
+    spendNullifier,
+    outAmount,
+    outBlinding,
+    outAssetId,
+    outAssetIdHash,
+    outPublicKey,
+    outV,
+    outR,
+    outr,
+    outC,
+  });
+  const extAssetHash = await Asset.fromTicker(asset).getIdHash();
+
+  const txData: TxDataStruct = {
+    proof,
+    spendNullifier,
+    spendValueCommitment: spendC,
+    outputCommitment,
+    outputValueCommitment: outC,
+    outputEncryptedOutput,
+    bridgeInValueCommitment: [],
+    bridgeOutChainId: [],
+    bridgeOutDestination: [],
+    bridgeOutEncryptedOutput: [],
+    bridgeOutValueCommitment: [],
+    extAssetHash,
+    extAmount: amount,
+    bpk: [toStr(Bpk.x), toStr(Bpk.y)],
+    root: `${tree.root}`,
+    R: [toStr(sig.R.x), toStr(sig.R.y)],
+    s: toStr(sig.s),
+    hash,
+  };
+
+  return { txData };
 }
