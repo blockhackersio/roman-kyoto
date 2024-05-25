@@ -44,32 +44,6 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
             .decode(data, (uint, uint, uint, uint, uint, uint, uint, uint));
     }
 
-    // function spendVerify(
-    //     bytes memory _proof,
-    //     uint[1] memory _pubSignals
-    // ) public view {
-    //     (uint[2] memory a, uint[2][2] memory b, uint[2] memory c) = parseProof(
-    //         _proof
-    //     );
-    //     require(
-    //         spendVerifier.verifyProof(a, b, c, _pubSignals),
-    //         "invalid proof"
-    //     );
-    // }
-
-    // function outputVerify(
-    //     bytes memory _proof,
-    //     uint[1] memory _pubSignals
-    // ) public view {
-    //     (uint[2] memory a, uint[2][2] memory b, uint[2] memory c) = parseProof(
-    //         _proof
-    //     );
-    //     require(
-    //         outputVerifier.verifyProof(a, b, c, _pubSignals),
-    //         "invalid proof"
-    //     );
-    // }
-
     function txVerify(
         bytes memory _proof,
         uint[4] memory _pubSignals

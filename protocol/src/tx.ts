@@ -347,16 +347,19 @@ export async function prepareTx(
     const nc = await n.commitment();
     const vc = ValueCommitment.fromNote(n);
     const index = tree.indexOf(nc);
-    const pathElements = tree.path(index).pathElements.map((e) => e.toString());
+    const pathElements =
+      index > -1
+        ? tree.path(index).pathElements.map((e) => e.toString())
+        : new Array(tree.levels).fill(0);
     const nullifier = await n.nullifier(
       toStr(sender.privateKey),
-      BigInt(index)
+      BigInt(index >= 0 ? index : 0)
     );
     const Vs = await n.asset.getValueBase();
     spendAmount.push(toStr(n.amount));
     spendBlinding.push(toStr(n.blinding));
     spendAsset.push(toStr(await n.asset.getIdHash()));
-    spendPathIndex.push(toStr(BigInt(index)));
+    spendPathIndex.push(toStr(BigInt(index >= 0 ? index : 0)));
     spendNullifier.push(nullifier);
     spendPathElements.push(pathElements);
     spendCommitment.push(toFixedHex(nc));
@@ -365,7 +368,6 @@ export async function prepareTx(
     const [r, Cx, Cy] = await vc.toRXY();
     spendr.push(r);
     spendC.push([Cx, Cy]);
-
     // const proofSpend = await spendProve(
     //   toStr(sender.privateKey),
     //   toStr(n.amount),

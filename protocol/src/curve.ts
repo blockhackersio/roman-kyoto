@@ -2,6 +2,7 @@ import { twistedEdwards } from "@noble/curves/abstract/edwards";
 import { Field, mod } from "@noble/curves/abstract/modular";
 import { keccak_256 } from "@noble/hashes/sha3";
 import { randomBytes } from "@noble/hashes/utils";
+import crypto from 'crypto';
 
 export type BabyJub = ReturnType<typeof getBabyJubJub>;
 export function getBabyJubJub() {

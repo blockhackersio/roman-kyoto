@@ -52,7 +52,7 @@ template Tx(ins, outs, merkleDepth) {
     spend[i].Vx <== spendV[i][0];
     spend[i].Vy <== spendV[i][1];
     spend[i].Rx <== spendR[i][0];
-    spend[i].Ry <== spendR[i][0];
+    spend[i].Ry <== spendR[i][1];
     spend[i].r <== spendr[i];
     spend[i].Cx <== spendC[i][0];
     spend[i].Cy <== spendC[i][1];

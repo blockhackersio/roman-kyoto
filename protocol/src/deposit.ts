@@ -5,9 +5,6 @@ import { logAction } from "./log";
 import { Note } from "./note";
 import { prepareTx } from "./tx";
 import { IMasp__factory } from "../typechain-types";
-import { Asset } from "./asset";
-import { toStr } from "./utils";
-import { TxDataStruct } from "../typechain-types/contracts/RK";
 
 export async function deposit(
   signer: Signer,
@@ -21,7 +18,12 @@ export async function deposit(
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
   // If we are only depositing there are no spend notes
-  const spendList: Note[] = [];
+  const spendList: Note[] = [
+    // these are dummy notes
+    // TODO: iterate up to max in and create dummy notes
+    Note.create(0n, receiver.publicKey, asset),
+    Note.create(0n, receiver.publicKey, asset),
+  ];
   const outputList: Note[] = [
     Note.create(amount, receiver.publicKey, asset),
     // Need to add a zero note to ensure there are multiples of 2
@@ -41,7 +43,6 @@ export async function deposit(
   );
 
   const masp = IMasp__factory.connect(poolAddress, signer);
-
 
   return await masp.transact(txData);
 }

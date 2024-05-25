@@ -6,6 +6,7 @@ export async function generateGroth16Proof(
   inputs: CircuitSignals,
   circuitName: string = "hello"
 ) {
+  console.log(JSON.stringify(inputs, null,2))
   const wasmLocation = getWasmFileLocation(circuitName);
   const zkeyLocation = getZkeyFileLocation(circuitName);
   const start = Date.now();

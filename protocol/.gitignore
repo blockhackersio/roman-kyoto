@@ -22,5 +22,5 @@ node_modules
 /coverage
 /coverage.json
 
-/.hash
+.hashes/
 

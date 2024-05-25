@@ -18,7 +18,9 @@ export class ValueCommitment {
     public asset: Asset,
     public amount: bigint,
     private r: bigint = getRandomBigInt(253)
-  ) { }
+  ) {
+    // console.log("ValueCommitment from " + asset.getSymbol() + ", " + amount);
+  }
 
   encrypt(publicKey: string) {
     const jsonStr = this.serialize();
@@ -63,8 +65,8 @@ export class ValueCommitment {
     const parsed: JsonValueCommitment = JSON.parse(data);
     return ValueCommitment.fromJsonValueCommitment(parsed);
   }
-  
-  static deserialize64(data:string) {
+
+  static deserialize64(data: string) {
     return this.deserialize(base64Decode(data));
   }
 
