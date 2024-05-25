@@ -18,17 +18,8 @@ export async function deposit(
   if (signer.provider === null) throw new Error("Signer must have a provider");
 
   // If we are only depositing there are no spend notes
-  const spendList: Note[] = [
-    // these are dummy notes
-    // TODO: iterate up to max in and create dummy notes
-    Note.create(0n, receiver.publicKey, asset),
-    Note.create(0n, receiver.publicKey, asset),
-  ];
-  const outputList: Note[] = [
-    Note.create(amount, receiver.publicKey, asset),
-    // Need to add a zero note to ensure there are multiples of 2
-    Note.create(0n, receiver.publicKey, asset),
-  ];
+  const spendList: Note[] = [];
+  const outputList: Note[] = [Note.create(amount, receiver.publicKey, asset)];
 
   const { txData } = await prepareTx(
     spendList,

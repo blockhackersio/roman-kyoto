@@ -23,13 +23,13 @@ export async function bridge(
 ): Promise<ContractTransactionResponse> {
   logAction(
     "Bridging " +
-      amount +
-      " " +
-      asset +
-      " to " +
-      chainId +
-      ":" +
-      shrtn(destinationPool)
+    amount +
+    " " +
+    asset +
+    " to " +
+    chainId +
+    ":" +
+    shrtn(destinationPool)
   );
 
   if (signer.provider === null) throw new Error("Signer must have a provider");
@@ -58,30 +58,32 @@ export async function bridge(
     },
   ];
 
-  const { sig, Bpk, spends, outputs, bridgeOuts, hash } = await prepareTx(
+  const { txData } = await prepareTx(
     spendList,
     outputList,
     [],
     bridgeOutList,
     tree,
     sender,
-    sender
+    sender,
+    asset,
+    amount
   );
 
   const masp = IMasp__factory.connect(sourcePool, signer);
 
   return await masp.transact(
-    spends,
-    outputs,
-    [],
-    bridgeOuts,
-    await Asset.fromTicker(asset).getIdHash(),
-    toStr(0n),
-    [toStr(Bpk.x), toStr(Bpk.y)],
-    `${tree.root}`,
-    [toStr(sig.R.x), toStr(sig.R.y)],
-    toStr(sig.s),
-    hash
+    // spends,
+    // outputs,
+    // [],
+    // bridgeOuts,
+    // await Asset.fromTicker(asset).getIdHash(),
+    // toStr(0n),
+    // [toStr(Bpk.x), toStr(Bpk.y)],
+    // `${tree.root}`,
+    // [toStr(sig.R.x), toStr(sig.R.y)],
+    // toStr(sig.s),
+    // hash
+    txData
   );
 }
-

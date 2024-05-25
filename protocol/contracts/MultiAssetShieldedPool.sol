@@ -9,7 +9,7 @@ import {IMasp, TxData} from "./interfaces/IMasp.sol";
 import {MerkleTreeWithHistory} from "./MerkleTreeWithHistory.sol";
 
 import "./EdOnBN254.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 contract MultiAssetShieldedPool is MerkleTreeWithHistory {
     using EdOnBN254 for *;
@@ -76,19 +76,6 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         emit IMasp.NewCommitmentReceived(_commitment);
     }
 
-    // function bridgeoutVerify(
-    //     bytes memory _proof,
-    //     uint[2] memory _pubSignals
-    // ) public view {
-    //     (uint[2] memory a, uint[2][2] memory b, uint[2] memory c) = parseProof(
-    //         _proof
-    //     );
-    //     require(
-    //         bridgeoutVerifier.verifyProof(a, b, c, _pubSignals),
-    //         "invalid bridgeout proof"
-    //     );
-    // }
-
     struct RedDSASignature {
         bytes32 s;
         bytes32 R;
@@ -114,6 +101,19 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
 
         require(_Z.x == 0, "signature is not valid");
     }
+
+    // function logArray(uint256[] memory array) internal pure {
+    //     for (uint i = 0; i < array.length; i++) {
+    //         console.logBytes32(bytes32(array[i]));
+    //     }
+    // }
+    //
+    // function logValueCommitmentArray(uint256[2][] memory _array) internal pure {
+    //     for (uint i = 0; i < _array.length; i++) {
+    //         console.logBytes32(bytes32(_array[i][0]));
+    //         console.logBytes32(bytes32(_array[i][1]));
+    //     }
+    // }
 
     function _checkHash(
         uint256[] memory _spendNullifier,
@@ -227,7 +227,15 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
             .add(_bridgeOutsTotal)
             .add(_bridgeInsTotal.neg())
             .add(_ext);
-
+        // console.log("totalX");
+        // console.log(total.x);
+        // console.log("totalY");
+        // console.log(total.y);
+        // console.log("bpkX");
+        // console.log(_bindingPubkey.x);
+        // console.log("bpkY");
+        // console.log(_bindingPubkey.y);
+        //
         require(
             total.x == _bindingPubkey.x && total.y == _bindingPubkey.y,
             "Balance Check Failed"
@@ -253,10 +261,10 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         txVerify(
             _proof,
             [
-                _spendNullifier[0],
-                _spendNullifier[1],
                 _outputCommitment[0],
-                _outputCommitment[1]
+                _outputCommitment[1],
+                _spendNullifier[0],
+                _spendNullifier[1]
             ]
         );
 

@@ -1,5 +1,4 @@
 import { AbiCoder, keccak256 } from "ethers";
-import { BridgeOut, BridgeIn, Output, Spend } from "./types";
 import { Note, toXY } from "./note";
 import MerkleTree from "fixed-merkle-tree";
 import { toStr } from "./utils";
@@ -14,36 +13,36 @@ import { Asset } from "./asset";
 
 // TODO: add bridges to hash
 function encodeTxInputs(
-  spends: Spend[],
-  outputs: Output[],
-  bridgeIns: BridgeIn[],
-  bridgeOuts: BridgeOut[]
+  spendNullifier: string[],
+  outputCommitment: string[],
+  outputValueCommitment: [string, string][],
+  spendValueCommitment: [string, string][]
+  // bridgeIns: BridgeIn[],
+  // bridgeOuts: BridgeOut[]
 ) {
-  const nullifiers = [];
   const valueCommitments = [];
-  const commitments = [];
-
-  for (let { nullifier, valueCommitment } of spends) {
-    nullifiers.push(nullifier);
-    valueCommitments.push(valueCommitment);
+  for (let spend of spendValueCommitment) {
+    const [x, y] = spend;
+    valueCommitments.push(x);
+    valueCommitments.push(y);
   }
-
-  for (let { commitment, valueCommitment } of outputs) {
-    commitments.push(commitment);
-    valueCommitments.push(valueCommitment);
+  for (let output of outputValueCommitment) {
+    const [x, y] = output;
+    valueCommitments.push(x);
+    valueCommitments.push(y);
   }
 
   const abi = new AbiCoder();
   const encodeTypes = [
-    ...nullifiers.map(() => "uint256"),
-    ...commitments.map(() => "uint256"),
-    ...valueCommitments.flatMap(() => ["uint256", "uint256"]),
+    ...spendNullifier.map(() => "uint256"),
+    ...outputCommitment.map(() => "uint256"),
+    ...valueCommitments.map(() => "uint256"),
   ];
 
   const encodeData = [
-    ...nullifiers,
-    ...commitments,
-    ...valueCommitments.flatMap((a) => a),
+    ...spendNullifier,
+    ...outputCommitment,
+    ...valueCommitments,
   ];
 
   const encoded = abi.encode(encodeTypes, encodeData);
@@ -254,12 +253,14 @@ type ValueInput = {
   extAmount: bigint;
 };
 
-async function checkValueBalance({
-  ins,
-  outs,
-  bridgeOuts,
-  bridgeIns,
-}: ValueInput) {
+async function checkValueBalance(
+  ins: ValueCommitment[],
+  outs: ValueCommitment[],
+  bridgeOut: ValueCommitment[],
+  bridgeIn: ValueCommitment[],
+  extValueBase: ExtPointType,
+  extAmount: bigint
+) {
   let sumRIns = 0n;
   let sumROuts = 0n;
   let sumRBridgeOut = 0n;
@@ -280,17 +281,32 @@ async function checkValueBalance({
     sumOuts = sumOuts.add(await vc.toPoint());
   }
 
-  for (let vc of bridgeOuts) {
+  for (let vc of bridgeOut) {
     sumRBridgeOut += vc.getRandomness();
     sumBridgeOut = sumBridgeOut.add((await vc.toPoint()).negate());
   }
 
-  for (let vc of bridgeIns) {
+  for (let vc of bridgeIn) {
     sumRBridgeIn += vc.getRandomness();
     sumBridgeIn = sumBridgeIn.add((await vc.toPoint()).negate());
   }
-  // yti... was using this to debug but the problem appeared to be solved.
-  // maskes sense to validate value balance on the client before sending though...
+  const ext =
+    extAmount === 0n
+      ? B.ExtendedPoint.ZERO
+      : extValueBase.multiply(modN(extAmount));
+
+  const totalR = sumRIns - sumROuts - sumRBridgeOut + sumRBridgeIn;
+
+  const isBalanced = sumIns
+    .subtract(sumOuts)
+    .add(sumBridgeOut)
+    .subtract(sumBridgeIn)
+    .add(ext)
+    .equals(R.multiply(modN(totalR)));
+
+  if (!isBalanced) throw new Error("Value balance precheck failed");
+
+  console.log("Value balance passed");
 }
 
 export async function prepareTx(
@@ -304,21 +320,20 @@ export async function prepareTx(
   asset: string,
   amount: bigint
 ) {
-  let totalRandomness = 0n;
-  const outputs: Output[] = [];
-  const spends: Spend[] = [];
-  const bridgeIns: BridgeIn[] = [];
-  const bridgeOuts: BridgeOut[] = [];
+  for (let i = 0; i < 2; i++) {
+    if (typeof spendList[i] === "undefined") {
+      spendList[i] = Note.create(0n, sender.publicKey, asset);
+    }
+  }
+  for (let i = 0; i < 2; i++) {
+    if (typeof outputList[i] === "undefined") {
+      outputList[i] = Note.create(0n, receiver.publicKey, asset);
+    }
+  }
 
-  // const vcs = {
-  //   ins: [] as ValueCommitment[],
-  //   outs: [] as ValueCommitment[],
-  //   bridgeOuts: [] as ValueCommitment[],
-  //   bridgeIns: [] as ValueCommitment[],
-  //   extValueBase: B.ExtendedPoint.ZERO,
-  //   extAmount: 0n,
-  // };
+  let totalRandomness = 0n;
   const root = `${tree.root}`;
+
   const spendAmount: string[] = [];
   const spendBlinding: string[] = [];
   const spendAsset: string[] = [];
@@ -330,7 +345,7 @@ export async function prepareTx(
   const spendR: [string, string][] = [];
   const spendr: string[] = [];
   const spendC: [string, string][] = [];
-
+  const spendVc: ValueCommitment[] = [];
   const outAmount: string[] = [];
   const outBlinding: string[] = [];
   const outAssetId: string[] = [];
@@ -342,8 +357,9 @@ export async function prepareTx(
   const outC: [string, string][] = [];
   const outputEncryptedOutput: string[] = [];
   const outputCommitment: string[] = [];
+  const outVc: ValueCommitment[] = [];
+
   for (let n of spendList) {
-    // const result = await processSpend(sender, tree, n);
     const nc = await n.commitment();
     const vc = ValueCommitment.fromNote(n);
     const index = tree.indexOf(nc);
@@ -360,7 +376,7 @@ export async function prepareTx(
     spendBlinding.push(toStr(n.blinding));
     spendAsset.push(toStr(await n.asset.getIdHash()));
     spendPathIndex.push(toStr(BigInt(index >= 0 ? index : 0)));
-    spendNullifier.push(nullifier);
+    spendNullifier.push(toFixedHex(nullifier));
     spendPathElements.push(pathElements);
     spendCommitment.push(toFixedHex(nc));
     spendV.push(toXY(Vs));
@@ -368,41 +384,15 @@ export async function prepareTx(
     const [r, Cx, Cy] = await vc.toRXY();
     spendr.push(r);
     spendC.push([Cx, Cy]);
-    // const proofSpend = await spendProve(
-    //   toStr(sender.privateKey),
-    //   toStr(n.amount),
-    //   toStr(n.blinding),
-    //   toStr(await n.asset.getIdHash()),
-    //   toStr(BigInt(index)),
-    //   nullifier,
-    //   root,
-    //   pathElements,
-    //   ...toXY(Vs),
-    //   ...toXY(R),
-    //   ...(await vc.toRXY()),
-    //   toFixedHex(nc)
-    // );
-    // const result = {
-    //   r: vc.getRandomness(),
-    //   spend: {
-    //     valueCommitment: await vc.toXY(),
-    //     nullifier: nullifier,
-    //   },
-    //   vc,
-    // };
-    //
+    spendVc.push(vc);
     totalRandomness = modN(totalRandomness + vc.getRandomness());
-    // vcs.ins.push(result.vc);
   }
 
   for (let n of outputList) {
-    // const result = await processOutput(sender, receiver, n);
-
     const nc = await n.commitment();
     const vc = ValueCommitment.fromNote(n);
     const Vo = await n.asset.getValueBase();
 
-    // const proofOutput = await outputProve(
     outAmount.push(toStr(n.amount));
     outBlinding.push(toStr(n.blinding));
     outAssetId.push(toStr(n.asset.getId()));
@@ -414,7 +404,6 @@ export async function prepareTx(
     outr.push(r);
     outC.push([Cx, Cy]);
     outputCommitment.push(toFixedHex(nc));
-    // );
 
     const keyToEncryptTo =
       sender.publicKey === n.spender
@@ -423,19 +412,9 @@ export async function prepareTx(
 
     const encryptedOutput = n.encrypt(keyToEncryptTo);
     outputEncryptedOutput.push(encryptedOutput);
-    // const result = {
-    //   r: vc.getRandomness(),
-    //   output: {
-    //     valueCommitment: await vc.toXY(),
-    //     commitment: nc,
-    //     encryptedOutput,
-    //   },
-    //   vc,
-    // };
+    outVc.push(vc);
 
     totalRandomness = modN(totalRandomness - vc.getRandomness());
-    // outputs.push(result.output);
-    // vcs.outs.push(result.vc);
   }
 
   // for (let { note, chainId, destination } of bridgeOutList) {
@@ -479,7 +458,12 @@ export async function prepareTx(
   // test clientside value check
   // checkValueBalance(vcs);
 
-  const encoded = encodeTxInputs(spends, outputs, bridgeIns, bridgeOuts);
+  const encoded = encodeTxInputs(
+    spendNullifier,
+    outputCommitment,
+    outC,
+    spendC
+  );
   const hash = keccak256(encoded);
   const sig = reddsaSign(R, bsk, Bpk, hash);
 
@@ -512,7 +496,11 @@ export async function prepareTx(
     outr,
     outC,
   });
+
+  const extValueBase = await Asset.fromTicker(asset).getValueBase();
   const extAssetHash = await Asset.fromTicker(asset).getIdHash();
+
+  await checkValueBalance(spendVc, outVc, [], [], extValueBase, amount);
 
   const txData: TxDataStruct = {
     proof,

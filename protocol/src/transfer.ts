@@ -3,12 +3,11 @@ import { Keyset } from "./keypair";
 import MerkleTree from "fixed-merkle-tree";
 import { NoteStore } from "./types";
 import { logAction } from "./log";
-import { shrtn, toStr } from "./utils";
+import { shrtn } from "./utils";
 import { toFixedHex } from "./zklib";
 import { Note } from "./note";
 import { prepareTx } from "./tx";
 import { IMasp__factory } from "../typechain-types";
-import { Asset } from "./asset";
 
 export async function transfer(
   signer: Signer,
@@ -22,11 +21,11 @@ export async function transfer(
 ): Promise<ContractTransactionResponse> {
   logAction(
     "Transferring " +
-      amount +
-      " " +
-      asset +
-      " to " +
-      shrtn(toFixedHex(receiver.publicKey))
+    amount +
+    " " +
+    asset +
+    " to " +
+    shrtn(toFixedHex(receiver.publicKey))
   );
 
   if (signer.provider === null) throw new Error("Signer must have a provider");
@@ -45,29 +44,19 @@ export async function transfer(
     Note.create(change > 0n ? change : 0n, sender.publicKey, asset)
   );
 
-  const { sig, Bpk, spends, outputs, hash } = await prepareTx(
+  const { txData } = await prepareTx(
     spendList,
     outputList,
     [],
     [],
     tree,
     sender,
-    receiver
+    receiver,
+    asset,
+    0n
   );
+
   const masp = IMasp__factory.connect(poolAddress, signer);
 
-  return await masp.transact(
-    spends,
-    outputs,
-    [],
-    [],
-    await Asset.fromTicker(asset).getIdHash(),
-    0n,
-    [toStr(Bpk.x), toStr(Bpk.y)],
-    `${tree.root}`,
-    [toStr(sig.R.x), toStr(sig.R.y)],
-    toStr(sig.s),
-    hash
-  );
+  return await masp.transact(txData);
 }
-

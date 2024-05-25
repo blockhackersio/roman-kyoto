@@ -6,8 +6,6 @@ import { logAction } from "./log";
 import { Note } from "./note";
 import { prepareTx } from "./tx";
 import { IMasp__factory } from "../typechain-types";
-import { Asset } from "./asset";
-import { toStr } from "./utils";
 
 export async function withdraw(
   signer: Signer,
@@ -39,30 +37,19 @@ export async function withdraw(
   // create a zero note so that we have a multiple of 2 notes
   outputList.push(Note.create(0n, sender.publicKey, asset));
 
-  const { sig, Bpk, spends, outputs, hash } = await prepareTx(
+  const { txData } = await prepareTx(
     spendList,
     outputList,
     [],
     [],
     tree,
     sender,
-    receiver
+    receiver,
+    asset,
+    -amount
   );
 
   const masp = IMasp__factory.connect(poolAddress, signer);
 
-  return await masp.transact(
-    spends,
-    outputs,
-    [],
-    [],
-    await Asset.fromTicker(asset).getIdHash(),
-    toStr(-amount),
-    [toStr(Bpk.x), toStr(Bpk.y)],
-    `${tree.root}`,
-    [toStr(sig.R.x), toStr(sig.R.y)],
-    toStr(sig.s),
-    hash
-  );
+  return await masp.transact(txData);
 }
-
