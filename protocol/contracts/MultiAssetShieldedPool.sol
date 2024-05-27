@@ -333,6 +333,7 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         }
     }
 
+    // 56,174 gas to run with inputs
     function _transact(
         Spend[] memory _spends,
         Output[] memory _outputs,
@@ -346,17 +347,20 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
         uint256 _s,
         bytes memory _hash
     ) internal {
+        // 3945 gas
         _checkHash(_spends, _outputs, _hash);
 
+        // 88 gas
         EdOnBN254.Affine memory _bindingPubkey = EdOnBN254.Affine(
             _bpk[0],
             _bpk[1]
         );
-
+        
         EdOnBN254.Affine memory _extValueBase = EdOnBN254
-            .primeSubgroupGenerator()
-            .mul(_extAssetHash);
-
+             .primeSubgroupGenerator()// 3384 gas (primeSubgroupGenerator only)
+             .mul(_extAssetHash); // 1570873 gas
+       
+        // 78500 gas
         _balanceCheck(
             _spends,
             _outputs,
@@ -367,8 +371,10 @@ contract MultiAssetShieldedPool is MerkleTreeWithHistory {
             _extAmount
         );
 
+        // 3122271 gas
         _sigVerify(_s, _R, _bpk, _hash);
-
+        
+        // 590528 gas
         _proofCheck(_spends, _outputs, _bridgeIns, _bridgeOuts, _root);
     }
 
