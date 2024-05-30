@@ -29,6 +29,7 @@ function getNoteCommitmentEvents(receipt: ContractTransactionReceipt | null) {
     .filter((log) => log !== null);
   return decodedLogs.filter((c) => c !== null) as LogDescription[];
 }
+
 function getNoteCommitmentEventsFromFilter(events: TypedEventLog<any>[]) {
   const decodedLogs = events
     .map((log) => {
@@ -45,6 +46,7 @@ function getNoteCommitmentEventsFromFilter(events: TypedEventLog<any>[]) {
 }
 
 export class MaspWallet {
+  private lastBlock = 0;
   constructor(
     private privateKey: string,
     private notes: MetaNote[],
@@ -63,7 +65,7 @@ export class MaspWallet {
     return this.bridgeOuts;
   }
   async getKeys() {
-    return await getKeys(BigInt('0x'+this.privateKey));
+    return await getKeys(BigInt("0x" + this.privateKey));
   }
 
   async getTree(contract: RK) {
@@ -84,6 +86,7 @@ export class MaspWallet {
     }
     return notes;
   }
+
   async updateFromEvents(events: LogDescription[]) {
     for (let ev of events) {
       if (ev.name === "NewCommitment") {
@@ -98,7 +101,6 @@ export class MaspWallet {
             note,
           });
         } catch (err) {
-          console.log("failed decryption");
         }
       }
       if (ev.name === "NewBridgeout") {
@@ -122,15 +124,14 @@ export class MaspWallet {
     await this.updateFromEvents(events);
   }
 
-  async updateFromContract(address: string, wallet: Wallet) {
+  async updateFromContract(address: string, wallet: Wallet, fromBlock = this.lastBlock) {
     const RK = RK__factory.connect(address, wallet);
-    const fromBlock = 0;
     const toBlock = "latest";
     const NewCommitment = RK.filters.NewCommitment();
     const NewBridgeout = RK.filters.NewBridgeout();
     const NewNullifier = RK.filters.NewNullifier();
 
-    const events = [
+    const events: TypedEventLog<any>[] = [
       ...(
         await Promise.all([
           RK.queryFilter(NewCommitment, fromBlock, toBlock),
@@ -139,7 +140,11 @@ export class MaspWallet {
         ])
       ).flatMap((a) => a as any),
     ];
+    const last = events[events.length - 1];
+    const block = await last.getBlock();
+    
     await this.updateFromEvents(getNoteCommitmentEventsFromFilter(events));
+    this.lastBlock = block.number;
   }
 
   async getBalance(asset: string) {
@@ -177,10 +182,7 @@ export class MaspWallet {
 
   static async fromWallet(name: string, wallet: Wallet) {
     const keys = await getKeys(BigInt(wallet.privateKey));
-    return MaspWallet.fromPrivateKey(
-      keys.privateKey.toString(16),
-      name
-    );
+    return MaspWallet.fromPrivateKey(keys.privateKey.toString(16), name);
   }
 
   static fromPrivateKey(privateKey: string, name?: string) {

@@ -54,8 +54,8 @@ export async function transfer(
     sender,
     receiver
   );
-  const masp = IMasp__factory.connect(poolAddress, signer);
 
+  const masp = IMasp__factory.connect(poolAddress, signer);
   return await masp.transact(
     spends,
     outputs,
