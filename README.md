@@ -9,4 +9,3 @@ https://theblockhacker.substack.com/p/roman-kyoto-protocol-in-depth
 # PLEASE DONT USE THIS
 
 - It is unaudited
-- It may or may not be legal in your jurisdiction
