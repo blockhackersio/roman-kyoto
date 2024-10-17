@@ -9,7 +9,8 @@
     "dev": "pnpm -r --parallel exec -- pnpm run dev",
     "protocol:build": "pnpm -r --filter 'protocol...' exec -- pnpm run build",
     "protocol:test": "pnpm -r --filter 'protocol' test",
-    "protocol:dev": "pnpm -r --parallel --filter 'protocol...' exec -- pnpm run dev"
+    "protocol:dev": "pnpm -r --parallel --filter 'protocol...' exec -- pnpm run dev",
+    "frontend:dev": "pnpm --filter 'frontend' dev"
   },
   "keywords": [],
   "author": "",
