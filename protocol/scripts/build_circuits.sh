@@ -3,7 +3,14 @@ DIR="./circuits"
 HASH_FILE="./.hash"
 
 calculate_hash() {
-    find "$DIR" -type f -exec md5sum {} + | sort -k 2 | md5sum | cut -d" " -f1
+    # On macOS, md5 is the equivalent of md5sum
+    if command -v md5sum >/dev/null 2>&1; then
+        # Use md5sum if available (Linux)
+        find "$DIR" -type f -exec md5sum {} + | sort -k 2 | md5sum | cut -d" " -f1
+    else
+        # Use md5 on macOS
+        find "$DIR" -type f -exec md5 -r {} + | sort -k 2 | md5 -r | cut -d" " -f1
+    fi
 }
 
 build_circuits() {
